@@ -1,9 +1,9 @@
 import { useHorizon } from '@/shared/data';
-import { formatDeg, formatDuration, formatNumber, formatUtc, hoursBetween } from '@/shared/format';
+import { formatDeg, formatDuration, formatNumber, hoursBetween } from '@/shared/format';
 import { LUNAR, type IsoTime, type Site } from '@/shared/types';
-import { Icon, Pill, Skeleton } from '@/shared/ui';
-import { noEventCopy, PIN_COPY, recordedCopy } from './content';
-import { useSkyView } from './skyView';
+import { ErrorState, Icon, Pill, Skeleton } from '@/shared/ui';
+import { noEventCopy, PIN_COPY } from './content';
+import type { SkyView } from './skyView';
 import s from './SkyStatus.module.css';
 
 /** "sets in 3d 04h" — or an honest note when nothing changes within the computed range. */
@@ -17,14 +17,13 @@ function Countdown({ lead, event, now, target }: { lead: string; event: string; 
 }
 
 /**
- * Sun and Earth status for one site. Values come from the data provider. If "now" has no data, it shows the
- * nearest time that does and says so; it always settles on content or a message, never a blank or endless spinner.
+ * Sun and Earth status for one site at "now". The data is read once by the page and passed in as `view`.
+ * It always settles on content or the kit's error state, never a blank or an endless spinner.
  */
-export function SkyStatus({ site, time }: { site: Site; time: IsoTime }) {
-  const view = useSkyView(site, time);
+export function SkyStatus({ site, view, now }: { site: Site; view: SkyView; now: IsoTime }) {
   const horizon = useHorizon(site);
 
-  if (view.loading) {
+  if (view.status === 'loading') {
     return (
       <div className={s.status} role="status" aria-label={PIN_COPY.loading}>
         <Skeleton width={220} height={18} />
@@ -32,28 +31,15 @@ export function SkyStatus({ site, time }: { site: Site; time: IsoTime }) {
       </div>
     );
   }
-  if (!view.data) {
-    return (
-      <p className={s.row} role="status">
-        <Icon name="alert" size={18} />
-        <span>{PIN_COPY.unavailable}</span>
-      </p>
-    );
-  }
+  if (view.status === 'unavailable') return <ErrorState compact title={PIN_COPY.unavailable} />;
 
-  const { sky, metrics, recorded, time: at } = view.data;
+  const { sky, metrics } = view;
   const { sun, sunVisible, earthVisible } = sky;
   const sunNext = metrics ? (sunVisible ? metrics.nextSunset : metrics.nextSunrise) : undefined;
   const earthNext = metrics ? (earthVisible ? metrics.nextEarthset : metrics.nextEarthrise) : undefined;
 
   return (
     <div className={s.status}>
-      {recorded && (
-        <p className={s.recorded}>
-          <Icon name="clock" size={14} />
-          <span>{recordedCopy(formatUtc(at))}</span>
-        </p>
-      )}
       <p className={[s.row, s.sun].join(' ')}>
         <Icon name={sunVisible ? 'sun' : 'sunset'} size={18} />
         {sunVisible ? (
@@ -64,14 +50,14 @@ export function SkyStatus({ site, time }: { site: Site; time: IsoTime }) {
           <span>{PIN_COPY.sunDown}</span>
         )}
         {sunNext !== undefined && (
-          <Countdown lead={sunVisible ? PIN_COPY.sets : PIN_COPY.rises} event={sunVisible ? 'sunset' : 'sunrise'} now={at} target={sunNext} />
+          <Countdown lead={sunVisible ? PIN_COPY.sets : PIN_COPY.rises} event={sunVisible ? 'sunset' : 'sunrise'} now={now} target={sunNext} />
         )}
       </p>
       <p className={[s.row, s.earth].join(' ')}>
         <Icon name="earth" size={18} />
         <span>{earthVisible ? PIN_COPY.earthUp : PIN_COPY.earthDown}</span>
         {earthNext !== undefined && (
-          <Countdown lead={earthVisible ? PIN_COPY.sets : PIN_COPY.rises} event={earthVisible ? 'earthset' : 'earthrise'} now={at} target={earthNext} />
+          <Countdown lead={earthVisible ? PIN_COPY.sets : PIN_COPY.rises} event={earthVisible ? 'earthset' : 'earthrise'} now={now} target={earthNext} />
         )}
       </p>
       {!metrics && <p className={s.muted}>{PIN_COPY.countdownsMissing}</p>}

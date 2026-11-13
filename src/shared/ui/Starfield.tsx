@@ -13,7 +13,7 @@ export function Starfield({ density = 0.00018 }: { density?: number }) {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    return startStarDrift(canvas, { seed: 7, density, speed: 4, fill: color.text });
+    return startStarDrift(canvas, { seed: 7, density, speed: 10, fill: color.text });
   }, [density]);
 
   return <canvas ref={ref} className={s.stars} aria-hidden />;
