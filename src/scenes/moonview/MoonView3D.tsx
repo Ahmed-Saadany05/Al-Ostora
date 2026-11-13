@@ -36,6 +36,10 @@ const ABOVE_BACK = 1.3;
 const ABOVE_PITCH_DEG = -22;
 /** Seconds for the climb (and for the way back down). */
 const FLY_S = 2.2;
+/** Fly above: the real Moon around the terrain appears once the camera is this high (m). */
+const GLOBE_FROM_ALTITUDE_M = 60;
+/** The "Drag to look around" hint fades out after this long (or the first drag). */
+const HINT_MS = 8000;
 
 export interface BodyLabel {
   /** e.g. "Sets in 14d 6h" — computed by the page from the day report. */
@@ -109,15 +113,22 @@ function placeholderEarthTexture() {
 function Terrain({ terrain }: { terrain: TerrainSource }) {
   const geometry = useMemo(() => {
     const size = terrain.radius * 2;
-    const g = new THREE.PlaneGeometry(size, size, 256, 256);
+    const g = new THREE.PlaneGeometry(size, size, 320, 320);
     g.rotateX(-Math.PI / 2);
     const p = g.attributes.position;
-    // Round patch whose outer rim fades out, so from above it melts into the globe below.
+    const R = terrain.radius;
+    // Grid warped toward the centre: metre-scale detail under the lander, coarser toward the skyline.
+    const warp = (v: number) => Math.sign(v) * R * (Math.abs(v) / R) ** 1.55;
+    // Round patch whose outer rim fades out, so from above it melts into the globe below; brightness
+    // from the terrain's albedo (fresh crater rims and ejecta read lighter).
     const rgba = new Float32Array(p.count * 4);
     for (let i = 0; i < p.count; i++) {
-      p.setY(i, terrain.heightAt(p.getX(i), p.getZ(i)));
-      const d = Math.hypot(p.getX(i), p.getZ(i)) / terrain.radius;
-      rgba.set([1, 1, 1, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
+      const x = warp(p.getX(i));
+      const z = warp(p.getZ(i));
+      p.setXYZ(i, x, terrain.heightAt(x, z), z);
+      const d = Math.hypot(x, z) / R;
+      const a = terrain.albedoAt ? terrain.albedoAt(x, z) : 1;
+      rgba.set([a, a, a, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
     }
     g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
     g.computeVertexNormals();
@@ -127,7 +138,7 @@ function Terrain({ terrain }: { terrain: TerrainSource }) {
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
       {/* Regolith: grey, fully rough, no gloss (airless). */}
-      <meshStandardMaterial color={new THREE.Color(0.55, 0.54, 0.52)} roughness={1} metalness={0} vertexColors transparent />
+      <meshStandardMaterial color={new THREE.Color(0.5, 0.49, 0.47)} roughness={1} metalness={0} vertexColors transparent />
     </mesh>
   );
 }
@@ -265,7 +276,23 @@ function localToMoon(d: Vec3Tuple, lat: number, lon: number): Vec3 {
 
 /** The real Moon (Moon Trek imagery, true radius) laid under the site: site at the origin, its
  *  local up = +Y, east = +X, north = −Z. MoonTrekGlobe is 1 unit = 1 radius, so scale it back to metres. */
-function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: SkyState }) {
+function GlobeUnderSite({ lat, lon, sky, terrain }: { lat: number; lon: number; sky?: SkyState; terrain: TerrainSource }) {
+  // Join the globe to the terrain's edge (on a peak the land around is lower than the Moon's mean
+  // surface; in a crater, higher), and only show it once we have climbed: standing, the terrain's
+  // own edge is the true skyline and nothing should appear above it.
+  const edgeY = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      sum += terrain.heightAt(Math.cos(a) * terrain.radius * 0.97, Math.sin(a) * terrain.radius * 0.97);
+    }
+    return sum / 48;
+  }, [terrain]);
+  const eye = useMemo(() => terrain.heightAt(0, 0) + EYE_HEIGHT, [terrain]);
+  const group = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => {
+    if (group.current) group.current.visible = camera.position.y > eye + GLOBE_FROM_ALTITUDE_M;
+  });
   const quaternion = useMemo(() => {
     const { east, north, up } = enuAxes(lat, lon);
     // Moon-fixed → local rows (east, up, −north), after undoing the globe's own Z-up → Y-up turn.
@@ -275,7 +302,7 @@ function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: Sky
   }, [lat, lon]);
   const sun = useMemo(() => (sky ? localToMoon(azElToLocal(sky.sun.azDeg, sky.sun.elDeg), lat, lon) : DEFAULT_SUN), [sky, lat, lon]);
   return (
-    <group position={[0, -MOON_RADIUS_M, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
+    <group ref={group} position={[0, edgeY - MOON_RADIUS_M, 0]} quaternion={quaternion} scale={MOON_RADIUS_M} visible={false}>
       <MoonTrekGlobe sun={sun} />
     </group>
   );
@@ -373,6 +400,8 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
     if (!drag.current) return;
     const w = e.currentTarget.clientWidth || 1;
     const radPerPx = ((FOV * (w / (e.currentTarget.clientHeight || 1))) * Math.PI) / 180 / w;
+    dragged.current += Math.abs(e.clientX - drag.current.x) + Math.abs(e.clientY - drag.current.y);
+    if (dragged.current > 24 && !hintGone) setHintGone(true);
     look.current.yaw -= (e.clientX - drag.current.x) * radPerPx;
     look.current.pitch = THREE.MathUtils.clamp(look.current.pitch + (e.clientY - drag.current.y) * radPerPx, -0.5, 1.2);
     drag.current = { x: e.clientX, y: e.clientY };
@@ -381,6 +410,19 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
     drag.current = null;
     setGrabbing(false);
   };
+
+  // "Drag to look around": shown on arrival and on each view switch (stand / fly above), then fades
+  // out after the first real drag or after HINT_MS, whichever comes first.
+  const [hintGone, setHintGone] = useState(false);
+  useEffect(() => {
+    setHintGone(false);
+    const t = window.setTimeout(() => setHintGone(true), HINT_MS);
+    return () => window.clearTimeout(t);
+  }, [mode]);
+  const dragged = useRef(0);
+  useEffect(() => {
+    dragged.current = 0;
+  }, [mode]);
 
   const els = useRef(new Map<string, HTMLElement>());
   const bind = (id: string) => (el: HTMLElement | null) => {
@@ -426,7 +468,7 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
           <SkyPaths samples={samples} />
         </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
-        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} />}
+        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} terrain={terrain} />}
         <Terrain terrain={terrain} />
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />
@@ -469,7 +511,7 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
       </div>
 
       {!dense && (
-        <span className={v.hint}>
+        <span className={[v.hint, hintGone && v.hintOut].filter(Boolean).join(' ')} aria-hidden={hintGone}>
           <span aria-hidden>↔</span> Drag to look around
         </span>
       )}

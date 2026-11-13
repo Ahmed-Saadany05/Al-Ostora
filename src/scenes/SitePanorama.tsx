@@ -14,7 +14,7 @@ import { LUNAR, type SkyState } from '@/shared/types';
 import type { SitePanoramaProps } from './contracts';
 import { SitePanoramaStrip } from './SitePanoramaStrip';
 import { interpolateSky } from './moonview/skyMath';
-import { placeholderTerrain, seedFrom } from './moonview/terrain';
+import { seedFrom, siteTerrain } from './moonview/terrain';
 
 const MoonView3D = lazy(() => import('./moonview/MoonView3D'));
 
@@ -56,7 +56,10 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
   const rangeStart = useTime((s) => s.rangeStart);
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
   const { data: report } = useDayReport(compact || !webgl ? undefined : site, rangeStart, LUNAR.synodicDays);
-  const terrain = useMemo(() => placeholderTerrain(seedFrom(site.id)), [site.id]);
+  // Skyline shaped by the site's real LOLA horizon profile (when there is one); illustrative craters on top.
+  const { horizon } = props;
+  const lola = horizon && (horizon.terrain === 'lola' || horizon.source === 'lola') ? horizon : null;
+  const terrain = useMemo(() => siteTerrain(seedFrom(site.id), lola), [site.id, lola]);
   // The sky at exactly `time`, blended from the samples: no lag while scrubbing or in a timelapse.
   const live = useMemo(() => interpolateSky(report?.samples, time) ?? sky, [report, time, sky]);
 

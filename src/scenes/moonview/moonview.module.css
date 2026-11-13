@@ -94,6 +94,10 @@
   text-transform: uppercase;
   color: var(--color-text-muted);
   pointer-events: none;
+  transition: opacity 0.9s var(--ease-out);
+}
+.hintOut {
+  opacity: 0;
 }
 .terrainNote {
   position: absolute;
