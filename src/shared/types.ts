@@ -76,9 +76,10 @@ export interface Mission {
  *  - measured       hardware seen in LRO Camera images (≈ ±15–30 m)
  *  - reported       published by the agency / NASA catalogue but not image-confirmed (≈ km)
  *  - planned-target an announced landing point for a mission that hasn't flown
+ *  - region-site    a published candidate landing site inside a NASA region (≈ the region; regions are ~15 km)
  *  - custom         typed or clicked by the user
  */
-export type CoordQuality = 'measured' | 'reported' | 'planned-target' | 'custom';
+export type CoordQuality = 'measured' | 'reported' | 'planned-target' | 'region-site' | 'custom';
 
 export interface Site extends Sourced {
   id: string; // stable slug, e.g. "apollo-11", "connecting-ridge"
@@ -96,6 +97,8 @@ export interface Site extends Sourced {
   missions: Mission[];
   /** Extra short labels, e.g. "Moon Base I target (2026) · former Artemis landing candidate (2022)". */
   labels?: string[];
+  /** Programmes this place belongs to even without a mission yet (e.g. an Artemis candidate region). */
+  programs?: Program[];
   /** Where the coordinates / story come from. Shown in credits. */
   refs: SourceRef[];
 }

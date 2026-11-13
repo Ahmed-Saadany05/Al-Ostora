@@ -22,6 +22,17 @@ export const MOON_BASE_RELEASE: SourceRef = {
   url: 'https://www.nasa.gov/news-release/nasa-provides-update-on-moon-base-rovers-landers-missions/',
 };
 
+export const ARTEMIS_REGIONS_2024: SourceRef = {
+  label: 'NASA Release 24-136 (28 Oct 2024) — the nine Artemis candidate landing regions',
+  url: 'https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/',
+};
+
+/** Peer-reviewed landing sites inside each region; open data (CC BY 4.0). */
+export const WUELLER_2026: SourceRef = {
+  label: 'Wueller et al. 2026, JGR Planets 131(3) e2025JE009434 — candidate landing sites; data: Zenodo 10.5281/zenodo.17084058 (CC BY 4.0)',
+  url: 'https://doi.org/10.5281/zenodo.17084058',
+};
+
 export const ARTEMIS_REGIONS_2022: SourceRef = {
   label: 'NASA SVS — Artemis III landing region candidates (2022, 13 regions)',
   url: 'https://svs.gsfc.nasa.gov/5013',

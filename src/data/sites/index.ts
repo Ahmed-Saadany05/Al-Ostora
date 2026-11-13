@@ -29,7 +29,7 @@ export const SITE_TAGS: { id: SiteTag; label: string }[] = [
   { id: 'upcoming', label: 'Upcoming' },
 ];
 
-const programs = (s: Site): Set<Program> => new Set(s.missions.map((m) => m.program));
+const programs = (s: Site): Set<Program> => new Set([...s.missions.map((m) => m.program), ...(s.programs ?? [])]);
 
 export function hasTag(s: Site, tag: SiteTag): boolean {
   switch (tag) {

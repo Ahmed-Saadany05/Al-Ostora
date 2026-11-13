@@ -7,13 +7,40 @@
  * neighbouring older lander) shares one site; landers further apart get their own site.
  * Excluded: spent rocket stages, ascent stages, orbiter/probe impacts (not landing sites).
  *
- * NOT YET INCLUDED (no verified coordinates — see docs/TEAM.md):
- *  - The 9 Artemis candidate regions (NASA publishes them only as maps).
+ * Artemis regions: NASA publishes the nine regions only as maps (Release 24-136). Each entry
+ * uses a real landing site from Wueller et al. 2026 (open data, Zenodo 17084058): the published
+ * site closest to the middle of that region's sites (rule applied by script, see data README).
+ *
+ * NOT YET INCLUDED (no verified coordinates):
  *  - Shackleton rim (awaiting the exact edition of the Data Book table A2.1-1).
  *  - Upcoming targets without a published point: IM-3, Blue Ghost 2, Griffin-1, Chang'e 7.
  */
 import type { Mission, Site, SiteRegion, SourceRef } from '@/shared/types';
-import { DATA_BOOK, LROC, MOON_BASE_RELEASE, NSSDC, ARTEMIS_REGIONS_2022 } from './sources';
+import {
+  ARTEMIS_REGIONS_2022,
+  ARTEMIS_REGIONS_2024,
+  DATA_BOOK,
+  LROC,
+  MOON_BASE_RELEASE,
+  NSSDC,
+  WUELLER_2026,
+} from './sources';
+
+/** One of NASA's nine Artemis candidate regions (2024), placed at a published landing site. */
+const region = (id: string, name: string, siteName: string, lat: number, lon: number, story: string): Site =>
+  site({
+    id,
+    name,
+    region: 'south-pole',
+    lat,
+    lon,
+    coordQuality: 'region-site',
+    labels: [`Artemis candidate region (NASA, 2024) · landing site ${siteName}`],
+    programs: ['artemis'],
+    story,
+    missions: [],
+    refs: [ARTEMIS_REGIONS_2024, WUELLER_2026],
+  });
 
 type Draft = Omit<Site, 'source' | 'kind' | 'refs'> & { refs?: SourceRef[] };
 
@@ -404,6 +431,28 @@ export const CATALOGUE: Site[] = [
     story: 'Landed closer to the south pole than any mission before it, but tipped over inside a small crater and its mission ended early.',
     missions: [{ name: 'IM-2 Athena', agency: 'Intuitive Machines (NASA CLPS)', country: US, program: 'clps', date: '2025-03-06', crewed: false, hardware: ['lander', 'hopper Grace', 'rover'], outcome: 'partial', note: 'Came to rest on its side.' }],
   }),
+
+  // ------------------------------------------------------------------ Artemis candidate regions (NASA, Oct 2024)
+  // Like all nine, these lie within 6° of the south pole: picked for long sunlight and nearby
+  // permanently shadowed craters that may hold water ice. Each region is about 15 × 15 km.
+  region('peak-near-cabeus-b', 'Peak near Cabeus B', 'PCB03', -83.563, -68.2009,
+    'A tall peak near the crater Cabeus B, on the far western side of the polar region. Its height lifts landers above much of the surrounding shadow.'),
+  region('haworth', 'Haworth', 'HW02', -86.8076, -21.7194,
+    'High ground beside Haworth crater, whose floor never sees the Sun and may trap ice.'),
+  region('malapert-massif', 'Malapert Massif', 'MMA01', -85.9425, -0.9436,
+    'A mountain massif facing Earth. High ground keeps the Sun in view over distant ridges, and its slopes look toward home for radio contact.'),
+  region('mons-mouton-plateau', 'Mons Mouton Plateau', 'MMP06', -84.5961, 30.4525,
+    'NASA calls it the widest and overall flattest of the candidate regions: a high tableland next to Mons Mouton.'),
+  region('mons-mouton', 'Mons Mouton', 'MMO01', -85.416, 31.8506,
+    'A broad, flat-topped mountain named after NASA mathematician Melba Roy Mouton.'),
+  region('nobile-rim-1', 'Nobile Rim 1', 'NR107', -85.1978, 37.1774,
+    "On the rim of Nobile crater, a large crater whose shadowed floor is one of the south pole's cold traps."),
+  region('nobile-rim-2', 'Nobile Rim 2', 'NR208', -83.9064, 57.8114,
+    'A second stretch of the Nobile crater rim, further from the pole.'),
+  region('de-gerlache-rim-2', 'de Gerlache Rim 2', 'dGR203', -88.1408, -71.6955,
+    'On the rim of de Gerlache crater, very close to the pole, where the Sun skims the horizon all year.'),
+  region('slater-plain', 'Slater Plain', 'SP07', -87.1306, 127.857,
+    'A comparatively smooth plain near Slater crater: gentle ground for a lander to set down on.'),
 
   // ------------------------------------------------------------------ Artemis / Moon Base
   site({
