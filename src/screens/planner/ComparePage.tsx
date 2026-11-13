@@ -19,7 +19,7 @@ import {
   SourceBadge,
   StepHeader,
   Tabs,
-  TimelineStrip,
+  SkyTimeline,
 } from '@/shared/ui';
 import { useLunarDay } from './useLunarDay';
 import s from './flow.module.css';
@@ -60,7 +60,14 @@ function CompareCard({ c, index, metrics, best }: { c: Candidate; index: number;
           <ProgressRing value={metrics?.bothFraction} label="Both" />
         </div>
         {report ? (
-          <TimelineStrip start={c.from} end={c.to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} highlight={metrics?.bestWindow} cells={40} ticks={0} size="sm" />
+          <SkyTimeline
+            label={`Timeline for ${c.site.name}`}
+            start={c.from}
+            end={c.to}
+            sunWindows={report.sunWindows}
+            earthWindows={report.earthWindows}
+            highlight={metrics?.bestWindow}
+          />
         ) : (
           <LoadingState compact />
         )}

@@ -13,9 +13,8 @@ import {
   Page,
   Panel,
   Pill,
+  SkyTimeline,
   StepHeader,
-  TimelineLegend,
-  TimelineStrip,
 } from '@/shared/ui';
 import { useLunarDay } from './useLunarDay';
 import s from './flow.module.css';
@@ -105,8 +104,16 @@ export function DatePage() {
 
         {report && (
           <div className={s.stripBlock}>
-            <TimelineLegend />
-            <TimelineStrip start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} highlight={metrics?.bestWindow} now={plan?.landingDate} />
+            <SkyTimeline
+              size="full"
+              label="Touchdown on the lunar day"
+              start={from}
+              end={to}
+              sunWindows={report.sunWindows}
+              earthWindows={report.earthWindows}
+              highlight={metrics?.bestWindow}
+              now={plan?.landingDate}
+            />
           </div>
         )}
       </Panel>

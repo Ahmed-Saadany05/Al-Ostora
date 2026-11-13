@@ -24,11 +24,11 @@ import {
   LoadingState,
   Page,
   Pill,
+  SkyTimeline,
   SourceBadge,
   Tabs,
-  TimelineLegend,
-  TimelineStrip,
 } from '@/shared/ui';
+import { timelapseTo } from '@/shared/store/timelapse';
 import { PeekPanel } from './stand/PeekPanel';
 import { SideBySide } from './stand/SideBySide';
 import { BodyCard, HowFarCard, NearbyCard } from './stand/StandCards';
@@ -211,7 +211,7 @@ export function StandPage() {
             <span className="num">{formatUtc(time)}</span>
             {report && (
               <span className={st.tabStrip}>
-                <TimelineStrip start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} cells={40} ticks={0} size="sm" />
+                <SkyTimeline start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} />
               </span>
             )}
           </span>
@@ -225,9 +225,8 @@ export function StandPage() {
               <span className="num">{formatUtc(time)}</span>
             </div>
             <span className={st.grow} />
-            <TimelineLegend />
             {metrics?.bestWindow && (
-              <Button variant="secondary" onClick={() => setTime(metrics.bestWindow!.start)}>
+              <Button variant="secondary" onClick={() => timelapseTo(metrics.bestWindow!.start)}>
                 Jump to best
               </Button>
             )}
@@ -236,14 +235,17 @@ export function StandPage() {
             </Button>
           </div>
           {report ? (
-            <TimelineStrip
+            <SkyTimeline
+              size="full"
+              label={`Timeline for ${site.name}`}
               start={from}
               end={to}
               sunWindows={report.sunWindows}
               earthWindows={report.earthWindows}
               highlight={metrics?.bestWindow}
               now={time}
-              onSelectTime={setTime}
+              onSelectTime={(t) => timelapseTo(t)}
+              onScrub={setTime}
             />
           ) : (
             <LoadingState compact />
