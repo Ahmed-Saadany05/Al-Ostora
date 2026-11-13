@@ -10,6 +10,7 @@ import {
 } from './demoModel';
 import { SITE_CATALOGUE } from '@/data/sites';
 import { horizonInfo } from '../../horizon';
+import { lolaHorizon } from '@/data/horizons-lola';
 
 const SUN_KM = 149_597_870;
 const DEMO_TRANSIT_DAYS = 5;
@@ -17,8 +18,13 @@ const EARTH_RADIUS_KM = 6371;
 const latency = <T,>(value: T, ms = 120) => new Promise<T>((r) => setTimeout(() => r(value), ms));
 const p = (params?: Partial<Params>): Params => ({ ...DEFAULT_PARAMS, ...params });
 
+/** Real LOLA terrain when we have it (computed at 2 m observer height), otherwise the demo skyline. */
+function horizonFor(site: Site, params: Params) {
+  return lolaHorizon(site.id, site.lat, site.lon) ?? demoHorizon(site, params.observerHeightM);
+}
+
 function sky(site: Site, t: number, params: Params): SkyState {
-  const horizon = demoHorizon(site, params.observerHeightM);
+  const horizon = horizonFor(site, params);
   const sun = bodyPosition(site, horizon, subSolarPoint(t), SUN_KM, LUNAR.sunDiameterDeg);
   const e = subEarthPoint(t);
   const earthDiameter = (2 * Math.atan(EARTH_RADIUS_KM / e.distanceKm) * 180) / Math.PI;
@@ -31,7 +37,8 @@ function sky(site: Site, t: number, params: Params): SkyState {
     earth: { ...earth, illumination: earthIllumination(t) },
     sunVisible: sun.visibleFraction > 0,
     earthVisible: earth.clearanceDeg >= params.commsMinClearanceDeg,
-    horizon: horizonInfo('demo', site.lat),
+    // Sun/Earth positions are still demo; the skyline itself may be real terrain.
+    horizon: horizonInfo(horizon.source === 'lola' ? 'lola' : 'demo', site.lat),
   };
 }
 
@@ -58,7 +65,7 @@ export const demoProvider: DataProvider = {
   // Sites are REAL (sourced catalogue); only the sky numbers are demo.
   listSites: () => latency(SITE_CATALOGUE),
 
-  getHorizon: (site, params) => latency(demoHorizon(site, p(params).observerHeightM)),
+  getHorizon: (site, params) => latency(horizonFor(site, p(params))),
 
   getSky: (site, time, params) => latency(sky(site, Date.parse(time), p(params))),
 
