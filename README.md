@@ -76,6 +76,10 @@ Site catalogue┘          DataProvider interface ──────┤
 
 Both providers implement `DataProvider` (`src/shared/data/provider.ts`), so screens never change when we switch.
 
+## Frames
+
+JPL Horizons `coord@301` observer sites and the LOLA DEMs both use **MEAN_ME (DE421 mean-Earth/polar-axis frame)**, so site coordinates, horizons and ephemerides line up without conversion.
+
 ## Horizons proxy
 
 `GET /api/horizons?target=sun|earth&lat=-89.67&lon=129.78&start=2026-11-13T00:00Z&stop=2026-11-14T00:00Z&step=1h`
