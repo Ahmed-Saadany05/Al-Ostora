@@ -13,5 +13,6 @@ export { Starfield } from './Starfield';
 export { Page, OwnerNote } from './Page';
 export { ProgressRing } from './ProgressRing';
 export { TimelineStrip, TimelineLegend } from './TimelineStrip';
+export { SkyTimeline, type SkyTimelineProps } from './SkyTimeline';
 export { StepHeader } from './StepHeader';
 export { DateField } from './DateField';
