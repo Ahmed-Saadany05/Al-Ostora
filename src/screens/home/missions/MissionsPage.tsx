@@ -124,11 +124,12 @@ export function MissionsPage() {
         }
       }}
     >
-      <header className={s.head}>
+      <header className={[s.head, mission && s.headStory].filter(Boolean).join(' ')}>
         <DisplayHeading size="lg" align="left">
           {MISSIONS_COPY.title}
         </DisplayHeading>
-        <Lead align="left">{MISSIONS_COPY.line}</Lead>
+        {/* The "pick one" line is for the list; an open story needs the room for the conversation. */}
+        {!mission && <Lead align="left">{MISSIONS_COPY.line}</Lead>}
       </header>
 
       <div ref={area} className={s.area}>

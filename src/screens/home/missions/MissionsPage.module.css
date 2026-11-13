@@ -22,6 +22,10 @@
   margin-bottom: var(--space-5);
 }
 
+.headStory {
+  margin-bottom: var(--space-3);
+}
+
 .area {
   flex: 1;
   display: flex;
@@ -54,11 +58,14 @@
 }
 .history {
   grid-area: history;
-  max-height: calc(var(--say-lh) * 5);
+  max-height: calc(var(--say-lh) * 3.1 + var(--space-3));
   overflow-y: auto;
   display: grid;
   gap: var(--space-3);
   align-content: start;
+  /* the top 12 px fades out, so a line that scrolled halfway out is never shown cut in half; 2 px below absorbs sub-pixel rounding */
+  padding-block: var(--space-3) 2px;
+  mask-image: linear-gradient(to bottom, transparent, var(--color-bg) var(--space-3));
   padding-inline-end: var(--space-3);
 }
 .current {
@@ -81,7 +88,7 @@
 .beat {
   display: grid;
   gap: var(--space-2);
-  max-width: 38em;
+  max-width: min(100%, calc(var(--say) * 46));
   outline-offset: var(--space-2);
 }
 .beatTitle {
@@ -100,7 +107,7 @@
 .earlier {
   display: grid;
   gap: var(--space-1);
-  max-width: 38em;
+  max-width: min(100%, calc(var(--say) * 46));
 }
 .earlier .beatText,
 .earlier .beatTitle {
