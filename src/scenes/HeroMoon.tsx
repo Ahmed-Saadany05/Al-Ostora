@@ -6,9 +6,10 @@
  *   tiltTowardSouthPole, highlightedPin, startDark, onTextureReady, onTextureFailed, onPinScreen,
  *   onDiveComplete.
  *
- * "Planet horizon" framing (Hady's): an orthographic camera (world units = CSS pixels) looks at a
- * sphere far wider than the viewport, so only its top arc shows — a dome whose crest sits at
- * CREST_FROM_TOP of the height. The surface is Moon Trek imagery (LRO WAC) streamed with
+ * "Planet horizon" framing (Hady's): a sphere far wider than the viewport, so only its top arc shows —
+ * a dome whose crest sits at CREST_FROM_TOP of the height. The camera is a perspective camera so far
+ * away that it looks flat (orthographic); during the flight it moves in to exactly Step 1's camera
+ * (distance, focal length, centre of view), so the hand-off frame matches Step 1 pixel for pixel. The surface is Moon Trek imagery (LRO WAC) streamed with
  * 3d-tiles-renderer and lit with the airless shading shared with the step 1 globe.
  *
  * Going to Step 1 (click the Moon, or handle.enterStep1() from "Begin the journey"): the Moon is
@@ -20,12 +21,13 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Euler, Matrix4, Quaternion, Vector3, type Group } from 'three';
+import { Euler, Matrix4, PerspectiveCamera, Quaternion, Vector3, type Group } from 'three';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { DEFAULT_SUN, MoonTrekGlobe } from './globe/MoonTrekGlobe';
 import { createMoonLight } from './globe/moonShading';
 import { OPENING_VIEW, pickerDisc, preloadPickerGlobe, setMoonHandoff, type Rect } from './globe/moonHandoff';
+import { START_DISTANCE } from './globe/pickerTypes';
 import { latLonToVec } from './lib/moonFrame';
 
 export interface HeroMoonPin {
@@ -75,6 +77,32 @@ const EXPOSURE = 1.25;
 const IMAGERY_TIMEOUT_MS = 12_000;
 /** The flight into Step 1. */
 const FLIGHT_SECONDS = 1.6;
+/** Home camera distance in lunar radii: far enough that the dome looks orthographic. */
+const HOME_DISTANCE = 40;
+
+/** On-screen Moon disc: centre (canvas px from the top-left) and radius (px), seen from `d` radii. */
+interface View {
+  d: number;
+  r: number;
+  cx: number;
+  cy: number;
+}
+
+/**
+ * Points the camera at the Moon (unit sphere at the origin) from `d` radii away with the focal length
+ * that makes its disc `r` px wide, and shifts the centre of view so the disc centre lands at (cx, cy).
+ */
+function applyView(cam: PerspectiveCamera, v: View, w: number, h: number) {
+  const f = v.r * Math.sqrt(v.d * v.d - 1); // focal length in px
+  cam.position.set(0, 0, v.d);
+  cam.lookAt(0, 0, 0);
+  cam.fov = (2 * Math.atan(h / 2 / f) * 180) / Math.PI;
+  cam.aspect = w / h;
+  cam.near = Math.max(0.001, v.d - 1.5);
+  cam.far = v.d + 2;
+  cam.setViewOffset(w, h, w / 2 - v.cx, h / 2 - v.cy, w, h);
+  cam.updateProjectionMatrix();
+}
 
 const toScene = (v: { x: number; y: number; z: number }) => new Vector3(v.x, v.z, -v.y);
 /** MoonTrekGlobe's fixed Moon-fixed → scene turn. */
@@ -110,10 +138,9 @@ function Scene({
   controls,
   onMoonClick,
 }: HeroMoonProps & { controls: { current: Controls | null }; onMoonClick: () => void }) {
-  const camera = useThree((st) => st.camera);
+  const camera = useThree((st) => st.camera) as PerspectiveCamera;
   const gl = useThree((st) => st.gl);
   const { width, height } = useThree((st) => st.size);
-  const place = useRef<Group>(null);
   const orient = useRef<Group>(null);
   const pinAnchor = useRef<Group>(null);
   const lastPin = useRef<{ x: number; y: number } | null>(null);
@@ -124,8 +151,8 @@ function Scene({
   const ready = useRef(false);
   const flight = useRef<{
     t: number;
-    from: { x: number; y: number; r: number };
-    to: { x: number; y: number; r: number };
+    from: View;
+    to: View;
     q0: Quaternion;
     q1: Quaternion;
     sun0: Vector3;
@@ -153,7 +180,11 @@ function Scene({
   }, []);
 
   const radius = width * RADIUS_PER_WIDTH;
-  const crestY = height / 2 - CREST_FROM_TOP * height;
+  const homeView = (): View => ({ d: HOME_DISTANCE, r: radius, cx: width / 2, cy: CREST_FROM_TOP * height + radius });
+  // R3F would reset the aspect on resize; this component owns the projection.
+  useEffect(() => {
+    (camera as PerspectiveCamera & { manual?: boolean }).manual = true;
+  }, [camera]);
 
   controls.current = {
     dive: () => {
@@ -177,8 +208,8 @@ function Scene({
       const pose = openingPose();
       flight.current = {
         t: 0,
-        from: { x: 0, y: crestY - radius, r: radius },
-        to: { x: target.x, y: target.y, r: target.radius },
+        from: homeView(),
+        to: { d: START_DISTANCE, r: target.radius, cx: target.x, cy: target.y },
         q0: orient.current.quaternion.clone(),
         q1: pose.q,
         sun0: light.uSun.value.clone(),
@@ -191,16 +222,23 @@ function Scene({
 
   useFrame((_, dt) => {
     const o = orient.current;
-    const p = place.current;
     const f = flight.current;
 
-    if (f && o && p) {
+    if (f && o) {
       f.t = Math.min(1, f.t + Math.min(dt, 1 / 30) / FLIGHT_SECONDS);
       const e = f.t < 0.5 ? 4 * f.t ** 3 : 1 - (-2 * f.t + 2) ** 3 / 2; // ease in-out
-      // Lift and shrink on a log scale, so it reads as the Moon receding into the distance.
-      const r = f.from.r * Math.pow(f.to.r / f.from.r, e);
-      p.position.set(f.from.x + (f.to.x - f.from.x) * e, f.from.y + (f.to.y - f.from.y) * e, 0);
-      p.scale.setScalar(r);
+      // Size and distance on a log scale, so it reads as the Moon receding; the centre slides.
+      applyView(
+        camera,
+        {
+          d: f.from.d * Math.pow(f.to.d / f.from.d, e),
+          r: f.from.r * Math.pow(f.to.r / f.from.r, e),
+          cx: f.from.cx + (f.to.cx - f.from.cx) * e,
+          cy: f.from.cy + (f.to.cy - f.from.cy) * e,
+        },
+        width,
+        height,
+      );
       o.quaternion.slerpQuaternions(f.q0, f.q1, e);
       light.uSun.value.copy(f.sun0).lerp(f.sun1, e).normalize();
       light.uExposure.value = EXPOSURE;
@@ -229,10 +267,7 @@ function Scene({
       q.spin.setFromEuler(q.e.set(0, spinAngle.current, 0));
       o.quaternion.copy(q.lean).multiply(q.tilt).multiply(q.spin);
     }
-    if (p) {
-      p.position.set(0, crestY - radius, 0);
-      p.scale.setScalar(radius);
-    }
+    if (camera.zoom === 1 || !gsap.isTweening(camera)) applyView(camera, homeView(), width, height);
 
     // World-space light direction for the airless shading, plus the intro fade-in.
     const sp = sweep.current.p;
@@ -261,7 +296,7 @@ function Scene({
   }, [highlightedPin]);
 
   return (
-    <group ref={place} position={[0, crestY - radius, 0]} scale={radius}>
+    <group>
       <group ref={orient}>
         <MoonTrekGlobe light={light} onImageryReady={onImageryReady} />
         {pinAt && <group ref={pinAnchor} position={pinAt} />}
@@ -298,15 +333,20 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
       void loaded.then(() => navigate(missionUrl.chooseSite()));
       return;
     }
-    // Target: Step 1's Moon disc, in this canvas's world units (CSS px, origin at the centre, y up).
+    // Target: Step 1's Moon disc, in this canvas's pixels (from its top-left).
     const r = el.getBoundingClientRect();
     const disc = pickerDisc();
-    const target = { x: disc.x - (r.left + r.width / 2), y: r.top + r.height / 2 - disc.y, radius: disc.radius };
+    const target = { x: disc.x - r.left, y: disc.y - r.top, radius: disc.radius };
     const rect: Rect = { left: r.left, top: r.top, width: r.width, height: r.height };
     // Everything else on Home steps back while the Moon flies.
     const section = el.closest('section');
     const others = section ? [...section.querySelectorAll<HTMLElement>('[data-intro], [data-home-fade]')] : [];
     gsap.to(others, { opacity: 0, y: -10, duration: 0.5, ease: 'power2.in', stagger: 0.04 });
+    // Home's own stars and black backdrop give way to the app-wide drifting stars that Step 1 also
+    // shows, so no star jumps at the page change.
+    const stars = section?.querySelector<HTMLElement>('[data-home-stars]');
+    if (stars) gsap.to(stars, { opacity: 0, duration: FLIGHT_SECONDS * 0.8, ease: 'none' });
+    if (section) gsap.to(section, { backgroundColor: 'rgba(0, 0, 0, 0)', duration: FLIGHT_SECONDS * 0.8, ease: 'none' });
     controls.current.fly(target, (snapshot) => {
       setMoonHandoff({ snapshot, rect });
       void loaded.then(() => navigate(missionUrl.chooseSite()));
@@ -327,8 +367,7 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
   return (
     <div ref={box} style={{ position: 'absolute', inset: 0 }}>
       <Canvas
-        orthographic
-        camera={{ position: [0, 0, 3000], zoom: 1, near: 1, far: 6000 }}
+        camera={{ position: [0, 0, HOME_DISTANCE], fov: 10, near: 0.1, far: 100 }}
         dpr={[1, 2]}
         // Keeps the last frame readable for the hand-off snapshot.
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}

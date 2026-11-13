@@ -75,8 +75,9 @@ export function pickerStage(): Rect {
   const contentMax = cssPx('var(--content-max)');
   const statusbar = cssPx('var(--statusbar-height)', 'height');
   const gap = cssPx('var(--space-6)');
-  const pageWidth = Math.min(innerWidth, contentMax + 2 * gutter);
-  const left = (innerWidth - pageWidth) / 2 + gutter;
+  const vw = document.documentElement.clientWidth; // excludes a vertical scrollbar
+  const pageWidth = Math.min(vw, contentMax + 2 * gutter);
+  const left = (vw - pageWidth) / 2 + gutter;
   const innerWidthPx = pageWidth - 2 * gutter;
   const top = header + gap;
   const height = Math.max(520, innerHeight - header - statusbar - gap);

@@ -18,8 +18,8 @@ import { REGION_VIEW, regionAt, type LatLon, type RegionId } from './lib/moonFra
 import g from './globe/globe.module.css';
 
 const PickerGlobe3D = lazy(preloadPickerGlobe);
-/** After the Home flight: keep its last frame on top a moment longer, then fade into the live globe. */
-const SNAPSHOT_HOLD_MS = 250;
+/** After the Home flight: keep its last frame on top until the live tiles have sharpened, then fade. */
+const SNAPSHOT_HOLD_MS = 900;
 
 function hasWebGL() {
   try {

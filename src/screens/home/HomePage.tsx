@@ -46,7 +46,7 @@ export function HomePage() {
 
   return (
     <section className={s.hero}>
-      <div ref={stars} className={s.stars}>
+      <div ref={stars} className={s.stars} data-home-stars>
         {/* Stars drift on their own; they no longer follow the cursor. */}
         <StarLayers parallax={false} />
       </div>
