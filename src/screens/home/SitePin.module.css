@@ -63,7 +63,7 @@
 .card {
   position: absolute;
   left: 0;
-  top: var(--space-6);
+  top: var(--space-5);
   transform: translateX(calc(-1 * var(--space-4)));
   display: flex;
   flex-direction: column;
@@ -82,6 +82,12 @@
     opacity var(--duration-base) var(--ease-out),
     translate var(--duration-base) var(--ease-out),
     visibility 0s linear var(--duration-base);
+}
+
+.pin[data-flip='true'] .card {
+  top: auto;
+  bottom: var(--space-5);
+  translate: 0 var(--space-2);
 }
 
 .pin[data-open='true'] .card {

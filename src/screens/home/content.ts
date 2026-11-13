@@ -24,11 +24,8 @@ export const MOTION_COPY = {
 /** "no sunset in the next 29.5 days" — the number comes from LUNAR.synodicDays, passed in. */
 export const noEventCopy = (event: string, days: string) => `no ${event} in the next ${days} days`;
 
-/** "Showing 13 Nov 2026, 14:00 UTC (recorded)" — `when` comes from formatUtc, which already ends in "UTC". */
-export const recordedCopy = (when: string) => `Showing ${when} (recorded)`;
-
 export const PIN_COPY = {
-  unavailable: 'Sun and Earth status is not available right now.',
+  unavailable: 'No data for this time yet',
   countdownsMissing: 'Next change not available for this time.',
   cardTitle: 'Sun and Earth now',
   next: 'Stand on this site',
