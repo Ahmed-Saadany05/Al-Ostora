@@ -94,12 +94,14 @@
   text-transform: uppercase;
   color: var(--color-text-muted);
   pointer-events: none;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
   transition: opacity 0.9s var(--ease-out);
 }
 .hintOut {
   opacity: 0;
 }
 .terrainNote {
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
   position: absolute;
   left: var(--space-3);
   bottom: var(--space-2);

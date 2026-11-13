@@ -126,11 +126,24 @@ interface Crater {
  *    (on a peak like Malapert the land drops away; in a crater it rises to the rim).
  *  - ILLUSTRATIVE DETAIL: a seeded crater field (bowls, raised rims, ejecta; many small, few large,
  *    fresh ones brighter) over gently rolling regolith. Not measured: labelled as such.
- * Without a horizon profile it falls back to the placeholder ridges.
+ * Without a horizon profile, the same detail sits under a gentle made-up skyline ("Placeholder terrain").
  */
 export function siteTerrain(seed: number, horizon?: SkylineLike | null, opts: { radius?: number; craters?: boolean } = {}): TerrainSource {
   const radius = opts.radius ?? 2400;
-  if (!horizon || horizon.elevationsDeg.length === 0) return { ...placeholderTerrain(seed, radius) };
+  // No real horizon: same craters and relief, over a gentle made-up skyline (labelled as placeholder).
+  const measured = Boolean(horizon && horizon.elevationsDeg.length > 0);
+  if (!horizon || horizon.elevationsDeg.length === 0) {
+    const sn = makeNoise(seed + 5);
+    horizon = {
+      azStepDeg: 1,
+      elevationsDeg: Array.from({ length: 360 }, (_, i) => {
+        const a = (i * Math.PI) / 180;
+        return 0.3 + (sn(Math.cos(a) * 3 + 10, Math.sin(a) * 3 + 10) - 0.5) * 2.2 + (sn(Math.cos(a) * 9, Math.sin(a) * 9) - 0.5) * 0.6;
+      }),
+      observerHeightM: 2,
+    };
+  }
+  const skyline: SkylineLike = horizon;
   const n = makeNoise(seed + 17);
   const fbm = (x: number, z: number, oct = 4) => {
     let sum = 0;
@@ -158,6 +171,16 @@ export function siteTerrain(seed: number, horizon?: SkylineLike | null, opts: { 
       craters.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r, depth: 0.2 * 2 * r * (0.35 + 0.65 * fresh), rim: 0.035 * 2 * r * fresh, fresh });
     }
   }
+  if (opts.craters !== false) {
+    // A few mid-size craters in plain view (60–900 m out), whichever way you look.
+    for (let i = 0; i < 14; i++) {
+      const r = 14 + rnd() * 55;
+      const a = (i / 14) * Math.PI * 2 + rnd() * 0.4;
+      const d = 60 + r + rnd() * 820;
+      const fresh = 0.5 + 0.5 * rnd();
+      craters.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, r, depth: 0.4 * r * (0.5 + 0.5 * fresh), rim: 0.08 * r * fresh, fresh });
+    }
+  }
   const craterAt = (x: number, z: number) => {
     let h = 0;
     let bright = 0;
@@ -178,23 +201,29 @@ export function siteTerrain(seed: number, horizon?: SkylineLike | null, opts: { 
     return { h, bright };
   };
 
-  const eye = horizon.observerHeightM ?? 2;
+  const eye = skyline.observerHeightM ?? 2;
   const edge = radius * 0.9;
   return {
     radius,
-    label: 'Illustrative terrain · skyline from LOLA',
+    label: measured ? 'Illustrative terrain · skyline from LOLA' : 'Placeholder terrain',
     placeholder: true,
     heightAt(x, z) {
       const d = Math.hypot(x, z);
       // Cone that puts the skyline at the measured elevation: height at the edge = eye + edge·tan(el).
-      const el = (skylineAt(horizon, azimuthOf(x, z)) * Math.PI) / 180;
+      const el = (skylineAt(skyline, azimuthOf(x, z)) * Math.PI) / 180;
       const rimH = eye + edge * Math.tan(el);
       const t = Math.min(1, Math.max(0, (d - 40) / 360));
       const sky = rimH * (d / edge) * t * t * (3 - 2 * t); // grows linearly with distance, eased in near the lander
-      const nearFlat = Math.min(1, d / 40); // level ground under the lander
-      // Regolith: fine roughness the low Sun picks out, plus gentle swells and low hills.
-      const relief = (fbm(x / 7, z / 7, 3) * 0.35 + fbm(x / 45, z / 45) * 1.4 + fbm(x / 220 + 5, z / 220 - 3, 3) * 7) * nearFlat;
-      return sky + relief + craterAt(x, z).h * nearFlat;
+      const nearFlat = Math.min(1, d / 25); // level ground under the lander
+      // Faded out toward the edge so the skyline stays exactly where LOLA measured it.
+      const e = Math.min(1, Math.max(0, (d - edge * 0.6) / (edge * 0.35)));
+      const keepSkyline = 1 - e * e * (3 - 2 * e);
+      // Regolith: fine roughness the low Sun picks out, swells, rolling hills and broad undulation.
+      const fine = fbm(x / 6, z / 6, 3) * 0.5 + fbm(x / 40, z / 40) * 3;
+      // Big relief eases in over the first ~120 m, so the lander still stands on level ground.
+      const broadIn = Math.min(1, d / 120) ** 2;
+      const broad = (fbm(x / 160 + 5, z / 160 - 3, 4) * 16 + fbm(x / 600 - 11, z / 600 + 7, 3) * 34) * broadIn;
+      return sky + ((fine + broad) * keepSkyline + craterAt(x, z).h) * nearFlat;
     },
     albedoAt(x, z) {
       return Math.min(1.35, 0.9 + fbm(x / 90 - 9, z / 90 + 4, 3) * 0.18 + craterAt(x, z).bright);

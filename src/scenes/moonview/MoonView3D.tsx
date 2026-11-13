@@ -110,7 +110,85 @@ function placeholderEarthTexture() {
 
 // ---------------------------------------------------------------- scene parts
 
+/** Metres covered by one tile of the regolith detail texture. */
+const DETAIL_TILE_M = 24;
+
+/**
+ * Seamless regolith detail (512²): fine grain plus a scatter of small craters (dark floor, bright
+ * rim), wrapping at the edges. Used as a bump map (tiny relief catching the low Sun) and, lightly,
+ * as brightness variation. Seeded, so it is the same every time.
+ */
+function regolithTexture() {
+  const N = 512;
+  const h = new Float32Array(N * N);
+  let st = 12345;
+  const rnd = () => (st = (st * 16807) % 2147483647) / 2147483647;
+  // Tileable value noise at a few octaves.
+  for (const [cells, amp] of [
+    [8, 0.5],
+    [32, 0.3],
+    [128, 0.2],
+    [256, 0.12],
+  ] as const) {
+    const g = Array.from({ length: cells * cells }, rnd);
+    const at = (i: number, j: number) => g[((j + cells) % cells) * cells + ((i + cells) % cells)];
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const fx = (x / N) * cells;
+        const fy = (y / N) * cells;
+        const i = Math.floor(fx);
+        const j = Math.floor(fy);
+        const u = fx - i;
+        const v = fy - j;
+        const su = u * u * (3 - 2 * u);
+        const sv = v * v * (3 - 2 * v);
+        const a = at(i, j) + (at(i + 1, j) - at(i, j)) * su;
+        const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * su;
+        h[y * N + x] += (a + (b - a) * sv - 0.5) * amp;
+      }
+    }
+  }
+  // Small craters (bowl + rim), wrapping across the edges.
+  for (let k = 0; k < 140; k++) {
+    const cx = rnd() * N;
+    const cy = rnd() * N;
+    const r = 3 + rnd() ** 3 * 34;
+    const depth = 0.35 + rnd() * 0.5;
+    const R = Math.ceil(r * 2);
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        const q = Math.hypot(dx, dy) / r;
+        if (q > 2) continue;
+        const x = (((Math.round(cx) + dx) % N) + N) % N;
+        const y = (((Math.round(cy) + dy) % N) + N) % N;
+        h[y * N + x] += q < 1 ? depth * (q * q - 1) + 0.12 : 0.12 * (2 - q) ** 2;
+      }
+    }
+  }
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const v of h) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) {
+    const g = Math.round(((h[i] - lo) / (hi - lo)) * 255);
+    img.data.set([g, g, g, 255], i * 4);
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 function Terrain({ terrain }: { terrain: TerrainSource }) {
+  const detail = useMemo(regolithTexture, []);
+  useEffect(() => () => detail.dispose(), [detail]);
   const geometry = useMemo(() => {
     const size = terrain.radius * 2;
     const g = new THREE.PlaneGeometry(size, size, 320, 320);
@@ -122,10 +200,12 @@ function Terrain({ terrain }: { terrain: TerrainSource }) {
     // Round patch whose outer rim fades out, so from above it melts into the globe below; brightness
     // from the terrain's albedo (fresh crater rims and ejecta read lighter).
     const rgba = new Float32Array(p.count * 4);
+    const uv = g.attributes.uv;
     for (let i = 0; i < p.count; i++) {
       const x = warp(p.getX(i));
       const z = warp(p.getZ(i));
       p.setXYZ(i, x, terrain.heightAt(x, z), z);
+      uv.setXY(i, x / DETAIL_TILE_M, z / DETAIL_TILE_M); // detail texture in metres, same density everywhere
       const d = Math.hypot(x, z) / R;
       const a = terrain.albedoAt ? terrain.albedoAt(x, z) : 1;
       rgba.set([a, a, a, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
@@ -138,7 +218,23 @@ function Terrain({ terrain }: { terrain: TerrainSource }) {
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
       {/* Regolith: grey, fully rough, no gloss (airless). */}
-      <meshStandardMaterial color={new THREE.Color(0.5, 0.49, 0.47)} roughness={1} metalness={0} vertexColors transparent />
+      <meshStandardMaterial
+        color={new THREE.Color(0.6, 0.59, 0.57)}
+        roughness={1}
+        metalness={0}
+        vertexColors
+        transparent
+        bumpMap={detail}
+        bumpScale={2.2}
+        map={detail}
+        onBeforeCompile={(sh) => {
+          // Use the detail texture only as a light brightness variation (0.8–1.1), not full contrast.
+          sh.fragmentShader = sh.fragmentShader.replace(
+            '#include <map_fragment>',
+            '#ifdef USE_MAP\n  float detailLum = texture2D( map, vMapUv ).r;\n  diffuseColor.rgb *= mix( 0.8, 1.1, detailLum );\n#endif',
+          );
+        }}
+      />
     </mesh>
   );
 }
@@ -187,7 +283,8 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         ref={sun}
         position={dir}
         target={target}
-        intensity={up ? 3.2 : 0}
+        // Like a camera's exposure: a little less light as the Sun climbs, so high-Sun scenes don't wash out.
+        intensity={up ? 3.6 * (1 - 0.42 * THREE.MathUtils.smoothstep(sky?.sun.elDeg ?? 0, 6, 45)) : 0}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -200,8 +297,10 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         shadow-bias={-0.0004}
       />
       {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black. */}
-      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 : 0.05} color={color.earth} />
-      <ambientLight intensity={0.07} />
+      {/* Fill so shadows and the night side stay readable (earthshine + a soft overall lift). */}
+      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.3 : 0.12} color={color.earth} />
+      <hemisphereLight args={[0xd8dce4, 0x2a2927, 0.16]} />
+      <ambientLight intensity={0.05} />
     </>
   );
 }
