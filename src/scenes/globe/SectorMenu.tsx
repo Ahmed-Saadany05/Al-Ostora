@@ -1,38 +1,128 @@
 /**
- * Right-hand menu of step 1 (owner: Pink). First the four sectors of the Moon; after choosing one,
- * that sector's landing sites, custom coordinates, and the step's footer (chips + primary button).
+ * Right-hand panel of step 1 (owner: Pink), laid out like the design:
+ *   MISSION DESIGN  (01)(02)(03)
+ *   + FIRST, FIND YOUR PLACE
+ *   A world of / possibilities.
+ *   01 Nearside · 3 landing spots  ◐ ↗   … 05 Custom coordinates ⌖ ↗
+ * Choosing a region lists its sites (lettered A, B, C … like the pins on the Moon); "Custom
+ * coordinates" opens a lat/lon form. The step's footer (selection + primary button) sits at the bottom.
  * Hover/focus is reported up so the 3D Moon can turn and glow.
  */
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { formatLatLon } from '@/shared/format';
 import type { Site } from '@/shared/types';
-import { Button, Card, Icon } from '@/shared/ui';
-import { REGION_LABEL, REGION_ORDER, type RegionId } from '../lib/moonFrame';
-import { KIND_ICON, KIND_WORD } from './pickerTypes';
+import { Button, Icon } from '@/shared/ui';
+import type { RegionId } from '../lib/moonFrame';
+import { siteLetter } from './pickerTypes';
 import g from './globe.module.css';
 
-/** One line per sector: why you would (or would not) land there. Plain words for the public. */
-const REGION_BLURB: Record<RegionId, string> = {
-  'south-pole': 'Water ice in craters that never see the Sun; ridges in near-constant light. Artemis goes here.',
-  nearside: 'Always faces Earth, so a radio link is easy. Apollo landed here.',
-  farside: 'Never sees Earth: no direct radio contact without a relay satellite.',
-  'north-pole': 'Long shadows and a low Sun, like the south pole, but less explored.',
+/** Display order and words for each region (plain language for the public). */
+export const REGIONS: RegionId[] = ['nearside', 'farside', 'north-pole', 'south-pole'];
+export const REGION_COPY: Record<RegionId, { name: string; accent: string; blurb: string }> = {
+  nearside: {
+    name: 'Nearside',
+    accent: 'familiar ground.',
+    blurb: 'Always faces Earth, so a radio link is easy. Apollo landed here.',
+  },
+  farside: {
+    name: 'Farside',
+    accent: 'discoveries.',
+    blurb: 'Beyond the familiar. Heavily cratered highlands on the side facing away from Earth: no direct radio contact without a relay.',
+  },
+  'north-pole': {
+    name: 'North polar',
+    accent: 'long shadows.',
+    blurb: 'A low Sun skims the horizon, like at the south pole, but far less explored.',
+  },
+  'south-pole': {
+    name: 'South polar',
+    accent: 'ice and light.',
+    blurb: 'Water ice in craters that never see the Sun; ridges in near-constant light. Artemis goes here.',
+  },
 };
+
+/** Half-lit disc per region: which side of the Moon it is. */
+function RegionIcon({ region }: { region: RegionId }) {
+  const half: Record<RegionId, string> = {
+    nearside: 'M12 3 A9 9 0 0 0 12 21 Z',
+    farside: 'M12 3 A9 9 0 0 1 12 21 Z',
+    'north-pole': 'M3 12 A9 9 0 0 1 21 12 Z',
+    'south-pole': 'M3 12 A9 9 0 0 0 21 12 Z',
+  };
+  return (
+    <svg className={g.regionIcon} viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d={half[region]} fill="currentColor" />
+    </svg>
+  );
+}
+
+function CrosshairIcon() {
+  return (
+    <svg className={g.regionIcon} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.2">
+      <circle cx="12" cy="12" r="6" />
+      <path d="M12 2v5M12 17v5M2 12h5M17 12h5" />
+    </svg>
+  );
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
 
 interface Props {
   sites: Site[];
   selectedIds: string[];
   active: RegionId | null;
+  /** The custom-coordinates view is open. */
+  custom: boolean;
   onHoverRegion: (r: RegionId | null) => void;
   onChooseRegion: (r: RegionId) => void;
-  onBack: () => void;
+  onOpenCustom: () => void;
   onHoverSite: (id: string | null) => void;
   onChooseSite: (id: string) => void;
   onCoords: (lat: number, lon: number) => void;
   footer?: ReactNode;
 }
 
-export function SectorMenu({ sites, selectedIds, active, onHoverRegion, onChooseRegion, onBack, onHoverSite, onChooseSite, onCoords, footer }: Props) {
+/** MISSION DESIGN + the three steps of the flow: 01 site, 02 dates, 03 launch. */
+function Stepper({ siteDone }: { siteDone: boolean }) {
+  const steps = [
+    { n: 1, label: 'Choose a site' },
+    { n: 2, label: 'Pick a date' },
+    { n: 3, label: 'Launch' },
+  ];
+  const current = siteDone ? 2 : 1;
+  return (
+    <div className={g.stepper}>
+      <span className={g.kicker}>Mission design</span>
+      <ol className={g.steps} aria-label="Mission steps">
+        {steps.map((s) => (
+          <li
+            key={s.n}
+            className={[g.step, s.n === current && g.stepNow, s.n < current && g.stepDone].filter(Boolean).join(' ')}
+            aria-current={s.n === current ? 'step' : undefined}
+            title={s.label}
+          >
+            {s.n < current ? <Icon name="check" size={11} /> : <span className="num">{pad(s.n)}</span>}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+export function SectorMenu({
+  sites,
+  selectedIds,
+  active,
+  custom,
+  onHoverRegion,
+  onChooseRegion,
+  onOpenCustom,
+  onHoverSite,
+  onChooseSite,
+  onCoords,
+  footer,
+}: Props) {
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
   const [error, setError] = useState<string>();
@@ -53,89 +143,138 @@ export function SectorMenu({ sites, selectedIds, active, onHoverRegion, onChoose
     onFocus: () => onHoverRegion(r),
     onBlur: () => onHoverRegion(null),
   });
+  const catalogued = sites.filter((x) => x.kind !== 'custom');
+  const head = (eyebrow: string, title: string, accent: string, lead: ReactNode) => (
+    <header className={g.panelHead}>
+      <span className={g.eyebrowPlus}>
+        <Icon name="plus" size={12} /> {eyebrow}
+      </span>
+      <h2 className={g.panelTitle}>
+        <span>{title}</span>
+        <em>{accent}</em>
+      </h2>
+      <p className={g.panelLead}>{lead}</p>
+    </header>
+  );
 
-  if (!active) {
+  const siteRow = (site: Site, i: number) => {
+    const selected = selectedIds.includes(site.id);
     return (
-      <nav className={g.menu} aria-label="Sectors of the Moon">
-        <p className={g.menuLabel}>Choose a sector</p>
-        <div className={g.menuList}>
-          {REGION_ORDER.map((r) => {
-            const count = sites.filter((x) => x.region === r).length;
+      <li key={site.id}>
+        <button
+          type="button"
+          className={[g.row, selected && g.rowOn].filter(Boolean).join(' ')}
+          onClick={() => onChooseSite(site.id)}
+          onMouseEnter={() => onHoverSite(site.id)}
+          onMouseLeave={() => onHoverSite(null)}
+          onFocus={() => onHoverSite(site.id)}
+          onBlur={() => onHoverSite(null)}
+          aria-pressed={selected}
+        >
+          <span className={g.rowLetter}>{site.kind === 'custom' ? <Icon name="pin" size={12} /> : siteLetter(i)}</span>
+          <span className={g.rowText}>
+            <strong>{site.kind === 'custom' ? 'Your pin' : site.name}</strong>
+            <small className="num">{formatLatLon(site.lat, site.lon)}</small>
+          </span>
+          <span className={g.rowEnd} aria-hidden>
+            <Icon name={selected ? 'check' : 'plus'} size={16} />
+          </span>
+        </button>
+      </li>
+    );
+  };
+
+  let body: ReactNode;
+  if (custom) {
+    const pins = sites.filter((x) => x.kind === 'custom');
+    body = (
+      <>
+        {head('Your own point', 'Custom', 'coordinates.', 'Any latitude and longitude on the Moon. Type them in, or click anywhere on the surface to drop a pin.')}
+        <form className={g.coordsForm} onSubmit={submit}>
+          <div className={g.coordRow}>
+            <input className={['num', g.input].join(' ')} placeholder="Lat −89.45" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} aria-label="Latitude" />
+            <input className={['num', g.input].join(' ')} placeholder="Lon −137.3" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} aria-label="Longitude" />
+            <Button type="submit" variant="secondary" leadingIcon="plus" icon={null}>
+              Add
+            </Button>
+          </div>
+          {error && (
+            <span className={g.error} role="alert">
+              <Icon name="alert" size={13} /> {error}
+            </span>
+          )}
+        </form>
+        {pins.length > 0 && <ul className={g.rows}>{pins.map(siteRow)}</ul>}
+      </>
+    );
+  } else if (active) {
+    const copy = REGION_COPY[active];
+    const list = sites.filter((x) => x.region === active);
+    body = (
+      <>
+        {head('Your landing site', copy.name, copy.accent, copy.blurb)}
+        <ul className={g.rows} aria-label={`${copy.name} landing sites`}>
+          {list.length === 0 && <li className={g.menuEmpty}>No catalogued sites here yet. Click the Moon to drop your own pin.</li>}
+          {list.map(siteRow)}
+        </ul>
+      </>
+    );
+  } else {
+    body = (
+      <>
+        {head(
+          'First, find your place',
+          'A world of',
+          'possibilities.',
+          <>
+            Four regions. <span className="num">{catalogued.length}</span> places to begin.
+            <br />
+            Where will your journey take you?
+          </>,
+        )}
+        <ul className={g.rows} aria-label="Regions of the Moon">
+          {REGIONS.map((r, i) => {
+            const count = catalogued.filter((x) => x.region === r).length;
             return (
-              <div key={r} {...hover(r)}>
-                <Card padding="sm" onSelect={() => onChooseRegion(r)}>
-                  <span className={g.sectorRow}>
-                    <span className={g.sectorText}>
-                      <strong>{REGION_LABEL[r]}</strong>
-                      <span>{REGION_BLURB[r]}</span>
-                    </span>
-                    <span className={g.count}>
-                      <span className="num">{count}</span> {count === 1 ? 'site' : 'sites'}
-                      <Icon name="arrowRight" size={14} />
-                    </span>
+              <li key={r} {...hover(r)}>
+                <button type="button" className={g.row} onClick={() => onChooseRegion(r)}>
+                  <span className={['num', g.rowNum].join(' ')}>{pad(i + 1)}</span>
+                  <span className={g.rowText}>
+                    <strong className={g.rowBig}>{REGION_COPY[r].name}</strong>
+                    <small>
+                      <span className="num">{count}</span> landing {count === 1 ? 'spot' : 'spots'}
+                    </small>
                   </span>
-                </Card>
-              </div>
+                  <RegionIcon region={r} />
+                  <span className={g.rowEnd} aria-hidden>
+                    <Icon name="arrowUpRight" size={16} />
+                  </span>
+                </button>
+              </li>
             );
           })}
-        </div>
-        {footer && <div className={g.menuFooter}>{footer}</div>}
-      </nav>
+          <li>
+            <button type="button" className={g.row} onClick={onOpenCustom}>
+              <span className={['num', g.rowNum].join(' ')}>{pad(REGIONS.length + 1)}</span>
+              <span className={g.rowText}>
+                <strong className={g.rowBig}>Custom coordinates</strong>
+                <small>Any point on the Moon</small>
+              </span>
+              <CrosshairIcon />
+              <span className={g.rowEnd} aria-hidden>
+                <Icon name="arrowUpRight" size={16} />
+              </span>
+            </button>
+          </li>
+        </ul>
+      </>
     );
   }
 
-  const list = sites.filter((x) => x.region === active);
   return (
-    <nav className={g.menu} aria-label={`${REGION_LABEL[active]} landing sites`}>
-      <div className={g.menuHead}>
-        <Button variant="ghost" leadingIcon="arrowLeft" icon={null} onClick={onBack}>
-          All sectors
-        </Button>
-        <h2 className={g.menuTitle}>{REGION_LABEL[active]}</h2>
-      </div>
-      <div className={g.menuList}>
-        {list.length === 0 && <p className={g.menuEmpty}>No catalogued sites here yet. Drop your own pin below.</p>}
-        {list.map((site) => {
-          const selected = selectedIds.includes(site.id);
-          return (
-            <div key={site.id} onMouseEnter={() => onHoverSite(site.id)} onMouseLeave={() => onHoverSite(null)} onFocus={() => onHoverSite(site.id)} onBlur={() => onHoverSite(null)}>
-              <Card padding="sm" onSelect={() => onChooseSite(site.id)} selected={selected}>
-                <span className={g.siteRow}>
-                  <span className={g.check} aria-hidden>
-                    {selected && <Icon name="check" size={14} />}
-                  </span>
-                  <span className={g.sectorText}>
-                    <strong>{site.kind === 'custom' ? 'Your pin' : site.name}</strong>
-                    <span className="num">{formatLatLon(site.lat, site.lon)}</span>
-                  </span>
-                  <span className={g.kind} title={KIND_WORD[site.kind]}>
-                    <Icon name={KIND_ICON[site.kind]} size={14} />
-                    {KIND_WORD[site.kind]}
-                  </span>
-                </span>
-              </Card>
-            </div>
-          );
-        })}
-      </div>
-
-      <form className={g.coordsForm} onSubmit={submit}>
-        <span className={g.menuLabel}>Or enter coordinates</span>
-        <div className={g.coordRow}>
-          <input className={['num', g.input].join(' ')} placeholder="Lat −89.45" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} aria-label="Latitude" />
-          <input className={['num', g.input].join(' ')} placeholder="Lon −137.3" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} aria-label="Longitude" />
-          <Button type="submit" variant="secondary" leadingIcon="plus" icon={null}>
-            Add
-          </Button>
-        </div>
-        {error && (
-          <span className={g.error} role="alert">
-            <Icon name="alert" size={13} /> {error}
-          </span>
-        )}
-        <span className={g.menuHint}>…or click anywhere on the Moon to drop a pin.</span>
-      </form>
-
+    <nav className={g.menu} aria-label="Choose your landing site">
+      <Stepper siteDone={selectedIds.length > 0} />
+      <div className={g.menuScroll}>{body}</div>
       {footer && <div className={g.menuFooter}>{footer}</div>}
     </nav>
   );

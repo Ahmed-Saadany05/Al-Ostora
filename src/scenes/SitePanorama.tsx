@@ -4,7 +4,8 @@
  * Full: the 3D "stand on the Moon" view (moonview/MoonView3D, loaded lazily): terrain, Sun and Earth
  * at their az/el from `sky`, their dotted sky paths over the lunar day (from useDayReport), labels.
  * Compact (Compare cards), or no WebGL / a 3D failure: the 2D horizon strip (SitePanoramaStrip).
- * All numbers come from the shared data hooks; the terrain is a placeholder TerrainSource for now.
+ * All numbers come from the shared data hooks. Terrain (Aser): the real LOLA skyline when the site has one
+ * (horizonTerrain), otherwise the placeholder; both with procedural realism (withRealism).
  */
 import { Component, lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
 import { nextTransition, useDayReport } from '@/shared/data';
@@ -13,7 +14,8 @@ import { useTime } from '@/shared/store/time';
 import { LUNAR, type SkyState } from '@/shared/types';
 import type { SitePanoramaProps } from './contracts';
 import { SitePanoramaStrip } from './SitePanoramaStrip';
-import { placeholderTerrain, seedFrom } from './moonview/terrain';
+import { interpolateSky } from './moonview/skyMath';
+import { horizonTerrain, placeholderTerrain, seedFrom, withRealism } from './moonview/terrain';
 
 const MoonView3D = lazy(() => import('./moonview/MoonView3D'));
 
@@ -55,7 +57,17 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
   const rangeStart = useTime((s) => s.rangeStart);
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
   const { data: report } = useDayReport(compact || !webgl ? undefined : site, rangeStart, LUNAR.synodicDays);
-  const terrain = useMemo(() => placeholderTerrain(seedFrom(site.id)), [site.id]);
+  // Real skyline when this site has a LOLA horizon (live data, 15 polar sites); else the placeholder.
+  // Realism detail on top; on the real skyline it only carves beyond the flat area, so it stays exact.
+  const realHorizon = props.horizon?.terrain === 'lola' ? props.horizon : undefined;
+  const terrain = useMemo(() => {
+    const seed = seedFrom(site.id);
+    if (!realHorizon) return withRealism(placeholderTerrain(seed), seed);
+    const ring = horizonTerrain(realHorizon);
+    return withRealism(ring, seed, ring.rockRadius);
+  }, [realHorizon, site.id]);
+  // The sky at exactly `time`, blended from the samples: no lag while scrubbing or in a timelapse.
+  const live = useMemo(() => interpolateSky(report?.samples, time) ?? sky, [report, time, sky]);
 
   const strip = <SitePanoramaStrip {...props} />;
   if (compact || !webgl) return strip;
@@ -63,13 +75,14 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
     <ViewBoundary fallback={strip}>
       <Suspense fallback={null}>
         <MoonView3D
-          sky={sky}
+          sky={live}
+          site={{ lat: site.lat, lon: site.lon, name: site.kind === 'custom' ? 'your pin' : site.name }}
           samples={report?.samples}
           terrain={terrain}
           mode={mode}
           dense={dense}
-          sunLabel={{ next: sky ? nextLabel(report?.samples, time, 'sun', sky.sunVisible) : null }}
-          earthLabel={{ next: sky ? nextLabel(report?.samples, time, 'earth', sky.earthVisible) : null }}
+          sunLabel={{ next: live ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}
+          earthLabel={{ next: live ? nextLabel(report?.samples, time, 'earth', live.earthVisible) : null }}
         />
       </Suspense>
     </ViewBoundary>

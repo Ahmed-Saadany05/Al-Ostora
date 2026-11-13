@@ -45,7 +45,7 @@ const MOON_IMG = '/moon/lroc_color_poles_2k.webp';
 /** NASA Apollo 17 "Blue Marble" (AS17-148-22727, public domain), resized to 360 px. */
 const EARTH_IMG = '/earth/blue-marble-apollo17.jpg';
 /** Report both to Goda for the credits page. */
-export const IMAGE_CREDIT = 'Earth: NASA Apollo 17 "Blue Marble" (AS17-148-22727) · Moon: NASA SVS CGI Moon Kit (LRO LROC)';
+export const IMAGE_CREDIT = 'Earth: NASA Apollo 17 "Blue Marble" (AS17-148-22727) · Moon: NASA SVS CGI Moon Kit, LROC imagery NASA/GSFC/Arizona State University';
 
 /** Fixed pseudo-random stars for the flight drawing (same every render). */
 const STARS = Array.from({ length: 54 }, (_, i) => {

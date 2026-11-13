@@ -5,24 +5,37 @@
  * wired), black sky and stars, the Sun and Earth at their az/el from SkyState (real angular sizes,
  * Earth's phase from the Sun's direction), their dotted paths across the sky over the lunar day
  * (from DayReport samples), a dashed horizon and N/E/S/W marks. Labels over the Sun and Earth are
- * DOM elements that follow them. Drag to look around 360°; "above" orbits over the terrain.
+ * DOM elements that follow them. Drag to look around 360°.
+ * "Fly above" eases the camera up to 15 km: the local terrain fades into the real Moon Trek globe
+ * (true radius) laid under the site, so the curved horizon shows instead of the edge of a block.
+ * The sky (stars, Sun, Earth, paths) is a dome that follows the camera, far beyond the ground.
  * Every number comes from props (the data hooks); nothing here invents values.
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Line } from '@react-three/drei';
-import { useEffect, useMemo, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { formatDeg } from '@/shared/format';
+import { DEFAULT_SUN, MoonTrekGlobe } from '../globe/MoonTrekGlobe';
+import { enuAxes, MOON_RADIUS_M, type Vec3 } from '../lib/moonFrame';
 import { color } from '@/shared/theme/tokens';
 import type { SkyState } from '@/shared/types';
 import { azElToLocal, skyPathSegments, type Vec3Tuple } from './skyMath';
 import { type TerrainSource } from './terrain';
 import v from './moonview.module.css';
 
-/** Sky objects sit on this sphere (metres); far beyond the terrain, inside the camera's far plane. */
+/** Sky objects are built on this sphere (metres) inside a dome scaled by SKY_SCALE (≈ 3,200 km). */
 const SKY_R = 8000;
+/** The dome is scaled up so it sits beyond the Moon's horizon even from 15 km up. */
+const SKY_SCALE = 400;
 const EYE_HEIGHT = 1.8;
 const FOV = 60;
+/** Fly above: altitude (m), horizontal stand-off per metre of altitude, and look-down angle. */
+const ABOVE_ALT = 15_000;
+const ABOVE_BACK = 1.3;
+const ABOVE_PITCH_DEG = -22;
+/** Seconds for the climb (and for the way back down). */
+const FLY_S = 2.2;
 
 export interface BodyLabel {
   /** e.g. "Sets in 14d 6h" — computed by the page from the day report. */
@@ -31,6 +44,8 @@ export interface BodyLabel {
 
 export interface MoonView3DProps {
   sky?: SkyState;
+  /** Where we stand: puts the real Moon globe under the site and names the "you are here" pin. */
+  site?: { lat: number; lon: number; name: string };
   /** Time-ordered sky samples over the lunar day (DayReport.samples) for the dotted paths. */
   samples?: SkyState[];
   terrain: TerrainSource;
@@ -91,22 +106,104 @@ function placeholderEarthTexture() {
 
 // ---------------------------------------------------------------- scene parts
 
+/**
+ * Ground mesh. Pink: a round patch whose outer rim fades out, so from above it melts into the real
+ * Moon Trek globe below. Realism pass (Aser): a POLAR grid — rings packed tightly near the observer,
+ * spreading out with distance — so small craters and rocks show close by while far ridges stay cheap;
+ * vertex colours carry the regolith brightness (terrain.albedoAt) plus Pink's fade in alpha.
+ */
 function Terrain({ terrain }: { terrain: TerrainSource }) {
   const geometry = useMemo(() => {
-    const size = terrain.radius * 2;
-    const g = new THREE.PlaneGeometry(size, size, 256, 256);
-    g.rotateX(-Math.PI / 2);
-    const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setY(i, terrain.heightAt(p.getX(i), p.getZ(i)));
+    const RINGS = 190;
+    const SEGS = 512;
+    const r0 = 1.5;
+    const R = terrain.radius;
+    const shade = (x: number, z: number) => terrain.albedoAt?.(x, z) ?? 0.55;
+    const pos: number[] = [0, terrain.heightAt(0, 0), 0];
+    const a0 = shade(0, 0);
+    const col: number[] = [a0, a0 * 0.985, a0 * 0.96, 1];
+    for (let k = 0; k < RINGS; k++) {
+      const r = r0 * Math.pow(R / r0, k / (RINGS - 1));
+      const fade = 1 - THREE.MathUtils.smoothstep(r / R, 0.82, 0.99);
+      for (let s = 0; s < SEGS; s++) {
+        const a = (s / SEGS) * Math.PI * 2;
+        const x = Math.sin(a) * r;
+        const z = -Math.cos(a) * r;
+        pos.push(x, terrain.heightAt(x, z), z);
+        const al = shade(x, z);
+        col.push(al, al * 0.985, al * 0.96, fade); // slightly warm grey, like regolith
+      }
+    }
+    const idx: number[] = [];
+    for (let s = 0; s < SEGS; s++) idx.push(0, 1 + ((s + 1) % SEGS), 1 + s);
+    for (let k = 0; k < RINGS - 1; k++)
+      for (let s = 0; s < SEGS; s++) {
+        const i0 = 1 + k * SEGS + s;
+        const i1 = 1 + k * SEGS + ((s + 1) % SEGS);
+        idx.push(i0, i1, i0 + SEGS, i1, i1 + SEGS, i0 + SEGS);
+      }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+    g.setIndex(idx);
     g.computeVertexNormals();
     return g;
   }, [terrain]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
-      {/* Regolith: grey, fully rough, no gloss (airless). */}
-      <meshStandardMaterial color={new THREE.Color(0.55, 0.54, 0.52)} roughness={1} metalness={0} />
+      {/* Regolith: fully rough, no gloss (airless); brightness per vertex; rim fades into the globe. */}
+      <meshStandardMaterial roughness={1} metalness={0} vertexColors transparent />
     </mesh>
+  );
+}
+
+/**
+ * Rocks and boulders near the observer (realism pass, Aser). Procedural (no models): squashed,
+ * jittered icosahedra, many small and few large. Kept under ~1.1 m tall — below the 1.8 m eye — and
+ * only inside terrain.rockRadius, so they can never hide the Sun or Earth or change a real skyline.
+ */
+function Rocks({ terrain, seed = 7 }: { terrain: TerrainSource; seed?: number }) {
+  const { geometry, matrices, count } = useMemo(() => {
+    let s = seed * 9301 + 49297;
+    const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+    const geo = new THREE.IcosahedronGeometry(1, 1);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const f = 0.75 + rnd() * 0.45;
+      p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.7, p.getZ(i) * f);
+    }
+    geo.computeVertexNormals();
+    const maxR = Math.min(terrain.rockRadius ?? 600, 600);
+    const n = 1100;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const out: THREE.Matrix4[] = [];
+    for (let i = 0; i < n; i++) {
+      const d = 6 + Math.pow(rnd(), 1.6) * (maxR - 6); // more rocks close by
+      const a = rnd() * Math.PI * 2;
+      const x = Math.sin(a) * d;
+      const z = -Math.cos(a) * d;
+      const size = Math.min(1.1, 0.06 * Math.pow(1 - rnd() * 0.999, -1 / 1.8)); // power law
+      e.set(rnd() * 0.6, rnd() * Math.PI * 2, rnd() * 0.6);
+      q.setFromEuler(e);
+      m.compose(new THREE.Vector3(x, terrain.heightAt(x, z) + size * 0.25, z), q, new THREE.Vector3(size, size * (0.6 + rnd() * 0.5), size * (0.8 + rnd() * 0.4)));
+      out.push(m.clone());
+    }
+    return { geometry: geo, matrices: out, count: n };
+  }, [terrain, seed]);
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    matrices.forEach((mm, i) => ref.current!.setMatrixAt(i, mm));
+    ref.current.instanceMatrix.needsUpdate = true;
+  }, [matrices]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <instancedMesh ref={ref} args={[geometry, undefined, count]} castShadow receiveShadow>
+      <meshStandardMaterial color={new THREE.Color(0.47, 0.46, 0.44)} roughness={1} metalness={0} flatShading />
+    </instancedMesh>
   );
 }
 
@@ -156,19 +253,21 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         target={target}
         intensity={up ? 3.2 : 0}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={4096}
+        shadow-mapSize-height={4096}
         shadow-camera-left={-radius}
         shadow-camera-right={radius}
         shadow-camera-top={radius}
         shadow-camera-bottom={-radius}
         shadow-camera-near={1}
         shadow-camera-far={radius * 4}
-        shadow-bias={-0.0004}
+        shadow-bias={-0.0003}
+        shadow-normalBias={0.6}
       />
       {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black. */}
       <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 : 0.05} color={color.earth} />
-      <ambientLight intensity={0.07} />
+      {/* Almost no fill: no air to scatter light, so shade is close to black (realism pass). */}
+      <ambientLight intensity={0.025} />
     </>
   );
 }
@@ -186,7 +285,7 @@ function Bodies({ sky }: { sky?: SkyState }) {
       <group position={sunPos}>
         <mesh>
           <sphereGeometry args={[sunR, 32, 16]} />
-          <meshBasicMaterial color={color.text} toneMapped={false} />
+          <meshBasicMaterial color={color.text} toneMapped={false} depthWrite={false} />
         </mesh>
         {/* Glare in the eye/camera only — there is no air to scatter light. */}
         <sprite scale={[sunR * 14, sunR * 14, 1]}>
@@ -196,7 +295,7 @@ function Bodies({ sky }: { sky?: SkyState }) {
       {/* Lit by the same Sun direction as the terrain, so its phase is right by construction. */}
       <mesh position={earthPos} rotation={[0.41, 0, 0]}>
         <sphereGeometry args={[earthR, 48, 32]} />
-        <meshStandardMaterial map={earthMap} roughness={0.9} metalness={0} />
+        <meshStandardMaterial map={earthMap} roughness={0.9} metalness={0} depthWrite={false} />
       </mesh>
     </>
   );
@@ -219,6 +318,46 @@ function SkyPaths({ samples }: { samples?: SkyState[] }) {
   );
 }
 
+/** Stars, Sun, Earth and paths: centred on the camera and scaled far out, so the ground (terrain
+ *  and globe) always hides what is below the horizon, whatever the altitude. */
+function SkyDome({ children }: { children: ReactNode }) {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => g.current?.position.copy(camera.position));
+  return (
+    <group ref={g} scale={SKY_SCALE}>
+      {children}
+    </group>
+  );
+}
+
+/** Local (x east, y up, z south) direction → Moon-fixed frame at the site. */
+function localToMoon(d: Vec3Tuple, lat: number, lon: number): Vec3 {
+  const { east, north, up } = enuAxes(lat, lon);
+  return {
+    x: east.x * d[0] + up.x * d[1] - north.x * d[2],
+    y: east.y * d[0] + up.y * d[1] - north.y * d[2],
+    z: east.z * d[0] + up.z * d[1] - north.z * d[2],
+  };
+}
+
+/** The real Moon (Moon Trek imagery, true radius) laid under the site: site at the origin, its
+ *  local up = +Y, east = +X, north = −Z. MoonTrekGlobe is 1 unit = 1 radius, so scale it back to metres. */
+function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: SkyState }) {
+  const quaternion = useMemo(() => {
+    const { east, north, up } = enuAxes(lat, lon);
+    // Moon-fixed → local rows (east, up, −north), after undoing the globe's own Z-up → Y-up turn.
+    const toLocal = new THREE.Matrix4().set(east.x, east.y, east.z, 0, up.x, up.y, up.z, 0, -north.x, -north.y, -north.z, 0, 0, 0, 0, 1);
+    const undoBody = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)).invert();
+    return new THREE.Quaternion().setFromRotationMatrix(toLocal.multiply(undoBody));
+  }, [lat, lon]);
+  const sun = useMemo(() => (sky ? localToMoon(azElToLocal(sky.sun.azDeg, sky.sun.elDeg), lat, lon) : DEFAULT_SUN), [sky, lat, lon]);
+  return (
+    <group position={[0, -MOON_RADIUS_M, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
+      <MoonTrekGlobe sun={sun} />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- camera
 
 interface Look {
@@ -226,34 +365,58 @@ interface Look {
   pitch: number; // radians
 }
 
+const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+
+/**
+ * Stand: eye height on the site, looking where you dragged. Above: 15 km up, set back along the view
+ * direction, looking down 22° (the site below, the curved horizon at the top). Switching flies
+ * between them: the altitude grows geometrically (slow lift-off, then a fast climb), so it feels
+ * like taking off rather than a zoom.
+ */
 function CameraRig({ look, mode, terrain }: { look: MutableRefObject<Look>; mode: 'stand' | 'above'; terrain: TerrainSource }) {
   const camera = useThree((s) => s.camera);
   const eye = useMemo(() => terrain.heightAt(0, 0) + EYE_HEIGHT, [terrain]);
+  const k = useRef(mode === 'above' ? 1 : 0);
+  const dir = useMemo(() => new THREE.Vector3(), []);
+  const up = useMemo(() => new THREE.Vector3(), []);
   const t = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
+  useFrame((_, dt) => {
+    const goal = mode === 'above' ? 1 : 0;
+    const step = Math.min(dt, 0.05) / FLY_S;
+    k.current = goal > k.current ? Math.min(goal, k.current + step) : Math.max(goal, k.current - step);
+    const e = ease(k.current);
     const { yaw, pitch } = look.current;
-    if (mode === 'stand') {
-      camera.position.set(0, eye, 0);
-      const d = azElToLocal((yaw * 180) / Math.PI, (pitch * 180) / Math.PI);
-      camera.lookAt(t.set(d[0], eye + d[1], d[2]));
-    } else {
-      // Fly above: orbit the site from 700 m up, 1.6 km out, looking at the observer's spot.
-      const back = azElToLocal((yaw * 180) / Math.PI + 180, 24, 1700);
-      camera.position.set(back[0], eye + back[1], back[2]);
-      camera.lookAt(t.set(0, eye, 0));
-    }
+    const yawDeg = (yaw * 180) / Math.PI;
+
+    const h = EYE_HEIGHT * (ABOVE_ALT / EYE_HEIGHT) ** e; // 1.8 m … 15 km, geometric
+    const back = azElToLocal(yawDeg + 180, 0, (h - EYE_HEIGHT) * ABOVE_BACK);
+    camera.position.set(back[0], eye - EYE_HEIGHT + h, back[2]);
+
+    dir.set(...azElToLocal(yawDeg, (pitch * 180) / Math.PI));
+    up.set(...azElToLocal(yawDeg, ABOVE_PITCH_DEG));
+    dir.lerp(up, e).normalize();
+    camera.lookAt(t.copy(camera.position).add(dir));
   });
   return null;
 }
 
+interface Anchor {
+  id: string;
+  pos: Vec3Tuple;
+  /** In the sky dome (follows the camera) rather than on the ground. */
+  sky?: boolean;
+}
+
 /** Projects 3D points to the canvas and moves DOM labels there (like the Step 1 pins). */
-function LabelProjector({ anchors, els }: { anchors: { id: string; pos: Vec3Tuple }[]; els: MutableRefObject<Map<string, HTMLElement>> }) {
+function LabelProjector({ anchors, els }: { anchors: Anchor[]; els: MutableRefObject<Map<string, HTMLElement>> }) {
   const p = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, size }) => {
     for (const a of anchors) {
       const el = els.current.get(a.id);
       if (!el) continue;
-      p.set(...a.pos).project(camera);
+      p.set(...a.pos);
+      if (a.sky) p.multiplyScalar(SKY_SCALE).add(camera.position); // lives in the sky dome
+      p.project(camera);
       const hidden = String(p.z > 1 || Math.abs(p.x) > 1.2 || Math.abs(p.y) > 1.2);
       if (el.dataset.hidden !== hidden) el.dataset.hidden = hidden;
       el.style.transform = `translate3d(${((p.x + 1) / 2) * size.width}px, ${((1 - p.y) / 2) * size.height}px, 0)`;
@@ -264,7 +427,7 @@ function LabelProjector({ anchors, els }: { anchors: { id: string; pos: Vec3Tupl
 
 // ---------------------------------------------------------------- component
 
-export default function MoonView3D({ sky, samples, terrain, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
+export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
   // Open looking toward the Sun (or Earth if the Sun is down), slightly above the horizon.
   const initialYaw = sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
   const look = useRef<Look>({ yaw: initialYaw, pitch: (4 * Math.PI) / 180 });
@@ -301,15 +464,17 @@ export default function MoonView3D({ sky, samples, terrain, mode, sunLabel, eart
     if (el) els.current.set(id, el);
     else els.current.delete(id);
   };
+  const siteY = useMemo(() => terrain.heightAt(0, 0), [terrain]);
   const anchors = useMemo(() => {
-    const a: { id: string; pos: Vec3Tuple }[] = [];
+    const a: Anchor[] = [];
     if (sky) {
-      a.push({ id: 'sun', pos: azElToLocal(sky.sun.azDeg, sky.sun.elDeg, SKY_R) });
-      a.push({ id: 'earth', pos: azElToLocal(sky.earth.azDeg, sky.earth.elDeg, SKY_R) });
+      a.push({ id: 'sun', pos: azElToLocal(sky.sun.azDeg, sky.sun.elDeg, SKY_R), sky: true });
+      a.push({ id: 'earth', pos: azElToLocal(sky.earth.azDeg, sky.earth.elDeg, SKY_R), sky: true });
     }
-    for (const [id, az] of [['N', 0], ['E', 90], ['S', 180], ['W', 270]] as const) a.push({ id, pos: azElToLocal(az, 0, SKY_R * 0.98) });
+    for (const [id, az] of [['N', 0], ['E', 90], ['S', 180], ['W', 270]] as const) a.push({ id, pos: azElToLocal(az, 0, SKY_R * 0.98), sky: true });
+    a.push({ id: 'site', pos: [0, siteY, 0] });
     return a;
-  }, [sky]);
+  }, [sky, siteY]);
 
   return (
     <div
@@ -325,13 +490,22 @@ export default function MoonView3D({ sky, samples, terrain, mode, sunLabel, eart
           : 'View from the site, loading.'
       }
     >
-      <Canvas shadows dpr={[1, 1.75]} camera={{ fov: FOV, near: 0.5, far: 12000, position: [0, 2, 0] }} gl={{ antialias: true }}>
+      <Canvas
+        shadows
+        dpr={[1, 1.75]}
+        camera={{ fov: FOV, near: 0.5, far: SKY_R * SKY_SCALE * 1.2, position: [0, 2, 0] }}
+        gl={{ antialias: true, logarithmicDepthBuffer: true }}
+      >
         <color attach="background" args={[color.bg]} />
-        <Stars />
+        <SkyDome>
+          <Stars />
+          <Bodies sky={sky} />
+          <SkyPaths samples={samples} />
+        </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
+        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} />}
         <Terrain terrain={terrain} />
-        <Bodies sky={sky} />
-        <SkyPaths samples={samples} />
+        <Rocks terrain={terrain} />
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />
       </Canvas>
@@ -356,6 +530,14 @@ export default function MoonView3D({ sky, samples, terrain, mode, sunLabel, eart
               </span>
             </div>
           </>
+        )}
+        {site && (
+          <div ref={bind('site')} className={[v.anchor, mode === 'above' ? v.siteOn : v.siteOff].join(' ')} data-hidden="true">
+            <span className={v.sitePin}>
+              <i aria-hidden />
+              You are here · {site.name}
+            </span>
+          </div>
         )}
         {['N', 'E', 'S', 'W'].map((d) => (
           <div key={d} ref={bind(d)} className={v.anchor} data-hidden="true">

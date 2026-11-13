@@ -8,5 +8,5 @@ import { ErrorState } from '@/shared/ui';
 export function DataError({ errors }: { errors: (Error | undefined)[] }) {
   const e = errors.find(Boolean);
   if (!e) return null;
-  return <ErrorState compact title="NASA data isn't available for this right now" message={`${e.message} Try again online, or pick another date.`} />;
+  return <ErrorState compact title="Live data (JPL Horizons) isn't available for this right now" message={`${e.message} Try again online, or pick another date.`} />;
 }
