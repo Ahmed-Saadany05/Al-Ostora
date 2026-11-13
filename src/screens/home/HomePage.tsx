@@ -14,6 +14,9 @@ import { useSkyView } from './skyView';
 import { shouldPlayIntro, useIntro } from './useIntro';
 import s from './HomePage.module.css';
 
+/** The live site pin on the Moon is hidden for now (team decision); set true to bring it back. */
+const SHOW_SITE_PIN = false;
+
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
@@ -23,7 +26,8 @@ export function HomePage() {
   // "Now" is local to Home: the shared clock may have been scrubbed in a mission step. Minute-rounded for stable cache keys.
   const [now] = useState(() => new Date(Math.round(Date.now() / 60_000) * 60_000).toISOString());
   // The page's only read of the sky (one useSky + one useMetrics for "now"); the pin and its card get it as a prop.
-  const view = useSkyView(site, now);
+  // Skipped while the pin is hidden: nothing on Home would show the data.
+  const view = useSkyView(SHOW_SITE_PIN ? site : undefined, now);
 
   const [textured, setTextured] = useState(false);
   // Set when the Moon is as ready as it will ever be: texture on, or a known failure (so the intro never waits for nothing).
@@ -86,7 +90,7 @@ export function HomePage() {
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
       <div ref={pins} className={s.pins} inert={!pinRevealed}>
-        {site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />}
+        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />}
       </div>
 
       <MotionToggle />

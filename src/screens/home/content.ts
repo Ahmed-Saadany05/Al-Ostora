@@ -44,8 +44,8 @@ export const PIN_COPY = {
 
 /** Shown only while the NASA texture is actually rendering. */
 export const IMAGERY_CREDIT = {
-  text: 'Moon imagery: NASA’s Scientific Visualization Studio (LRO LROC + LOLA)',
-  sourceIds: ['nasa-svs-moon-kit'],
+  text: 'Moon imagery: NASA Moon Trek / LRO WAC (NASA/GSFC/Arizona State University)',
+  sourceIds: ['nasa-moon-trek'],
 } as const satisfies { sourceIds: SourceId[] } & Record<string, unknown>;
 
 /** Shown only when sky.source says the positions really are Horizons. */

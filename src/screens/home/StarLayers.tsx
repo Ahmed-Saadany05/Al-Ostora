@@ -1,39 +1,22 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { color } from '@/shared/theme/tokens';
+import { startStarDrift } from '@/shared/ui/starDrift';
 import s from './StarLayers.module.css';
 
-/** Three depth layers: [seed, density, max cursor shift in px]. Each has its own seed so stars never double up. */
+/**
+ * Three depth layers: seed, density, max cursor shift in px, and drift speed in px/s (nearer layers
+ * drift faster, for depth). Each has its own seed so stars never double up.
+ */
 const LAYERS = [
-  { seed: 11, density: 0.00006, shift: 3 },
-  { seed: 23, density: 0.00007, shift: 5 },
-  { seed: 37, density: 0.00004, shift: 8 },
+  { seed: 11, density: 0.00006, shift: 3, speed: 2 },
+  { seed: 23, density: 0.00007, shift: 5, speed: 3.5 },
+  { seed: 37, density: 0.00004, shift: 8, speed: 5.5 },
 ] as const;
 
-function paint(canvas: HTMLCanvasElement, seed: number, density: number) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.scale(dpr, dpr);
-  let state = seed;
-  const rand = () => ((state = (state * 16807) % 2147483647) - 1) / 2147483646;
-  const n = Math.round(w * h * density);
-  ctx.fillStyle = color.text;
-  for (let i = 0; i < n; i++) {
-    const r = rand() < 0.92 ? 0.5 + rand() * 0.5 : 1 + rand() * 0.6;
-    ctx.globalAlpha = 0.25 + rand() * 0.7;
-    ctx.beginPath();
-    ctx.arc(rand() * w, rand() * h, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 /**
- * Home's own star field: static (no twinkle), three layers that drift a few pixels with the cursor.
+ * Home's own star field: three layers drifting slowly sideways at different speeds (paused when
+ * motion is off), which also shift a few pixels with the cursor.
  * The root is what the intro fades in; `parallax` turns the cursor drift on.
  */
 export function StarLayers({ parallax }: { parallax: boolean }) {
@@ -41,11 +24,10 @@ export function StarLayers({ parallax }: { parallax: boolean }) {
   const canvases = useRef<(HTMLCanvasElement | null)[]>([]);
 
   useEffect(() => {
-    const draw = () => canvases.current.forEach((c, i) => c && paint(c, LAYERS[i].seed, LAYERS[i].density));
-    draw();
-    const ro = new ResizeObserver(draw);
-    canvases.current[0] && ro.observe(canvases.current[0]);
-    return () => ro.disconnect();
+    const stops = canvases.current.map((c, i) =>
+      c ? startStarDrift(c, { seed: LAYERS[i].seed, density: LAYERS[i].density, speed: LAYERS[i].speed, fill: color.text }) : () => {},
+    );
+    return () => stops.forEach((stop) => stop());
   }, []);
 
   useEffect(() => {
