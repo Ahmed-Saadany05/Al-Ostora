@@ -15,7 +15,8 @@
  *  - Shackleton rim (awaiting the exact edition of the Data Book table A2.1-1).
  *  - Upcoming targets without a published point: IM-3, Blue Ghost 2, Griffin-1, Chang'e 7.
  */
-import type { Mission, Site, SiteRegion, SourceRef } from '@/shared/types';
+import { regionOf } from '@/shared/geo';
+import type { Mission, Site, SourceRef } from '@/shared/types';
 import {
   ARTEMIS_REGIONS_2022,
   ARTEMIS_REGIONS_2024,
@@ -31,7 +32,6 @@ const region = (id: string, name: string, siteName: string, lat: number, lon: nu
   site({
     id,
     name,
-    region: 'south-pole',
     lat,
     lon,
     coordQuality: 'region-site',
@@ -42,7 +42,7 @@ const region = (id: string, name: string, siteName: string, lat: number, lon: nu
     refs: [ARTEMIS_REGIONS_2024, WUELLER_2026],
   });
 
-type Draft = Omit<Site, 'source' | 'kind' | 'refs'> & { refs?: SourceRef[] };
+type Draft = Omit<Site, 'source' | 'kind' | 'refs' | 'region'> & { refs?: SourceRef[] };
 
 function site(d: Draft): Site {
   const outcomes = d.missions.map((m) => m.outcome);
@@ -52,7 +52,8 @@ function site(d: Draft): Site {
       ? 'crash-site'
       : 'candidate';
   const refs = d.refs ?? (d.coordQuality === 'measured' ? [NSSDC, LROC] : [NSSDC]);
-  return { ...d, kind, refs, source: 'catalogue' };
+  // Region comes from the one shared rule (same as the globe's sectors), never typed by hand.
+  return { ...d, region: regionOf(d.lat, d.lon), kind, refs, source: 'catalogue' };
 }
 
 const US = 'United States';
@@ -71,15 +72,12 @@ const apollo = (n: number, date: string, crew: string, note: string): Mission =>
   note: `${crew}. ${note}`,
 });
 
-const near = (_lat: number, lon: number, region?: SiteRegion): SiteRegion =>
-  region ?? (Math.abs(lon) > 90 ? 'farside' : 'nearside');
 
 export const CATALOGUE: Site[] = [
   // ------------------------------------------------------------------ Apollo
   site({
     id: 'apollo-11',
     name: 'Apollo 11 · Tranquility Base',
-    region: near(0.67416, 23.47314),
     lat: 0.67416,
     lon: 23.47314,
     coordQuality: 'measured',
@@ -89,7 +87,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'apollo-12',
     name: 'Apollo 12 · Ocean of Storms',
-    region: near(-3.0128, -23.4219),
     lat: -3.0128,
     lon: -23.4219,
     coordQuality: 'measured',
@@ -112,7 +109,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'apollo-14',
     name: 'Apollo 14 · Fra Mauro',
-    region: near(-3.64589, -17.47194),
     lat: -3.64589,
     lon: -17.47194,
     coordQuality: 'measured',
@@ -122,7 +118,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'apollo-15',
     name: 'Apollo 15 · Hadley–Apennine',
-    region: near(26.13239, 3.6333),
     lat: 26.13239,
     lon: 3.6333,
     coordQuality: 'measured',
@@ -132,7 +127,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'apollo-16',
     name: 'Apollo 16 · Descartes Highlands',
-    region: near(-8.9734, 15.5011),
     lat: -8.9734,
     lon: 15.5011,
     coordQuality: 'measured',
@@ -142,7 +136,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'apollo-17',
     name: 'Apollo 17 · Taurus–Littrow',
-    region: near(20.1911, 30.7723),
     lat: 20.1911,
     lon: 30.7723,
     coordQuality: 'measured',
@@ -154,7 +147,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'surveyor-1',
     name: 'Surveyor 1 · Ocean of Storms',
-    region: near(-2.4745, -43.3398),
     lat: -2.4745,
     lon: -43.3398,
     coordQuality: 'measured',
@@ -164,7 +156,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'surveyor-5',
     name: 'Surveyor 5 · Sea of Tranquility',
-    region: near(1.4551, 23.1943),
     lat: 1.4551,
     lon: 23.1943,
     coordQuality: 'measured',
@@ -174,7 +165,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'surveyor-6',
     name: 'Surveyor 6 · Sinus Medii',
-    region: near(0.4742, -1.4275),
     lat: 0.4742,
     lon: -1.4275,
     coordQuality: 'measured',
@@ -184,7 +174,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'surveyor-7',
     name: 'Surveyor 7 · Tycho',
-    region: near(-40.9812, -11.5127),
     lat: -40.9812,
     lon: -11.5127,
     coordQuality: 'measured',
@@ -196,7 +185,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-9',
     name: 'Luna 9 · Ocean of Storms',
-    region: near(7.13, -64.37),
     lat: 7.13,
     lon: -64.37,
     coordQuality: 'reported',
@@ -206,7 +194,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-13',
     name: 'Luna 13 · Ocean of Storms',
-    region: near(18.87, -62.05),
     lat: 18.87,
     lon: -62.05,
     coordQuality: 'reported',
@@ -216,7 +203,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-15',
     name: 'Luna 15 · Sea of Crises',
-    region: near(17, 60),
     lat: 17,
     lon: 60,
     coordQuality: 'reported',
@@ -226,7 +212,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-16',
     name: 'Luna 16 · Sea of Fertility',
-    region: near(-0.5137, 56.3638),
     lat: -0.5137,
     lon: 56.3638,
     coordQuality: 'measured',
@@ -236,7 +221,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-17',
     name: 'Luna 17 · Sea of Rains',
-    region: near(38.23764, -35.00163),
     lat: 38.23764,
     lon: -35.00163,
     coordQuality: 'measured',
@@ -246,7 +230,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-20',
     name: 'Luna 20 · Apollonius highlands',
-    region: near(3.7863, 56.6242),
     lat: 3.7863,
     lon: 56.6242,
     coordQuality: 'measured',
@@ -256,7 +239,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-21',
     name: 'Luna 21 · Le Monnier',
-    region: near(25.9994, 30.4076),
     lat: 25.9994,
     lon: 30.4076,
     coordQuality: 'measured',
@@ -266,7 +248,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-23',
     name: 'Luna 23 · Sea of Crises',
-    region: near(12.6667, 62.1511),
     lat: 12.6667,
     lon: 62.1511,
     coordQuality: 'measured',
@@ -276,7 +257,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-24',
     name: 'Luna 24 · Sea of Crises',
-    region: near(12.7142, 62.2129),
     lat: 12.7142,
     lon: 62.2129,
     coordQuality: 'measured',
@@ -288,7 +268,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'change-3',
     name: "Chang'e 3 · Sea of Rains",
-    region: near(44.1214, -19.5117),
     lat: 44.1214,
     lon: -19.5117,
     coordQuality: 'measured',
@@ -298,7 +277,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'change-4',
     name: "Chang'e 4 · Von Kármán crater",
-    region: 'farside',
     lat: -45.4561,
     lon: 177.5885,
     coordQuality: 'measured',
@@ -308,7 +286,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'change-5',
     name: "Chang'e 5 · Mons Rümker area",
-    region: near(43.0576, -51.9161),
     lat: 43.0576,
     lon: -51.9161,
     coordQuality: 'measured',
@@ -318,7 +295,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'change-6',
     name: "Chang'e 6 · Apollo basin",
-    region: 'farside',
     lat: -41.6385,
     lon: -153.9852,
     coordQuality: 'measured',
@@ -330,7 +306,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'chandrayaan-2-vikram',
     name: 'Chandrayaan-2 · Vikram crash site',
-    region: 'south-pole',
     lat: -70.881,
     lon: 22.784,
     coordQuality: 'measured',
@@ -340,7 +315,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'chandrayaan-3',
     name: 'Chandrayaan-3 · Shiv Shakti Point',
-    region: 'south-pole',
     lat: -69.3741,
     lon: 32.32,
     coordQuality: 'measured',
@@ -350,7 +324,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'slim',
     name: 'SLIM · near Shioli crater',
-    region: near(-13.316, 25.251),
     lat: -13.316,
     lon: 25.251,
     coordQuality: 'measured',
@@ -360,7 +333,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'beresheet',
     name: 'Beresheet crash site · Sea of Serenity',
-    region: near(32.5956, 19.3496),
     lat: 32.5956,
     lon: 19.3496,
     coordQuality: 'measured',
@@ -370,7 +342,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'luna-25',
     name: 'Luna 25 crash site',
-    region: near(-57.865, 61.36),
     lat: -57.865,
     lon: 61.36,
     coordQuality: 'measured',
@@ -382,7 +353,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'hakuto-r-m1',
     name: 'Hakuto-R Mission 1 crash site',
-    region: near(47.581, 44.094),
     lat: 47.581,
     lon: 44.094,
     coordQuality: 'measured',
@@ -392,7 +362,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'hakuto-r-m2',
     name: 'Resilience (Hakuto-R Mission 2) crash site',
-    region: near(60.4445, -4.588),
     lat: 60.4445,
     lon: -4.588,
     coordQuality: 'measured',
@@ -404,7 +373,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'im-1-odysseus',
     name: 'Odysseus (IM-1) · near Malapert A',
-    region: 'south-pole',
     lat: -80.13,
     lon: 1.44,
     coordQuality: 'measured',
@@ -414,7 +382,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'blue-ghost-1',
     name: 'Blue Ghost Mission 1 · Mare Crisium',
-    region: near(18.562, 61.81),
     lat: 18.562,
     lon: 61.81,
     coordQuality: 'measured',
@@ -424,7 +391,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'im-2-athena',
     name: 'Athena (IM-2) · south polar region',
-    region: 'south-pole',
     lat: -84.7906,
     lon: 29.1957,
     coordQuality: 'measured',
@@ -458,7 +424,6 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'connecting-ridge',
     name: 'Shackleton Connecting Ridge',
-    region: 'south-pole',
     lat: -89.468,
     lon: -137.4,
     coordQuality: 'planned-target',

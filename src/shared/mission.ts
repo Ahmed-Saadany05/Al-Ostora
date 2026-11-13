@@ -15,6 +15,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useSites } from './data';
 import { formatLatLon } from './format';
+import { regionOf } from './geo';
 import type { IsoTime, Site } from './types';
 
 export const MAX_COMPARE = 4;
@@ -43,7 +44,7 @@ export function customSite(lat: number, lon: number): Site {
     id: customSiteId(lat, lon),
     name: 'Custom site',
     kind: 'custom',
-    region: lat < -80 ? 'south-pole' : lat > 80 ? 'north-pole' : Math.abs(lon) > 90 ? 'farside' : 'nearside',
+    region: regionOf(lat, lon),
     lat,
     lon,
     coordQuality: 'custom',

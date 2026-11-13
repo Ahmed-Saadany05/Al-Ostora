@@ -1,0 +1,19 @@
+.root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Oversized so the cursor drift (max 8px) never shows an edge. */
+.layer {
+  position: absolute;
+  inset: calc(-1 * var(--space-4));
+  will-change: transform;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

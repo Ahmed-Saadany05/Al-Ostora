@@ -20,9 +20,9 @@ export const color = {
 } as const;
 
 export const font = {
-  sans: "'DM Sans Variable', 'DM Sans', system-ui, sans-serif",
-  display: "'Instrument Serif', 'Times New Roman', serif",
-  mono: "'DM Mono', ui-monospace, Consolas, monospace",
+  sans: "'IBM Plex Sans', system-ui, sans-serif",
+  display: "'IBM Plex Sans', system-ui, sans-serif",
+  mono: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
 } as const;
 
 export const motion = {

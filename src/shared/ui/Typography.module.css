@@ -8,7 +8,7 @@
 }
 
 .display {
-  font-weight: var(--weight-regular);
+  font-weight: var(--weight-heading);
   letter-spacing: var(--tracking-display);
   line-height: var(--leading-tight);
   color: var(--color-text);
@@ -26,7 +26,7 @@
 
 .accent {
   font-family: var(--font-display);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   letter-spacing: -0.02em;
   /* Instrument Serif runs small next to the sans — nudge it up. */
