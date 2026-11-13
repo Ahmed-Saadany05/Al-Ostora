@@ -13,13 +13,13 @@
   --color-surface: #0b0b0c;
   --color-surface-raised: #131315;
   --color-surface-hover: #1a1a1d;
-  --color-overlay: rgba(0, 0, 0, 0.72);
+  --color-overlay: rgba(0, 0, 0, 0.9); /* dark enough that faint text on it is 4.5:1 even over a white lunar surface */
   --color-glass: rgba(14, 14, 16, 0.66);
 
   /* ---- text */
   --color-text: #ede9e3; /* text-primary */
   --color-text-muted: #a39f98; /* text-secondary */
-  --color-text-faint: #6b6b69;
+  --color-text-faint: #85827c; /* smallest warm grey that is 4.5:1 on bg, surface, surface-raised, surface-hover and glass */
   --color-text-inverse: #0b0b0c; /* near-black: text on the solid primary button */
 
   /* ---- lines */
