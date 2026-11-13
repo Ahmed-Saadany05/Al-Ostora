@@ -7,6 +7,8 @@ export const REFAEY_COPY = {
   back: 'Back',
   ok: 'OK',
   collapse: 'Close the conversation',
+  /** The label on the inline card. */
+  explains: 'Refaey explains',
   /** The speaker label above his line. */
   speaker: 'Refaey',
 } as const;

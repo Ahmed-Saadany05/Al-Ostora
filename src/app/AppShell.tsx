@@ -4,7 +4,6 @@ import { getProvider } from '@/shared/data';
 import { useApp } from '@/shared/store/app';
 import { TimeTicker } from '@/shared/store/time';
 import { Divider, Icon, Starfield } from '@/shared/ui';
-import { RefaeyHost } from '@/screens/home/refaey';
 import type { RouteHandle } from './routeTypes';
 import s from './AppShell.module.css';
 
@@ -72,8 +71,6 @@ export function AppShell() {
       <main id="main" className={s.main}>
         <Outlet />
       </main>
-
-      <RefaeyHost />
 
       {!minimalChrome && (
         <footer className={s.status}>

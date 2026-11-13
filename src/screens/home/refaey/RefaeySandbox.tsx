@@ -1,72 +1,60 @@
 /**
- * DEV ONLY (route /refaey, not registered in production builds). A bench for Refaey's states: open any node, switch the
- * Horizons/LOLA conditions on and off, and see long text split into beats. Remove when the feature is done.
+ * DEV ONLY (route /refaey, not registered in production builds). A bench for Refaey: replay the briefing, and see the
+ * inline "Refaey explains" card with the moments and an explainer. Remove when the feature is done.
  */
 import { useMemo, useState } from 'react';
 import { Button, DisplayHeading, Eyebrow, Page } from '@/shared/ui';
-import { RefaeyDock } from './RefaeyDock';
-import { RefaeyStage } from './RefaeyStage';
-import { getNode, type RuntimeNode } from './registry';
+import { Explain } from '../Explain';
+import { RefaeyBriefing } from './RefaeyBriefing';
+import { RefaeyMoment, type MomentContext } from './RefaeyMoment';
 import { useRefaey } from './store';
 
-const LONG: RuntimeNode = {
-  id: 'sandbox-long',
-  mood: 'smile',
-  lines: [
-    'This is a deliberately long sentence that keeps going so that it needs several visual lines inside the bubble, to prove that nothing is ever cut off.',
-    'A second sentence, also on the long side, so the pair together cannot fit in four visual lines at this width.',
-    'And a short one.',
-  ],
-  replies: [{ label: 'Got it', action: { type: 'collapse' } }],
-};
-
 const FAKE = { sunElev: '1.7°', sunsetIn: '3d 04h', earthStatus: 'below the horizon', siteName: 'Shackleton Crater Rim', landingDate: '14 Nov 2026' };
-
-const IDS = ['intro-hello', 'intro-thumb', 'intro-choice', 'missions-hub', 'athena-3', 'plan-intro', 'step-site', 'step-stand', 'step-dates', 'outcome-play', 'outcome-night', 'explain:lunar-day', 'sandbox-long'];
+const MOMENTS = ['plan-intro', 'step-site', 'step-stand', 'step-dates'];
 
 export function RefaeySandbox() {
   const [horizons, setHorizons] = useState(false);
   const [lola, setLola] = useState(false);
-  const [stage, setStage] = useState(false);
-  const { openNode, openAsk, collapse, seen, begun } = useRefaey();
-  const context = useMemo(() => ({ horizons, values: horizons ? FAKE : {}, flags: { horizonLola: lola } }), [horizons, lola]);
-  const lookup = (id: string, backTo?: string) => (id === LONG.id ? LONG : getNode(id, backTo));
+  const [briefing, setBriefing] = useState(false);
+  const [round, setRound] = useState(0);
+  const begun = useRefaey((st) => st.begun);
+  const seen = useRefaey((st) => st.seen);
+  const context: MomentContext = useMemo(() => ({ horizons, values: horizons ? FAKE : {}, flags: { horizonLola: lola } }), [horizons, lola]);
+  const reset = () => {
+    useRefaey.setState({ seen: {}, begun: true });
+    setRound((r) => r + 1);
+  };
   return (
     <Page>
       <Eyebrow>Refaey sandbox (dev only)</Eyebrow>
       <DisplayHeading size="lg" align="left">
         Refaey
       </DisplayHeading>
-      <p>
-        Data source:{' '}
+      <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'center' }}>
         <label>
           <input type="checkbox" checked={horizons} onChange={(e) => setHorizons(e.target.checked)} /> Horizons (tokens fill)
-        </label>{' '}
+        </label>
         <label>
           <input type="checkbox" checked={lola} onChange={(e) => setLola(e.target.checked)} /> LOLA horizon
-        </label>{' '}
-        <label>
-          <input type="checkbox" checked={stage} onChange={(e) => setStage(e.target.checked)} /> Home stage (half-body)
-        </label>{' '}
+        </label>
         <label>
           <input type="checkbox" checked={begun} onChange={(e) => useRefaey.setState({ begun: e.target.checked })} /> Begin used once
         </label>
-      </p>
-      <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-        {IDS.map((id) => (
-          <Button key={id} variant="secondary" size="md" icon={null} onClick={() => openNode(id)}>
-            {id}
-          </Button>
-        ))}
-        <Button variant="ghost" onClick={openAsk}>
-          Ask menu
+        <Button variant="secondary" size="md" icon={null} onClick={() => setBriefing(true)}>
+          Play the briefing
         </Button>
-        <Button variant="ghost" onClick={collapse}>
-          Collapse
+        <Button variant="ghost" onClick={reset}>
+          Show the moments again
         </Button>
+        <Explain id="low-sun" />
       </p>
       <p>Seen this session: {Object.keys(seen).join(', ') || 'none'}</p>
-      {stage ? <RefaeyStage screen="home" context={context} lookup={lookup} /> : <RefaeyDock screen="mission" context={context} lookup={lookup} />}
+      <div key={round} style={{ display: 'grid', gap: 'var(--space-4)', maxWidth: 520 }}>
+        {MOMENTS.map((id) => (
+          <RefaeyMoment key={id} id={id} context={context} />
+        ))}
+      </div>
+      {briefing && <RefaeyBriefing onDone={() => setBriefing(false)} />}
     </Page>
   );
 }

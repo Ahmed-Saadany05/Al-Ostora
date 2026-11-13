@@ -3,7 +3,10 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { useSites } from '@/shared/data';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
-import { useRefaey } from './refaey';
+import { useBlocker, useNavigate } from 'react-router-dom';
+import { releaseMoonHandoff } from '@/scenes/globe/moonHandoff';
+import { missionUrl } from '@/shared/mission';
+import { RefaeyBriefing, useRefaey, type BriefingDestination } from './refaey';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
@@ -31,7 +34,10 @@ const LEAVE_MS = 250;
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
+  const navigate = useNavigate();
   const begin = useRefaey((st) => st.begin);
+  const briefed = useRefaey((st) => st.briefed);
+  const markBriefed = useRefaey((st) => st.markBriefed);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -71,12 +77,27 @@ export function HomePage() {
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
 
-  // "Begin the journey": the whole hero (title, line, buttons, pin) fades out, then Pink's flight takes the Moon into Step 1.
-  // Refaey is not on Home at all: he appears on Step 1 once the flight has landed there (see RefaeyHost).
+  // "Begin the journey": the whole hero (title, line, buttons, pin) fades out, then Pink's flight takes the Moon toward Step 1.
+  // When the flight ends it navigates to Step 1; that navigation is held here (it is the flight's completion signal) so the
+  // briefing can play first. Once per session. Refaey is never on screen together with the hero.
   const [leaving, setLeaving] = useState(false);
+  const journey = useRef(false);
+  const blocker = useBlocker(({ nextLocation }) => journey.current && nextLocation.pathname === missionUrl.chooseSite());
+  const [briefing, setBriefing] = useState(false);
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return;
+    if (briefed) blocker.proceed();
+    else {
+      // The flight's last frame is still held up as an image; the briefing covers it, so let it go.
+      releaseMoonHandoff(0);
+      setBriefing(true);
+    }
+  }, [blocker, briefed]);
+
   const startJourney = useCallback(() => {
     if (leaving) return;
     setLeaving(true);
+    journey.current = true;
     begin();
     const fade = [copy.current, pins.current].flatMap((el) =>
       el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
@@ -85,6 +106,19 @@ export function HomePage() {
     if (motion) handle.current?.enterStep1();
     else void Promise.all(fade).then(() => handle.current?.enterStep1());
   }, [leaving, begin, motion]);
+
+  const endBriefing = useCallback(
+    (to: BriefingDestination) => {
+      markBriefed();
+      journey.current = false;
+      if (to === 'missions') {
+        if (blocker.state === 'blocked') blocker.reset();
+        navigate('/missions');
+      } else if (blocker.state === 'blocked') blocker.proceed();
+      else navigate(missionUrl.chooseSite());
+    },
+    [blocker, markBriefed, navigate],
+  );
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
@@ -149,6 +183,8 @@ export function HomePage() {
           </div>
         )}
       </div>
+
+      {briefing && <RefaeyBriefing onDone={endBriefing} />}
 
       <MotionToggle />
 

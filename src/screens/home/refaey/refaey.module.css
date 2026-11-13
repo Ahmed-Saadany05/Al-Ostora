@@ -1,23 +1,12 @@
 /*
- * Refaey on the scene. No chat bubble, no box: his half-body (Home) or a bust (other screens) and his words as large text.
- * Kit tokens only; transform and opacity are the only things that animate.
+ * Refaey. Two forms only:
+ *  1. The briefing: a full-screen scene (half-body, large text, text-link choices), played once after the flight.
+ *  2. The "Refaey explains" card: a 40 px circular bust and his line, inline on data screens and inside explainers.
+ * Kit tokens only; transform and opacity are the only things that animate. No scrim, no overlay on data screens.
  */
 
-/* Sizes: the circular busts. */
-.corner,
-.dockOpen {
-  --bust-sm: calc(var(--space-6) + var(--space-5)); /* 56 px */
-  --bust-lg: calc(var(--space-9) + var(--space-5)); /* 120 px */
-  --dock-bottom: var(--space-5);
-}
-.aboveBar {
-  /* the shared status bar sits at the bottom of every page except Home */
-  --dock-bottom: calc(var(--statusbar-height) + var(--space-4));
-}
-
-/* Speech: the type size follows the width: 24 px at 1280, capped at 32. */
-.talk,
-.stageText {
+/* Speech in the briefing: the type size follows the width: 24 px at 1280, capped at 32. */
+.talk {
   --say: clamp(var(--text-lg), 1.875vw, var(--text-2xl));
 }
 
@@ -36,28 +25,26 @@
   object-fit: cover;
 }
 
-/* ---------------------------------------------------------------- Home stage */
-.stage {
+/* ---------------------------------------------------------------- the briefing */
+.briefing {
   /* the half-body is 596 x 560; its fingertip is ~95% across and ~45% down */
   --art-h: 58vh;
   --art-w: calc(var(--art-h) * 596 / 560);
   --hand-x: calc(var(--art-w) * 0.95);
-  /* he stands on the shared status bar, not behind it */
-  --stand: var(--statusbar-height);
-  --hand-y: calc(100vh - var(--stand) - var(--art-h) * 0.55);
-  /* bottom of the centred title: half the viewport plus half its height */
-  --title-bottom: calc(50vh + var(--text-display) * var(--leading-tight) / 2);
-}
-
-.stageArt {
+  --hand-y: calc(100vh - var(--art-h) * 0.55);
   position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  background: var(--color-bg);
+  animation: fade var(--duration-slow) var(--ease-out) backwards;
+}
+.briefingArt {
+  position: absolute;
   left: 0;
-  bottom: var(--stand);
-  z-index: var(--z-drawer);
+  bottom: 0;
   width: var(--art-w);
   height: var(--art-h);
   pointer-events: none;
-  /* waits for the page copy to finish fading out (--duration-base), then rises */
   animation: rise var(--duration-slow) var(--ease-out) var(--duration-base) backwards;
 }
 .half {
@@ -65,18 +52,15 @@
   width: 100%;
   height: 100%;
 }
-
-.stageText {
-  position: fixed;
-  z-index: var(--z-drawer);
+.briefingText {
+  position: absolute;
   left: calc(var(--hand-x) + var(--space-5));
-  /* level with his hand, but never up into the title */
-  top: max(calc(var(--title-bottom) + var(--space-5)), calc(var(--hand-y) - var(--space-8)));
+  /* level with his hand */
+  top: calc(var(--hand-y) - var(--space-8));
   width: min(36ch, calc(100vw - var(--hand-x) - var(--space-5) - var(--gutter)));
   max-height: calc(100vh - var(--space-5));
   animation: fade var(--duration-base) var(--ease-out) var(--duration-base) backwards;
 }
-
 @keyframes rise {
   from {
     opacity: 0;
@@ -86,55 +70,6 @@
     opacity: 1;
     transform: none;
   }
-}
-
-/* ---------------------------------------------------------------- other screens */
-.corner {
-  position: fixed;
-  right: var(--gutter);
-  bottom: var(--dock-bottom);
-  z-index: var(--z-drawer);
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: transform var(--duration-base) var(--ease-out);
-}
-.corner:hover {
-  transform: scale(1.05);
-}
-
-.dockOpen {
-  position: fixed;
-  left: var(--gutter);
-  bottom: var(--dock-bottom);
-  z-index: var(--z-drawer);
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-4);
-  max-width: calc(100vw - 2 * var(--gutter));
-}
-.dockOpen .talk {
-  width: min(36ch, calc(100vw - 2 * var(--gutter) - var(--bust-lg) - var(--space-4)));
-}
-
-/* A soft dark scrim behind the text only (no glow, no border): keeps it readable when it crosses the lit Moon or a card. */
-.scrim {
-  position: fixed;
-  isolation: isolate;
-}
-.stageText.scrim {
-  position: fixed;
-}
-.scrim::before {
-  content: '';
-  position: absolute;
-  inset: calc(-1 * var(--space-7)) calc(-1 * var(--space-8));
-  z-index: -1;
-  /* full strength over the text, fading out only beyond it */
-  background: radial-gradient(closest-side, var(--color-overlay) 82%, transparent);
-  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------- the words */
@@ -211,11 +146,58 @@
   text-underline-offset: var(--space-1);
 }
 
-/* The intro plays on the post-flight view (Step 1), not under the Home title: the text may sit level with his hand, and he rises at once. */
-.stage {
-  --title-bottom: 0px;
+/* ---------------------------------------------------------------- the "Refaey explains" card */
+.card {
+  --bust-card: calc(var(--space-5) + var(--space-4)); /* 40 px */
+  display: grid;
+  grid-template-columns: var(--bust-card) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  font-stretch: var(--stretch-body);
 }
-.stage .stageArt,
-.stage .stageText {
-  animation-delay: 0s;
+.cardBody {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.cardLabel {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+.cardText {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text);
+}
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-1);
+}
+.cardAction {
+  height: auto;
+  min-height: 0;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.cardAction:hover,
+.cardAction:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
 }
