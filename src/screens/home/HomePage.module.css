@@ -99,12 +99,3 @@
 }
 
 /* When Refaey is on stage the promise line, Begin and About, and the pin with its Demo label, fade out (opacity only). */
-.under,
-.pinFade {
-  transition: opacity var(--duration-base) var(--ease-out);
-}
-.under[data-away='true'],
-.pinFade[data-away='true'] {
-  opacity: 0;
-  pointer-events: none;
-}

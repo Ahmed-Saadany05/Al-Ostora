@@ -5,7 +5,7 @@ import { useConversation, type ConversationOptions } from './useConversation';
 import s from './refaey.module.css';
 
 /**
- * Home, after Begin: Refaey's half-body pointing pose rises from the bottom-left (anchored to the bottom edge of the
+ * The intro: Refaey's half-body pointing pose rises from the bottom-left (anchored to the bottom edge of the
  * screen, about 58% of its height, the Moon behind him) and his words appear as large text to the right of his hand.
  * Nothing is shown until a conversation is open; Esc or any "OK" closes it and the page comes back.
  */

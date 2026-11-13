@@ -42,7 +42,9 @@
   --art-h: 58vh;
   --art-w: calc(var(--art-h) * 596 / 560);
   --hand-x: calc(var(--art-w) * 0.95);
-  --hand-y: calc(100vh - var(--art-h) * 0.55);
+  /* he stands on the shared status bar, not behind it */
+  --stand: var(--statusbar-height);
+  --hand-y: calc(100vh - var(--stand) - var(--art-h) * 0.55);
   /* bottom of the centred title: half the viewport plus half its height */
   --title-bottom: calc(50vh + var(--text-display) * var(--leading-tight) / 2);
 }
@@ -50,8 +52,8 @@
 .stageArt {
   position: fixed;
   left: 0;
-  bottom: 0;
-  z-index: var(--z-content);
+  bottom: var(--stand);
+  z-index: var(--z-drawer);
   width: var(--art-w);
   height: var(--art-h);
   pointer-events: none;
@@ -66,7 +68,7 @@
 
 .stageText {
   position: fixed;
-  z-index: var(--z-content);
+  z-index: var(--z-drawer);
   left: calc(var(--hand-x) + var(--space-5));
   /* level with his hand, but never up into the title */
   top: max(calc(var(--title-bottom) + var(--space-5)), calc(var(--hand-y) - var(--space-8)));
@@ -128,10 +130,10 @@
 .scrim::before {
   content: '';
   position: absolute;
-  inset: calc(-1 * var(--space-6)) calc(-1 * var(--space-7));
+  inset: calc(-1 * var(--space-7)) calc(-1 * var(--space-8));
   z-index: -1;
   /* full strength over the text, fading out only beyond it */
-  background: radial-gradient(closest-side, var(--color-overlay) 70%, transparent);
+  background: radial-gradient(closest-side, var(--color-overlay) 82%, transparent);
   pointer-events: none;
 }
 
@@ -207,4 +209,13 @@
   color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: var(--space-1);
+}
+
+/* The intro plays on the post-flight view (Step 1), not under the Home title: the text may sit level with his hand, and he rises at once. */
+.stage {
+  --title-bottom: 0px;
+}
+.stage .stageArt,
+.stage .stageText {
+  animation-delay: 0s;
 }

@@ -1,12 +1,9 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
-import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
-import { RefaeyStage, useRefaey } from './refaey';
-import type { DialogueAction } from './refaey/dialogues/dialogues';
+import { useRefaey } from './refaey';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
@@ -28,17 +25,13 @@ const MOON_GAP_PX = 48;
  */
 const RIM_ABOVE_POLE_PER_WIDTH = 0.0116;
 
-/** The Home dialogues have no data tokens and no conditions. */
-const REFAEY_HOME_CONTEXT = { horizons: false, values: {}, flags: {} } as const;
+/** The hero copy and the pin fade out over this long before the Moon flies (no flight under reduced motion). */
+const LEAVE_MS = 250;
 
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
-  const navigate = useNavigate();
   const begin = useRefaey((st) => st.begin);
-  const collapse = useRefaey((st) => st.collapse);
-  // While Refaey is on stage the promise line, Begin, About, the pin and its Demo label fade away (opacity only).
-  const stageOpen = useRefaey((st) => st.open);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -78,25 +71,20 @@ export function HomePage() {
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
 
-  // Refaey's intro ends in two choices. "Plan a future mission" reuses Pink's flight of the Moon into Step 1;
-  // "Explore past missions" is a plain navigation (handled by the dock).
-  const onRefaeyAction = useCallback(
-    (a: DialogueAction) => {
-      if (a.type === 'navigate' && a.to === missionUrl.chooseSite()) {
-        collapse();
-        if (handle.current) handle.current.enterStep1();
-        else navigate(a.to);
-        return true;
-      }
-      return false;
-    },
-    [collapse, navigate],
-  );
-
-  // Give focus back to Begin once it is no longer inert (it is inert while Refaey is on stage, until the next render).
-  const focusBegin = useCallback(() => {
-    requestAnimationFrame(() => requestAnimationFrame(() => under.current?.querySelector<HTMLElement>('a, button')?.focus()));
-  }, []);
+  // "Begin the journey": the whole hero (title, line, buttons, pin) fades out, then Pink's flight takes the Moon into Step 1.
+  // Refaey is not on Home at all: he appears on Step 1 once the flight has landed there (see RefaeyHost).
+  const [leaving, setLeaving] = useState(false);
+  const startJourney = useCallback(() => {
+    if (leaving) return;
+    setLeaving(true);
+    begin();
+    const fade = [copy.current, pins.current].flatMap((el) =>
+      el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
+    );
+    // With motion the flight starts at once (it fades the hero itself); without it, wait for the cross-fade, then change view.
+    if (motion) handle.current?.enterStep1();
+    else void Promise.all(fade).then(() => handle.current?.enterStep1());
+  }, [leaving, begin, motion]);
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
@@ -133,7 +121,7 @@ export function HomePage() {
             {HOME_COPY.headlineLead}
           </DisplayHeading>
         </div>
-        <div ref={under} className={s.under} data-away={stageOpen} inert={stageOpen}>
+        <div ref={under} className={s.under} inert={leaving}>
           <div data-intro>
             <Lead align="center">{HOME_COPY.line}</Lead>
           </div>
@@ -142,7 +130,7 @@ export function HomePage() {
               variant="primary"
               size="md"
               icon="arrowRight"
-              onClick={() => begin('intro-hello')}
+              onClick={startJourney}
             >
               {HOME_COPY.begin}
             </Button>
@@ -154,18 +142,15 @@ export function HomePage() {
       </div>
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
-      <div ref={pins} className={s.pins} inert={!pinRevealed || stageOpen}>
+      <div ref={pins} className={s.pins} inert={!pinRevealed || leaving}>
         {SHOW_SITE_PIN && site && pinAt && (
-          <div className={s.pinFade} data-away={stageOpen}>
+          <div>
             <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />
           </div>
         )}
       </div>
 
       <MotionToggle />
-
-      {/* Refaey: nothing at all until Begin. Then his half-body rises bottom-left and his words appear beside his hand. */}
-      <RefaeyStage screen="home" context={REFAEY_HOME_CONTEXT} onAction={onRefaeyAction} onClose={focusBegin} />
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>

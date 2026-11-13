@@ -1,4 +1,5 @@
 export { RefaeyStage } from './RefaeyStage';
+export { RefaeyHost } from './RefaeyHost';
 export { RefaeyDock } from './RefaeyDock';
 export { RefaeyBust, RefaeyHalf, ART } from './Refaey';
 export { DialogueText } from './DialogueText';
