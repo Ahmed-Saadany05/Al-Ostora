@@ -1,4 +1,6 @@
 /** Owner: Goda — the project page: sources, credits, licence. AI-use disclosure is added at submission. */
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button, Card, Divider, DisplayHeading, Eyebrow, Lead, OwnerNote, Page } from '@/shared/ui';
 
 /**
@@ -67,6 +69,12 @@ const REFERENCES: { group: string; refs: Ref[] }[] = [
 const muted = { color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' } as const;
 
 export function AboutPage() {
+  const { hash } = useLocation();
+  // The page renders after the browser's own hash jump, so jump to '#methods' ourselves.
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [hash]);
+
   return (
     <Page width="narrow">
       <OwnerNote owner="Goda">AI-use disclosure is added at submission; update HORIZONS_RETRIEVED to the final data date.</OwnerNote>
@@ -102,7 +110,10 @@ export function AboutPage() {
       </Card>
 
       <Divider />
-      <Eyebrow as="h2">References</Eyebrow>
+      {/* Anchor target for explainer sources ('/about#methods'). */}
+      <div id="methods" style={{ scrollMarginTop: '140px' }}>
+        <Eyebrow as="h2">References</Eyebrow>
+      </div>
       {REFERENCES.map(({ group, refs }) => (
         <Card key={group} padding="sm">
           <strong>{group}</strong>
