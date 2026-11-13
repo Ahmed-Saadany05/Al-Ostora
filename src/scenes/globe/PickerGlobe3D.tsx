@@ -14,10 +14,10 @@ import { formatLatLon } from '@/shared/format';
 import { color } from '@/shared/theme/tokens';
 import { useApp } from '@/shared/store/app';
 import type { Site } from '@/shared/types';
-import { Icon, Tabs } from '@/shared/ui';
+import { Tabs } from '@/shared/ui';
 import { MoonTrekGlobe } from './MoonTrekGlobe';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_ICON, KIND_WORD, OPENING_VIEW, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, siteLetter, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -43,6 +43,8 @@ const startPosition = (site?: Site) =>
 const MIN_DISTANCE = 1.025; // ≈ 43 km above the surface
 const MAX_DISTANCE = 12;
 const LABELS_BELOW_DISTANCE = 1.6;
+/** Up to this many pins in a sector, their names are always shown. */
+const LABELS_ALWAYS_MAX = 6;
 const CLICK_SLOP_PX = 5;
 
 // ---------------------------------------------------------------- 3D pieces
@@ -143,8 +145,9 @@ function MarkerLayer({
     else els.current.delete(id);
   };
   return (
-    <div className={g.anchors}>
-      {sites.map((site) => {
+    // Few sites: names always shown next to the letters (as in the design); many: on hover/selection.
+    <div className={[g.anchors, sites.length <= LABELS_ALWAYS_MAX && g.alwaysLabels].filter(Boolean).join(' ')}>
+      {sites.map((site, i) => {
         const selected = selectedIds.includes(site.id);
         return (
           <div key={site.id} ref={bind(site.id)} className={g.anchor} data-hidden="true">
@@ -155,12 +158,8 @@ function MarkerLayer({
               aria-pressed={selected}
               title={`${site.name} · ${KIND_WORD[site.kind]} · ${formatLatLon(site.lat, site.lon)}`}
             >
-              <span className={g.dot} />
-              <span className={g.label}>
-                <Icon name={KIND_ICON[site.kind]} size={12} />
-                {site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}
-                {selected && <em>· Selected</em>}
-              </span>
+              <span className={g.letter}>{siteLetter(i)}</span>
+              <span className={g.label}>{site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}</span>
             </button>
           </div>
         );
@@ -315,9 +314,33 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
         <sphereGeometry args={[1, 96, 64]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
+      <RimRing />
       <AltitudeAwareControls motion={motion} />
       <CameraDirector goal={goal} motion={motion} />
     </>
+  );
+}
+
+/**
+ * Thin dark rim just outside the Moon's edge (as in the design): a camera-facing ring scaled each
+ * frame so it hugs the silhouette at any distance, fading out when zoomed in close.
+ */
+function RimRing() {
+  const ring = useRef<THREE.Mesh>(null);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame(({ camera }) => {
+    const m = ring.current;
+    if (!m) return;
+    const d = camera.position.length();
+    m.quaternion.copy(camera.quaternion);
+    m.scale.setScalar(1 / Math.sqrt(Math.max(1e-4, 1 - 1 / (d * d)))); // silhouette radius in the centre plane
+    if (mat.current) mat.current.opacity = 0.9 * THREE.MathUtils.smoothstep(d, 2.2, 3.6);
+  });
+  return (
+    <mesh ref={ring} renderOrder={-2}>
+      <ringGeometry args={[1.012, 1.034, 160]} />
+      <meshBasicMaterial ref={mat} color="#2a2a2b" transparent depthWrite={false} />
+    </mesh>
   );
 }
 

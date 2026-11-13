@@ -29,7 +29,7 @@ export interface PickerGlobe3DProps extends SitePickerGlobeProps {
 }
 
 /** Camera distances in lunar radii. */
-export const START_DISTANCE = 4.4; // whole disc fits the 32° view with a margin
+export const START_DISTANCE = 5.2; // whole disc ≈ 70 % of the view height, with room around it
 export const SECTOR_DISTANCE = 3.3;
 export const SITE_DISTANCE = 1.18; // close-up, ≈ 310 km above the site
 
@@ -62,3 +62,8 @@ export function openingDistance(w: number, h: number): number {
 
 /** Goal distance meaning "the opening distance for this box" (see openingDistance). */
 export const FIT_DISTANCE = -1;
+
+/** Letter for the i-th site of a sector (A, B, … Z, then AA, AB …), shared by the menu and the pins. */
+export function siteLetter(i: number): string {
+  return i < 26 ? String.fromCharCode(65 + i) : siteLetter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
+}

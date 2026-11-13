@@ -8,10 +8,11 @@
  * Without WebGL, or if the 3D view fails, the flat map (SitePickerMap) takes the Moon's place.
  */
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pill } from '@/shared/ui';
+import { Link } from 'react-router-dom';
+import { Icon, Pill } from '@/shared/ui';
 import type { SitePickerGlobeProps } from './contracts';
 import { SitePickerMap } from './SitePickerMap';
-import { SectorMenu } from './globe/SectorMenu';
+import { REGION_COPY, SectorMenu } from './globe/SectorMenu';
 import { FIT_DISTANCE, SECTOR_DISTANCE, SITE_DISTANCE, type CameraGoal } from './globe/pickerTypes';
 import { preloadPickerGlobe, releaseMoonHandoff, takeMoonHandoff } from './globe/moonHandoff';
 import { REGION_VIEW, regionAt, type LatLon, type RegionId } from './lib/moonFrame';
@@ -63,6 +64,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
   const onImageryReady = useCallback(() => releaseMoonHandoff(SNAPSHOT_HOLD_MS), []);
 
   const [active, setActive] = useState<RegionId | null>(null);
+  const [custom, setCustom] = useState(false);
   const [menuHover, setMenuHover] = useState<RegionId | null>(null);
   const [moonHover, setMoonHover] = useState<RegionId | null>(null);
   const [hotSiteId, setHotSiteId] = useState<string | null>(null);
@@ -87,12 +89,14 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
     if (r && !active) go(REGION_VIEW[r], null); // turn to it, keep the distance
   };
   const chooseSector = (r: RegionId) => {
+    setCustom(false);
     setActive(r);
     setMenuHover(null);
     go(REGION_VIEW[r], SECTOR_DISTANCE);
   };
   const back = () => {
     const from = active;
+    setCustom(false);
     setActive(null);
     setHotSiteId(null);
     if (from) go(REGION_VIEW[from], FIT_DISTANCE);
@@ -108,12 +112,17 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
   };
   const pin = (p: LatLon) => {
     setRipple({ ...p, key: performance.now() });
-    setActive(regionAt(p.lat, p.lon));
+    if (!custom) setActive(regionAt(p.lat, p.lon));
     onPickCoords?.(p.lat, p.lon);
     go(p, SITE_DISTANCE);
   };
-  // On the sector list a click on the Moon picks that sector; inside a sector it drops a pin.
-  const moonClick = (p: LatLon) => (active ? pin(p) : chooseSector(regionAt(p.lat, p.lon)));
+  // On the region list a click on the Moon opens that region; inside a region (or custom) it drops a pin.
+  const moonClick = (p: LatLon) => (active || custom ? pin(p) : chooseSector(regionAt(p.lat, p.lon)));
+  const openCustom = () => {
+    setActive(null);
+    setMenuHover(null);
+    setCustom(true);
+  };
 
   const map = <SitePickerMap {...props} />;
   const globe = !webgl ? (
@@ -126,7 +135,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
           fromHome={fromHome}
           onImageryReady={onImageryReady}
           onSelectSite={chooseSite}
-          hoverRegion={active ? null : (menuHover ?? moonHover)}
+          hoverRegion={active || custom ? null : (menuHover ?? moonHover)}
           activeRegion={active}
           hotSiteId={hotSiteId}
           goal={goal}
@@ -140,23 +149,46 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
 
   if (layout !== 'full') return globe;
 
+  const inside = Boolean(active || custom);
   return (
     <div className={[g.layout, fromHome && g.enter].filter(Boolean).join(' ')}>
       <div className={g.left}>
+        {/* Top-left: back to Home, or back to all regions. */}
+        <div className={g.backLink}>
+          {inside ? (
+            <button type="button" className={g.backBtn} onClick={back}>
+              <Icon name="arrowLeft" size={14} /> All regions
+            </button>
+          ) : (
+            <Link to="/" className={g.backBtn}>
+              <Icon name="arrowLeft" size={14} /> Back
+            </Link>
+          )}
+        </div>
         {title && (
-          <div className={[g.title, active && g.titleHidden].filter(Boolean).join(' ')} aria-hidden={Boolean(active)}>
+          <div className={[g.title, inside && g.titleHidden].filter(Boolean).join(' ')} aria-hidden={inside}>
             {title}
           </div>
         )}
         {globe}
+        {/* Bottom-left caption, as in the design. */}
+        <div className={g.caption}>
+          <span className={g.captionTitle}>{active ? REGION_COPY[active].name : custom ? 'Custom coordinates' : 'Lunar surface'}</span>
+          <span className={g.captionSub}>{inside ? 'Exploring the surface' : 'NASA LRO imagery · 384,400 km from home'}</span>
+          <span className={g.captionHint}>
+            <Icon name="orbit" size={14} />
+            {inside ? 'Drag to rotate · Click the surface to pin a position' : 'Drag to explore · Click a region to open it'}
+          </span>
+        </div>
       </div>
       <SectorMenu
         sites={sites}
         selectedIds={selectedIds}
         active={active}
+        custom={custom}
         onHoverRegion={hoverSector}
         onChooseRegion={chooseSector}
-        onBack={back}
+        onOpenCustom={openCustom}
         onHoverSite={setHotSiteId}
         onChooseSite={chooseSite}
         onCoords={(lat, lon) => pin({ lat, lon })}

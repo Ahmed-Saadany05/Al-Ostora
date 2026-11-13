@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { SitePickerGlobe } from '@/scenes';
 import { formatLatLon } from '@/shared/format';
 import { customSite, MAX_COMPARE, missionUrl, useMission } from '@/shared/mission';
-import { Button, DisplayHeading, Icon, LoadingState, Page } from '@/shared/ui';
+import { Button, Icon, LoadingState, Page } from '@/shared/ui';
 import s from './flow.module.css';
 
 export function ChooseSitePage() {
@@ -24,11 +24,11 @@ export function ChooseSitePage() {
   const pins = [...(catalogue ?? []), ...sites.filter((x) => x.kind === 'custom')];
   const next =
     sites.length === 0 ? null : sites.length === 1 ? (
-      <Button variant="primary" size="lg" to={missionUrl.dates(sites[0].id)}>
-        Compare dates · {sites[0].kind === 'custom' ? 'your pin' : sites[0].name}
+      <Button variant="primary" icon="arrowRight" to={missionUrl.dates(sites[0].id)}>
+        Continue with {sites[0].kind === 'custom' ? 'your pin' : sites[0].name}
       </Button>
     ) : (
-      <Button variant="primary" size="lg" to={missionUrl.compare(siteIds)}>
+      <Button variant="primary" icon="arrowRight" to={missionUrl.compare(siteIds)}>
         Compare {sites.length} sites
       </Button>
     );
@@ -54,11 +54,6 @@ export function ChooseSitePage() {
       ) : (
         <SitePickerGlobe
           layout="full"
-          title={
-            <DisplayHeading size="lg" align="left" accent="land?">
-              Where will you
-            </DisplayHeading>
-          }
           footer={footer}
           sites={pins}
           selectedIds={siteIds}
