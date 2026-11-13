@@ -78,14 +78,16 @@ export function demoHorizon(site: Site, observerHeightM: number): HorizonProfile
   }));
   // Dip of the horizon for an observer raised h metres above the surface.
   const dip = Math.sqrt((2 * observerHeightM) / (LUNAR.radiusKm * 1000)) / DEG;
-  const elevationsDeg = Array.from({ length: 360 }, (_, az) => {
+  const STEP = 0.5; // same step as the real LOLA files
+  const elevationsDeg = Array.from({ length: 360 / STEP }, (_, i) => {
+    const az = i * STEP;
     const v = waves.reduce((s, w) => s + w.a * Math.sin(w.k * az * DEG + w.p), base);
     return Math.round((v - dip) * 1000) / 1000;
   });
   return {
     source: 'demo',
     siteId: site.id,
-    azStepDeg: 1,
+    azStepDeg: STEP,
     elevationsDeg,
     maxRangeKm: 0,
     observerHeightM,

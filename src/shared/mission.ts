@@ -46,7 +46,9 @@ export function customSite(lat: number, lon: number): Site {
     region: lat < -80 ? 'south-pole' : lat > 80 ? 'north-pole' : Math.abs(lon) > 90 ? 'farside' : 'nearside',
     lat,
     lon,
+    coordQuality: 'custom',
     story: `Your own point at ${formatLatLon(lat, lon)}.`,
+    missions: [],
     refs: [],
     source: 'computed',
   };

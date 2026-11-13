@@ -10,8 +10,11 @@
  *  - Every value object carries `source` so the UI can label where a number came from.
  */
 
-/** Where a number came from. `demo` must always be visibly labelled in the UI. */
-export type DataSource = 'demo' | 'horizons' | 'lola' | 'computed';
+/**
+ * Where a number came from. `demo` must always be visibly labelled in the UI.
+ * `catalogue` = sourced site data (NASA NSSDC / LROC / NASA documents), see Site.refs.
+ */
+export type DataSource = 'demo' | 'horizons' | 'lola' | 'computed' | 'catalogue';
 
 export interface Sourced {
   source: DataSource;
@@ -27,33 +30,72 @@ export interface SourceRef {
 
 // ---------------------------------------------------------------- Sites
 
+/**
+ * A SITE is a place (fixed coordinates). A MISSION is an event that happened (or will
+ * happen) there. One site can have several missions (Apollo 12 landed next to Surveyor 3),
+ * and a candidate site can have none yet.
+ */
 export type SiteKind =
-  | 'artemis-candidate' // NASA Artemis III south-pole candidate region
-  | 'historic-landing' // successful landing (Apollo, Luna, Chang'e, …)
-  | 'failed-landing' // crash / partial landing, kept for its lesson
+  | 'landing-site' // at least one landing (successful or partial)
+  | 'crash-site' // only crashes — kept for the lesson
+  | 'candidate' // planned / proposed, nothing has landed yet
   | 'custom'; // user-entered coordinates
 
 export type SiteRegion = 'south-pole' | 'nearside' | 'farside' | 'north-pole';
 
+/** Programme families — these drive the filter tags. */
+export type Program =
+  | 'apollo' // NASA crewed Apollo landings
+  | 'nasa-robotic' // NASA's own robotic landers (Surveyor)
+  | 'artemis' // Artemis / Moon Base (NASA human-landing campaign)
+  | 'clps' // NASA Commercial Lunar Payload Services deliveries
+  | 'commercial' // private missions outside CLPS
+  | 'international'; // other countries' space programmes
+
+export type MissionOutcome = 'landed' | 'partial' | 'crashed' | 'upcoming';
+
 export interface Mission {
   name: string; // "Apollo 11"
   agency: string; // "NASA", "CNSA", "ISRO", "JAXA", "Intuitive Machines" …
-  date: IsoTime; // landing date (UTC)
-  outcome: 'success' | 'partial' | 'failed';
+  country: string; // "United States", "China", "India", …
+  program: Program;
+  /** Landing / impact day (UTC, "YYYY-MM-DD"). Omitted for upcoming missions without a fixed day — see `dateNote`. */
+  date?: string;
+  /** Free text when the date isn't a fixed day, e.g. "NASA: no earlier than fall 2026". */
+  dateNote?: string;
+  crewed: boolean;
+  /** What touched down, e.g. ["lander", "rover Lunokhod 1"]. */
+  hardware: string[];
+  outcome: MissionOutcome;
+  /** One line: what happened / the lesson. */
+  note?: string;
 }
 
+/**
+ * How exact the coordinates are (shown to the user with an icon + word):
+ *  - measured       hardware seen in LRO Camera images (≈ ±15–30 m)
+ *  - reported       published by the agency / NASA catalogue but not image-confirmed (≈ km)
+ *  - planned-target an announced landing point for a mission that hasn't flown
+ *  - custom         typed or clicked by the user
+ */
+export type CoordQuality = 'measured' | 'reported' | 'planned-target' | 'custom';
+
 export interface Site extends Sourced {
-  id: string; // stable slug, e.g. "apollo-11", "shackleton-rim"
+  id: string; // stable slug, e.g. "apollo-11", "connecting-ridge"
   name: string;
   kind: SiteKind;
   region: SiteRegion;
   lat: number;
   lon: number;
+  coordQuality: CoordQuality;
   /** Surface elevation relative to the 1737.4 km reference sphere (LOLA), metres. */
   elevationM?: number;
   /** 2–3 line plain-language story for the public. */
   story: string;
-  mission?: Mission;
+  /** Everything that landed (or will land) here, oldest first. Empty for pure candidates. */
+  missions: Mission[];
+  /** Extra short labels, e.g. "Moon Base I target (2026) · former Artemis landing candidate (2022)". */
+  labels?: string[];
   /** Where the coordinates / story come from. Shown in credits. */
   refs: SourceRef[];
 }
@@ -66,12 +108,39 @@ export interface Site extends Sourced {
  */
 export interface HorizonProfile extends Sourced {
   siteId: string;
-  azStepDeg: number; // e.g. 1 → 360 samples
+  azStepDeg: number; // 0.5 → 720 samples (published standard; Mazarico 2011, Barker 2021)
   elevationsDeg: number[];
   /** How far the terrain search reached, km (long reach matters at the pole). */
   maxRangeKm: number;
   /** Observer height above ground used to compute it, metres (e.g. 2 m = lander mast). */
   observerHeightM: number;
+  /** 'lola' = real LOLA terrain; 'flat' = no terrain data (all elevations ≈ 0 minus dip). */
+  terrain?: 'lola' | 'flat';
+  /** DEM layers actually used, nearest first (e.g. 5 m to 5 km, 80 m to 100 km, 240 m beyond). Frame: MEAN_ME (DE421). */
+  dem?: { layers: { product: string; resolutionM: number; fromKm: number; toKm: number }[] };
+}
+
+/**
+ * HORIZON RELIABILITY RULE — engine and UI must match. Use horizonReliability()
+ * from '@/shared/horizon' instead of re-implementing it.
+ *  - 'lola'                     → 'high'
+ *  - 'flat' and |lat| <  80°    → 'medium'
+ *  - 'flat' and |lat| ≥  80°    → 'low'   (poles without LOLA terrain; exactly 80° counts as low)
+ *  - 'demo'                     → no reliability (the UI shows only the Demo badge)
+ * UI label for 'flat':           "Flat horizon · terrain not modelled"
+ * …and when |lat| ≥ 80° add:     " · unreliable near the pole"
+ * (1 km of height dips the horizon ≈ 1.9°, more than the Sun's highest polar elevation.)
+ * Every catalogue site south of 60°S must have a LOLA profile.
+ */
+export type HorizonSource = 'lola' | 'flat' | 'demo';
+export type Reliability = 'high' | 'medium' | 'low';
+
+export interface HorizonInfo {
+  source: HorizonSource;
+  /** Absent for 'demo'. */
+  reliability?: Reliability;
+  /** Optional detail, e.g. "coarse terrain grid". */
+  note?: string;
 }
 
 // ---------------------------------------------------------------- Sky
@@ -102,6 +171,8 @@ export interface SkyState extends Sourced {
   sunVisible: boolean;
   /** Earth clears the horizon by at least Params.commsMinClearanceDeg. */
   earthVisible: boolean;
+  /** Which horizon these answers were computed against, and how much to trust it. */
+  horizon?: HorizonInfo;
 }
 
 // ---------------------------------------------------------------- Windows & reports
@@ -153,6 +224,10 @@ export interface SiteMetrics extends Sourced {
   bestWindow: TimeWindow | null;
   /** 0–100 overall suitability used to rank sites/dates. Engine explains the formula. */
   matchScore: number;
+  /** Solar energy per day for the chosen Params.panelType, Wh/day (engine). */
+  energyWhPerDay?: number;
+  /** How matchScore was built — the UI lists these so the score is explainable. */
+  scoreBreakdown?: { label: string; points: number; reason: string }[];
 }
 
 // ---------------------------------------------------------------- Mission
@@ -180,12 +255,19 @@ export interface Params {
   commsMinClearanceDeg: number;
   /** Sampling step for day reports, minutes. */
   stepMinutes: number;
+  /** Solar array type for energy estimates (engine). */
+  panelType?: 'vertical-fixed' | 'vertical-rotating' | 'tracking' | 'flat';
+  /** Battery limit: longest darkness the mission can survive, hours. */
+  maxDarknessH?: number;
+  /** Weights for matchScore (engine). Placeholder values until Goda sets them. */
+  scoreWeights: { power: number; comms: number; darkness: number };
 }
 
 export const DEFAULT_PARAMS: Params = {
   observerHeightM: 2,
   commsMinClearanceDeg: 0,
   stepMinutes: 60,
+  scoreWeights: { power: 0.4, comms: 0.3, darkness: 0.3 }, // TODO(Goda): real defaults
 };
 
 // ---------------------------------------------------------------- Constants
@@ -196,5 +278,9 @@ export const LUNAR = {
   /** Period of the Sun's declination cycle as seen from the Moon (eclipse year). */
   solarSeasonDays: 346.62,
   axialTiltDeg: 1.54,
+  /**
+   * DISPLAY ONLY. The real value varies ≈ 0.524°–0.542° over the year; the engine uses
+   * Horizons' per-row angularDiameterDeg instead.
+   */
   sunDiameterDeg: 0.53,
 } as const;
