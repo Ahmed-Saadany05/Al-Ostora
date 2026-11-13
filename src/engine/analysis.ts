@@ -168,9 +168,10 @@ export function computeMetrics(
   const relativeEnergyPct = trackingWhPerDay > 0 ? (100 * energyWhPerDay) / trackingWhPerDay : 0;
 
   // Sub-scores (decided: linear, any-part fractions).
-  const powerScore = 100 * sunlitFraction;
-  const commsScore = 100 * earthVisibleFraction;
-  const darknessScore = 100 * clamp(1 - longestNightH / p.maxDarknessH, 0, 1);
+  // Unrounded for the arithmetic; the returned scores are whole numbers like the demo provider's.
+  const powerRaw = 100 * sunlitFraction;
+  const commsRaw = 100 * earthVisibleFraction;
+  const darknessRaw = 100 * clamp(1 - longestNightH / p.maxDarknessH, 0, 1);
 
   // Must-pass gates at landing.
   const { ms: landingMs, basis } = landingOf(p, fromMs);
@@ -190,17 +191,17 @@ export function computeMetrics(
   const breakdown: ScoreLine[] = [
     {
       label: 'Sunlight',
-      points: pts(w.power, powerScore),
+      points: pts(w.power, powerRaw),
       reason: `Sun in view ${pct(sunlitFraction)} of the time, for these dates`,
     },
     {
       label: 'Earth in view',
-      points: pts(w.comms, commsScore),
+      points: pts(w.comms, commsRaw),
       reason: `Earth in view ${pct(earthVisibleFraction)} of the time, for these dates`,
     },
     {
       label: 'Darkness',
-      points: pts(w.darkness, darknessScore),
+      points: pts(w.darkness, darknessRaw),
       reason: `Longest night ${longestNightH.toFixed(1)} h vs a ${p.maxDarknessH} h battery limit`,
     },
   ];
@@ -209,7 +210,8 @@ export function computeMetrics(
     breakdown.push({ label: 'Sun at landing', points: 0, reason: 'No sunlight at the landing time: the lander cannot charge' });
   if (!gates.earthAtLanding)
     breakdown.push({ label: 'Earth at landing', points: 0, reason: 'Earth is not in view at the landing time: no direct link home' });
-  const matchScore = gateOk ? breakdown.reduce((s, l) => s + l.points, 0) : 0;
+  const matchScore = gateOk ? Math.round(breakdown.reduce((s, l) => s + l.points, 0)) : 0;
+  for (const l of breakdown) l.points = Math.round(l.points * 10) / 10; // 1 decimal for display
 
   return {
     source: 'computed',
@@ -225,9 +227,9 @@ export function computeMetrics(
     nextSunrise: isoOrNull(nextOn(sun, fromMs)),
     nextEarthset: isoOrNull(nextOff(earth, toMs)),
     nextEarthrise: isoOrNull(nextOn(earth, fromMs)),
-    powerScore,
-    commsScore,
-    darknessScore,
+    powerScore: Math.round(powerRaw),
+    commsScore: Math.round(commsRaw),
+    darknessScore: Math.round(darknessRaw),
     bothFraction,
     bestWindow,
     matchScore,
