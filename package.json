@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Lunar Landing Site Navigator \u2014 Team Al Ostora, NASA Space Apps Cairo 2026",
+  "description": "Lunar Landing Site Navigator — Team Al Ostora, NASA Space Apps Cairo 2026",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
