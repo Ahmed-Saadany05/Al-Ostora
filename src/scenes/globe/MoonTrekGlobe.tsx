@@ -90,18 +90,24 @@ export interface MoonTrekGlobeProps {
   sun?: Vec3;
   /** Called once, when the first full set of imagery tiles has loaded. */
   onImageryReady?: () => void;
+  /**
+   * Lighting driven by the parent instead of `sun`: the parent writes `uSun` (WORLD-space unit
+   * vector) and may fade `uExposure`, e.g. for an intro light sweep. Create it with createMoonLight().
+   */
+  light?: MoonLight;
   /** Placed in the Moon-fixed frame, in metres. */
   children?: ReactNode;
 }
 
 export const MoonTrekGlobe = forwardRef<THREE.Group, MoonTrekGlobeProps>(function MoonTrekGlobe(
-  { layer = 'mosaic', sun = DEFAULT_SUN, onImageryReady, children },
+  { layer = 'mosaic', sun = DEFAULT_SUN, onImageryReady, light: external, children },
   ref,
 ) {
   const body = useRef<THREE.Group>(null);
   useImperativeHandle(ref, () => body.current as THREE.Group, []);
 
-  const light = useMemo(createMoonLight, []);
+  const own = useMemo(createMoonLight, []);
+  const light = external ?? own;
 
   // Switching layers remounts the surface (the grey placeholder sphere shows while new tiles load).
   const ready = useRef(false);
@@ -127,6 +133,7 @@ export const MoonTrekGlobe = forwardRef<THREE.Group, MoonTrekGlobeProps>(functio
     const b = body.current;
     if (!b) return;
     b.getWorldPosition(light.uMoonCentre.value);
+    if (external) return; // the parent drives uSun
     b.getWorldQuaternion(q);
     light.uSun.value.set(sun.x, sun.y, sun.z).applyQuaternion(q).normalize();
   });
