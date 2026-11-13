@@ -1,51 +1,62 @@
 /**
- * PLACEHOLDER — owner: Pink. A flat (equirectangular) Moon map with pins so step 1 works today.
- * Replace with the Moon Trek globe; keep SitePickerGlobeProps.
+ * STEP 1 — Site picker globe (owner: Pink). Props are fixed in contracts.ts (SitePickerGlobeProps).
+ *
+ * A 3D NASA Moon Trek globe (globe/PickerGlobe3D, loaded lazily) with site pins, region outlines
+ * and click-to-pin coordinates. Without WebGL, or if the 3D view fails, it shows the flat map
+ * (SitePickerMap) with the same props, so step 1 always works.
  */
-import type { MouseEvent } from 'react';
+import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
+import { Pill } from '@/shared/ui';
 import type { SitePickerGlobeProps } from './contracts';
-import s from './placeholders.module.css';
+import { SitePickerMap } from './SitePickerMap';
+import g from './globe/globe.module.css';
 
-export function SitePickerGlobe({ sites, selectedIds, onSelectSite, onPickCoords }: SitePickerGlobeProps) {
-  const x = (lon: number) => ((lon + 180) / 360) * 100;
-  const y = (lat: number) => ((90 - lat) / 180) * 100;
+const PickerGlobe3D = lazy(() => import('./globe/PickerGlobe3D'));
 
-  const pick = (e: MouseEvent<HTMLDivElement>) => {
-    if (!onPickCoords || e.target !== e.currentTarget) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const lon = ((e.clientX - r.left) / r.width) * 360 - 180;
-    const lat = 90 - ((e.clientY - r.top) / r.height) * 180;
-    onPickCoords(Math.round(lat * 100) / 100, Math.round(lon * 100) / 100);
-  };
+function hasWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return Boolean(c.getContext('webgl2') ?? c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
+/** If anything in the 3D view throws, show the flat map instead of a broken step. */
+class GlobeBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error('[SitePickerGlobe] 3D globe failed, showing the flat map', error);
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+function Loading() {
   return (
-    <div
-      className={s.map}
-      onClick={pick}
-      role="application"
-      aria-label="Moon map. Click a pin to select a site, or click anywhere to set custom coordinates."
-    >
-      <span className={s.meridian} style={{ left: '50%' }} />
-      <span className={s.parallel} style={{ top: '50%' }} />
-      <span className={s.polarBand} />
-      {sites.map((site) => {
-        const selected = selectedIds.includes(site.id);
-        return (
-          <button
-            key={site.id}
-            type="button"
-            className={[s.pin, selected && s.pinSelected].filter(Boolean).join(' ')}
-            style={{ left: `${x(site.lon)}%`, top: `${y(site.lat)}%` }}
-            onClick={() => onSelectSite(site.id)}
-            aria-pressed={selected}
-            title={site.name}
-          >
-            <span className={s.pinDot} />
-            <span className={s.pinLabel}>{site.name}</span>
-          </button>
-        );
-      })}
-      <span className={s.mapNote}>Placeholder flat map (near side in the middle) · Pink's Moon Trek globe goes here</span>
+    <div className={g.frame} aria-busy="true">
+      <div className={[g.hud, g.bottomBar].join(' ')}>
+        <span className={g.glass}>
+          <Pill icon="clock" label="Loading the 3D Moon…" />
+        </span>
+      </div>
     </div>
+  );
+}
+
+export function SitePickerGlobe(props: SitePickerGlobeProps) {
+  const [webgl] = useState(hasWebGL);
+  const map = <SitePickerMap {...props} />;
+  if (!webgl) return map;
+  return (
+    <GlobeBoundary fallback={map}>
+      <Suspense fallback={<Loading />}>
+        <PickerGlobe3D {...props} />
+      </Suspense>
+    </GlobeBoundary>
   );
 }

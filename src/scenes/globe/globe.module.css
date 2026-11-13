@@ -1,0 +1,192 @@
+/* Globe scenes — owner: Pink. Tokens only (see src/shared/theme/tokens.css). */
+
+.frame {
+  position: relative;
+  width: 100%;
+  /* Fill the step below its header without running under the status bar. */
+  height: clamp(420px, calc(100vh - var(--header-height) - var(--statusbar-height) - 200px), 820px);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  overflow: hidden;
+  isolation: isolate;
+}
+.frame canvas {
+  display: block;
+  cursor: grab;
+}
+.frame canvas:active {
+  cursor: grabbing;
+}
+
+/* HUD corners — glass chips over the black sky. */
+.hud {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.hud > * {
+  pointer-events: auto;
+}
+.topLeft {
+  top: var(--space-4);
+  left: var(--space-4);
+}
+.topRight {
+  top: var(--space-4);
+  right: var(--space-4);
+}
+/* One bottom bar: help on the left, credits on the right; on narrow globes the credits wrap above. */
+.bottomBar {
+  bottom: var(--space-4);
+  left: var(--space-4);
+  right: var(--space-4);
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap-reverse;
+}
+.bottomLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.bottomRight {
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+/* Pills are outline-only; over bright imagery they need a dark glass backing to stay readable. */
+.glass {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+}
+.coords {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  min-width: 22ch;
+}
+.coords:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- site markers (DOM over the canvas) */
+
+.anchors {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+.anchor[data-hidden='true'] {
+  visibility: hidden;
+}
+
+.marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transform: translate(-6px, -50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-text);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-line-strong);
+}
+.marker:hover .dot,
+.marker:focus-visible .dot {
+  box-shadow: 0 0 0 3px var(--color-line-strong);
+}
+.marker:focus-visible {
+  outline: none;
+}
+.selected .dot {
+  box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-text);
+}
+.label {
+  display: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  border: var(--border);
+}
+.label em {
+  font-style: normal;
+  color: var(--color-text-muted);
+}
+.marker:hover .label,
+.marker:focus-visible .label,
+.selected .label,
+.showLabels .label {
+  display: inline-flex;
+}
+
+/* Pin ripple where you clicked. */
+.ripple {
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--color-text);
+  pointer-events: none;
+  animation: ripple var(--duration-slow) var(--ease-out) 2;
+}
+@keyframes ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
