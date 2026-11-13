@@ -1,0 +1,101 @@
+/* Refaey: a small portrait bottom-right, and a bubble above it. Kit tokens only; transform and opacity only. */
+.dock {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--space-5);
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  /* the dock itself never blocks the page; its two children do */
+  pointer-events: none;
+}
+.aboveBar {
+  /* the shared status bar sits at the bottom of the screen on every page except Home */
+  bottom: calc(var(--statusbar-height) + var(--space-4));
+}
+
+.portrait {
+  pointer-events: auto;
+  width: var(--space-8);
+  height: var(--space-8);
+  padding: 0;
+  border: var(--border-strong);
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.portrait:hover {
+  transform: scale(1.04);
+}
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panel {
+  pointer-events: auto;
+  display: grid;
+  gap: var(--space-4);
+  /* wide enough that two typical sentences fit in four visual lines, so most nodes are one beat */
+  width: min(420px, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-4) var(--space-5);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+  animation: rise var(--duration-base) var(--ease-out);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bubble {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+}
+.title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+.line {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-text);
+}
+/* Counts visual lines at the bubble's width; never seen or heard. */
+.measure {
+  position: absolute;
+  inset: 0 0 auto 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.replies {
+  display: grid;
+  gap: var(--space-2);
+}
+.reply {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 44px;
+  padding-block: var(--space-2);
+  white-space: normal;
+  text-align: start;
+}
