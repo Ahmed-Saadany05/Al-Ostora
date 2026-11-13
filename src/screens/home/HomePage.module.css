@@ -1,29 +1,59 @@
 .hero {
   position: relative;
   flex: 1;
-  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  /* The shared status bar is hidden on Home (route flag minimalChrome), so only the header is subtracted. */
+  min-height: calc(100vh - var(--header-height));
   overflow: hidden;
-  display: flex;
-  justify-content: center;
+  /* Opaque: covers the shell's own static starfield so Home's layers can fade in on their own. */
+  background: var(--color-bg);
+  isolation: isolate;
 }
 
-.copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-2) var(--gutter) 0;
+.stars {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-scene);
 }
 
-/* Big sphere peeking up from the bottom edge. */
+/* Moon: full-bleed, behind everything. The intro lifts this layer into place. */
 .moon {
   position: absolute;
-  left: 50%;
-  top: max(62%, 430px);
-  width: min(1500px, 120vw);
-  aspect-ratio: 1;
-  transform: translateX(-50%);
+  inset: 0;
+  z-index: var(--z-scene);
+}
+
+/* Text: one left-aligned column above the dome. */
+.copy {
+  position: relative;
+  z-index: var(--z-content);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: 1200px; /* the display headline stays on one line up to 1920 */
+  padding: var(--space-6) var(--gutter) var(--space-4);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Pins sit over the dome; only the pin itself takes pointer events. */
+.pins {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-content);
   pointer-events: none;
+}
+
+.credit {
+  position: absolute;
+  left: var(--gutter);
+  bottom: var(--space-4);
+  z-index: var(--z-content);
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
 }

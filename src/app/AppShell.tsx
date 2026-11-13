@@ -22,6 +22,7 @@ export function AppShell() {
   const handle = [...matches].reverse().find((m) => (m.handle as RouteHandle | undefined)?.caption)?.handle as
     | RouteHandle
     | undefined;
+  const minimalChrome = matches.some((m) => (m.handle as RouteHandle | undefined)?.minimalChrome);
   const provider = getProvider();
 
   useEffect(() => {
@@ -69,27 +70,29 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      <footer className={s.status}>
-        <div className={s.statusGroup}>
-          <Icon name="plus" size={16} className={s.plus} />
-          <span>{handle?.caption ?? 'Refaey on the Moon'}</span>
-          <Divider vertical />
-          <span className={provider.id === 'demo' ? s.demo : s.live} title={provider.id === 'demo' ? 'Numbers are placeholders' : 'Numbers from JPL Horizons + NASA LOLA'}>
-            <Icon name={provider.id === 'demo' ? 'beaker' : 'orbit'} size={13} />
-            {provider.id === 'demo' ? 'Demo data' : 'Live NASA data'}
-          </span>
-        </div>
-        <div className={s.statusGroup}>
-          <button type="button" className={s.toggle} onClick={() => setMotion(!motion)} aria-pressed={motion}>
-            <Icon name="motion" size={15} /> Motion {motion ? 'on' : 'off'}
-          </button>
-          <Divider vertical />
-          <button type="button" className={s.toggle} onClick={() => setSound(!sound)} aria-pressed={sound} aria-label={sound ? 'Sound on' : 'Sound off'}>
-            <Icon name={sound ? 'soundOn' : 'soundOff'} size={15} />
-          </button>
-          <span className={s.credit}>Al Ostora / Space Apps</span>
-        </div>
-      </footer>
+      {!minimalChrome && (
+        <footer className={s.status}>
+          <div className={s.statusGroup}>
+            <Icon name="plus" size={16} className={s.plus} />
+            <span>{handle?.caption ?? 'Refaey on the Moon'}</span>
+            <Divider vertical />
+            <span className={provider.id === 'demo' ? s.demo : s.live} title={provider.id === 'demo' ? 'Numbers are placeholders' : 'Numbers from JPL Horizons + NASA LOLA'}>
+              <Icon name={provider.id === 'demo' ? 'beaker' : 'orbit'} size={13} />
+              {provider.id === 'demo' ? 'Demo data' : 'Live NASA data'}
+            </span>
+          </div>
+          <div className={s.statusGroup}>
+            <button type="button" className={s.toggle} onClick={() => setMotion(!motion)} aria-pressed={motion}>
+              <Icon name="motion" size={15} /> Motion {motion ? 'on' : 'off'}
+            </button>
+            <Divider vertical />
+            <button type="button" className={s.toggle} onClick={() => setSound(!sound)} aria-pressed={sound} aria-label={sound ? 'Sound on' : 'Sound off'}>
+              <Icon name={sound ? 'soundOn' : 'soundOff'} size={15} />
+            </button>
+            <span className={s.credit}>Al Ostora / Space Apps</span>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

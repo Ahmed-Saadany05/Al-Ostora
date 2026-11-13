@@ -1,0 +1,34 @@
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.sun svg {
+  color: var(--color-sun);
+}
+.earth svg {
+  color: var(--color-earth);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.recorded {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
