@@ -81,7 +81,7 @@ function LayerTiles({ layerId, light, onLoaded }: { layerId: MoonLayerId; light:
 
 /** Moon-fixed (Z-up) → scene (Y-up): one fixed turn, applied once, here. */
 const BODY_ROTATION = new THREE.Euler(-Math.PI / 2, 0, 0);
-const DEFAULT_SUN: Vec3 = { x: 0.82, y: -0.42, z: -0.38 };
+export const DEFAULT_SUN: Vec3 = { x: 0.82, y: -0.42, z: -0.38 };
 
 export interface MoonTrekGlobeProps {
   /** Which Moon Trek layer to show. */

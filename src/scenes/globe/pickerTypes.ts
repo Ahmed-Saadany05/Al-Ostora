@@ -22,8 +22,10 @@ export interface PickerGlobe3DProps extends SitePickerGlobeProps {
   ripple: (LatLon & { key: number }) | null;
   onMoonHoverRegion: (region: RegionId | null) => void;
   onMoonClick: (p: LatLon) => void;
-  /** Opened by clicking the Home Moon: start close over the south pole (see moonHandoff). */
+  /** Opened by the Home flight: start on the opening view it landed on (see moonHandoff). */
   fromHome?: boolean;
+  /** First Moon Trek imagery is on screen. */
+  onImageryReady?: () => void;
 }
 
 /** Camera distances in lunar radii. */
@@ -43,3 +45,20 @@ export const KIND_WORD: Record<SiteKind, string> = {
   'crash-site': 'Crash site',
   custom: 'Your pin',
 };
+
+/** Step 1 camera: vertical field of view, and the opening view (also where Home's flight lands). */
+export const PICKER_FOV = 32;
+export const OPENING_VIEW = { lat: -55, lon: 8 } as const;
+
+/**
+ * Opening camera distance for a globe box of w × h px: START_DISTANCE, or further back when the box
+ * is narrow, so the whole disc always fits (at most 90 % of the width).
+ */
+export function openingDistance(w: number, h: number): number {
+  const focal = h / 2 / Math.tan(((PICKER_FOV / 2) * Math.PI) / 180);
+  const radius = Math.min(focal / Math.sqrt(START_DISTANCE ** 2 - 1), 0.45 * w);
+  return Math.sqrt(1 + (focal / Math.max(radius, 1)) ** 2);
+}
+
+/** Goal distance meaning "the opening distance for this box" (see openingDistance). */
+export const FIT_DISTANCE = -1;

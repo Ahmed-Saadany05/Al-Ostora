@@ -12,14 +12,14 @@ import { Pill } from '@/shared/ui';
 import type { SitePickerGlobeProps } from './contracts';
 import { SitePickerMap } from './SitePickerMap';
 import { SectorMenu } from './globe/SectorMenu';
-import { SECTOR_DISTANCE, SITE_DISTANCE, START_DISTANCE, type CameraGoal } from './globe/pickerTypes';
-import { preloadPickerGlobe, takeMoonHandoff } from './globe/moonHandoff';
+import { FIT_DISTANCE, SECTOR_DISTANCE, SITE_DISTANCE, type CameraGoal } from './globe/pickerTypes';
+import { preloadPickerGlobe, releaseMoonHandoff, takeMoonHandoff } from './globe/moonHandoff';
 import { REGION_VIEW, regionAt, type LatLon, type RegionId } from './lib/moonFrame';
 import g from './globe/globe.module.css';
 
 const PickerGlobe3D = lazy(preloadPickerGlobe);
-/** Where the opening view settles (also the end of the flight in from Home). */
-const OPENING_VIEW: LatLon = { lat: -55, lon: 8 };
+/** After the Home flight: keep its last frame on top until the live tiles have sharpened, then fade. */
+const SNAPSHOT_HOLD_MS = 900;
 
 function hasWebGL() {
   try {
@@ -57,8 +57,10 @@ function Loading() {
 export function SitePickerGlobe(props: SitePickerGlobeProps) {
   const { sites, selectedIds, onSelectSite, onPickCoords, layout, title, footer } = props;
   const [webgl] = useState(hasWebGL);
-  // Just clicked the Moon on Home? Then continue that move: start close over the south pole, pull back.
-  const [fromHome] = useState(takeMoonHandoff);
+  // Just flew here from Home? Its last frame (put on the page by moonHandoff) covers the globe until
+  // our own imagery has loaded and sharpened, then fades.
+  const [fromHome] = useState(() => takeMoonHandoff() !== null);
+  const onImageryReady = useCallback(() => releaseMoonHandoff(SNAPSHOT_HOLD_MS), []);
 
   const [active, setActive] = useState<RegionId | null>(null);
   const [menuHover, setMenuHover] = useState<RegionId | null>(null);
@@ -67,10 +69,6 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
   const [goal, setGoal] = useState<CameraGoal | null>(null);
   const [ripple, setRipple] = useState<(LatLon & { key: number }) | null>(null);
   const go = useCallback((p: LatLon, distance: number | null) => setGoal({ lat: p.lat, lon: p.lon, distance, key: performance.now() }), []);
-
-  useEffect(() => {
-    if (fromHome) go(OPENING_VIEW, START_DISTANCE);
-  }, [fromHome, go]);
 
   // Arriving with sites already chosen (a link, or Back from step 2): open that sector, near the site.
   const arrived = useRef(false);
@@ -97,7 +95,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
     const from = active;
     setActive(null);
     setHotSiteId(null);
-    if (from) go(REGION_VIEW[from], START_DISTANCE);
+    if (from) go(REGION_VIEW[from], FIT_DISTANCE);
   };
   const chooseSite = (id: string) => {
     const site = sites.find((x) => x.id === id);
@@ -126,6 +124,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
         <PickerGlobe3D
           {...props}
           fromHome={fromHome}
+          onImageryReady={onImageryReady}
           onSelectSite={chooseSite}
           hoverRegion={menuHover ?? moonHover}
           activeRegion={active}

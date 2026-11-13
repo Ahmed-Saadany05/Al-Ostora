@@ -15,11 +15,12 @@
   height: 100%;
 }
 
-/* Arriving from Home: the Moon pulls back first, then the title and menu fade in. */
+/* Arriving from Home: the Moon is already in place; the title and menu fade in around it. */
 .enter .menu,
 .enter .title {
-  animation: enterFade var(--duration-slow) var(--ease-out) 0.9s both;
+  animation: enterFade var(--duration-slow) var(--ease-out) 0.1s both;
 }
+
 @keyframes enterFade {
   from {
     opacity: 0;

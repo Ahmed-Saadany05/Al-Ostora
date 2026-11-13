@@ -1,5 +1,6 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
 import { lazy, Suspense, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
@@ -20,6 +21,7 @@ const SHOW_SITE_PIN = false;
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
+  const navigate = useNavigate();
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -44,8 +46,9 @@ export function HomePage() {
 
   return (
     <section className={s.hero}>
-      <div ref={stars} className={s.stars}>
-        <StarLayers parallax={motion && introDone} />
+      <div ref={stars} className={s.stars} data-home-stars>
+        {/* Stars drift on their own; they no longer follow the cursor. */}
+        <StarLayers parallax={false} />
       </div>
 
       <div ref={moon} className={s.moon}>
@@ -76,8 +79,16 @@ export function HomePage() {
           <Lead align="left">{HOME_COPY.line}</Lead>
         </div>
         <div data-intro className={s.actions}>
-          {/* Until the camera dive exists, Begin goes straight into the mission flow. */}
-          <Button variant="primary" size="md" icon="arrowRight" to={missionUrl.chooseSite()}>
+          <Button
+            variant="primary"
+            size="md"
+            icon="arrowRight"
+            onClick={() => {
+              // Same as clicking the Moon: it flies into Step 1. Without the Moon, go straight there.
+              if (handle.current) handle.current.enterStep1();
+              else navigate(missionUrl.chooseSite());
+            }}
+          >
             {HOME_COPY.begin}
           </Button>
           <Button variant="ghost" to="/about">
