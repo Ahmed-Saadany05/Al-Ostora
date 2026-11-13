@@ -100,6 +100,7 @@
   min-width: 0;
   gap: var(--space-4);
   min-height: 0;
+  height: 100%;
   padding-top: var(--space-2);
 }
 .menuLabel {
@@ -124,10 +125,19 @@
 .menuList {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
+  grid-auto-rows: minmax(76px, auto);
+  align-content: start;
+  gap: var(--space-3);
+  flex: 1;
   overflow: auto;
   min-height: 0;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+.menuList > div,
+.menuList > div > * {
+  height: 100%;
 }
 .menuEmpty,
 .menuHint {
@@ -143,6 +153,23 @@
   padding-top: var(--space-3);
   border-top: var(--border);
 }
+/* The step's primary button fills the menu width; long site names wrap instead of overflowing. */
+.menuFooter > a,
+.menuFooter > button {
+  width: 100%;
+  height: auto;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-5);
+  white-space: normal;
+  text-align: left;
+  line-height: var(--leading-tight);
+  justify-content: space-between;
+}
+.menuFooter > a > span,
+.menuFooter > button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .sectorRow,
 .siteRow {
@@ -154,9 +181,13 @@
 }
 .sectorText {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
   flex: 1;
   min-width: 0;
+}
+.sectorText > strong {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
 }
 .sectorText > span {
   font-size: var(--text-xs);
@@ -179,14 +210,6 @@
   flex: none;
   border-radius: 6px;
   border: var(--border-strong);
-}
-.kind {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex: none;
-  font-size: var(--text-2xs);
-  color: var(--color-text-muted);
 }
 
 .coordsForm {

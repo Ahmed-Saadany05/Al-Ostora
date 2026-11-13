@@ -8,7 +8,6 @@ import { formatLatLon } from '@/shared/format';
 import type { Site } from '@/shared/types';
 import { Button, Card, Icon } from '@/shared/ui';
 import { REGION_LABEL, REGION_ORDER, type RegionId } from '../lib/moonFrame';
-import { KIND_ICON, KIND_WORD } from './pickerTypes';
 import g from './globe.module.css';
 
 /** One line per sector: why you would (or would not) land there. Plain words for the public. */
@@ -107,10 +106,6 @@ export function SectorMenu({ sites, selectedIds, active, onHoverRegion, onChoose
                   <span className={g.sectorText}>
                     <strong>{site.kind === 'custom' ? 'Your pin' : site.name}</strong>
                     <span className="num">{formatLatLon(site.lat, site.lon)}</span>
-                  </span>
-                  <span className={g.kind} title={KIND_WORD[site.kind]}>
-                    <Icon name={KIND_ICON[site.kind]} size={14} />
-                    {KIND_WORD[site.kind]}
                   </span>
                 </span>
               </Card>

@@ -126,7 +126,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
           fromHome={fromHome}
           onImageryReady={onImageryReady}
           onSelectSite={chooseSite}
-          hoverRegion={menuHover ?? moonHover}
+          hoverRegion={active ? null : (menuHover ?? moonHover)}
           activeRegion={active}
           hotSiteId={hotSiteId}
           goal={goal}
