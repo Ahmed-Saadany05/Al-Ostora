@@ -96,3 +96,12 @@ test('regions mirror customSite(): ±80° caps, far side beyond ±90° longitude
     assert.ok(lines.length > 0 && lines.every((l) => l.length > 2), id);
   }
 });
+
+test('each region view centre lies inside (or, for the poles, looks onto) its region', async () => {
+  const { REGION_VIEW, REGION_ORDER } = await import('./moonFrame.ts');
+  assert.deepEqual(REGION_ORDER, ['south-pole', 'nearside', 'farside', 'north-pole']);
+  assert.equal(regionAt(REGION_VIEW.nearside.lat, REGION_VIEW.nearside.lon), 'nearside');
+  assert.equal(regionAt(REGION_VIEW.farside.lat, REGION_VIEW.farside.lon), 'farside');
+  // Poles are framed obliquely from ±70°, 10° outside the ±80° caps they show.
+  assert.ok(REGION_VIEW['south-pole'].lat < 0 && REGION_VIEW['north-pole'].lat > 0);
+});

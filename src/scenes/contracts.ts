@@ -3,6 +3,7 @@
  * Aser's step pages render these and lay their HUD on top. Pink can replace the
  * placeholder implementations freely, but keep these props stable (or agree changes with Aser).
  */
+import type { ReactNode } from 'react';
 import type { HorizonProfile, IsoTime, LaunchPlan, Site, SkyState } from '@/shared/types';
 
 /** Step 1 — pick landing sites on the Moon. */
@@ -13,6 +14,15 @@ export interface SitePickerGlobeProps {
   onSelectSite: (siteId: string) => void;
   /** Click empty terrain → custom coordinates. */
   onPickCoords?: (lat: number, lon: number) => void;
+  /**
+   * 'full' = the whole step: Moon on the left, sector → site menu on the right (Pink).
+   * Omitted = the globe alone (original behaviour).
+   */
+  layout?: 'full';
+  /** Small page title shown top-left until a sector is chosen (layout 'full'). */
+  title?: ReactNode;
+  /** Pinned to the bottom of the menu: selected-site chips + the step's primary button (layout 'full'). */
+  footer?: ReactNode;
 }
 
 /** Step 2 (full) and step 3 (compact cards) — the view from a site. */

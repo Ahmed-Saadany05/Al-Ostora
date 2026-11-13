@@ -1,25 +1,58 @@
 /* Globe scenes — owner: Pink. Tokens only (see src/shared/theme/tokens.css). */
 
-.frame {
+/* ---------------------------------------------------------------- step 1 layout */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--space-6);
+  height: calc(100vh - var(--header-height) - var(--statusbar-height) - var(--space-6));
+  min-height: 520px;
+}
+.left {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+}
+
+/* Small title, top-left over the Moon; fades away once a sector is chosen. */
+.title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  transition:
+    opacity var(--duration-slow) var(--ease-out),
+    transform var(--duration-slow) var(--ease-out);
+}
+.titleHidden {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* The Moon: no box, no border — it sits straight on the black page. */
+.stage {
   position: relative;
   width: 100%;
-  /* Fill the step below its header without running under the status bar. */
-  height: clamp(420px, calc(100vh - var(--header-height) - var(--statusbar-height) - 200px), 820px);
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg);
-  overflow: hidden;
+  height: 100%;
+  min-height: 420px;
   isolation: isolate;
 }
-.frame canvas {
+.stage canvas {
   display: block;
   cursor: grab;
 }
-.frame canvas:active {
+.stage canvas:active {
   cursor: grabbing;
 }
+.loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 
-/* HUD corners — glass chips over the black sky. */
 .hud {
   position: absolute;
   z-index: 2;
@@ -31,67 +64,148 @@
 .hud > * {
   pointer-events: auto;
 }
-.topLeft {
-  top: var(--space-4);
-  left: var(--space-4);
+.bottomLeftHud {
+  bottom: var(--space-2);
+  left: 0;
 }
-.topRight {
-  top: var(--space-4);
-  right: var(--space-4);
+/* Required imagery credit: plain small text, no box. */
+.credit {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.04em;
 }
-/* One bottom bar: help on the left, credits on the right; on narrow globes the credits wrap above. */
-.bottomBar {
-  bottom: var(--space-4);
-  left: var(--space-4);
-  right: var(--space-4);
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap-reverse;
+
+/* ---------------------------------------------------------------- right menu */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--space-4);
+  min-height: 0;
+  padding-top: var(--space-2);
 }
-.bottomLeft {
+.menuLabel {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.menuHead {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
-.bottomRight {
-  margin-left: auto;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.menuTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
 }
-/* Pills are outline-only; over bright imagery they need a dark glass backing to stay readable. */
-.glass {
+.menuList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  overflow: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+.menuEmpty,
+.menuHint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.menuFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border);
+}
+
+.sectorRow,
+.siteRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+}
+.sectorText {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.sectorText > span {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+}
+.count {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-}
-
-.hint {
+  flex: none;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
+}
+.check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 6px;
+  border: var(--border-strong);
+}
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.coordsForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.coordRow {
+  display: flex;
+  gap: var(--space-2);
+}
+.input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
   border: var(--border);
   border-radius: var(--radius-pill);
-  padding: var(--space-1) var(--space-3);
-}
-.coords {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  background: transparent;
   color: var(--color-text);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  border: var(--border);
-  border-radius: var(--radius-pill);
-  padding: var(--space-1) var(--space-3);
-  min-width: 22ch;
+  font-size: var(--text-sm);
 }
-.coords:empty {
-  display: none;
+.input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-bad);
 }
 
 /* ---------------------------------------------------------------- site markers (DOM over the canvas) */
@@ -128,7 +242,6 @@
   white-space: nowrap;
   cursor: pointer;
   pointer-events: auto;
-  transition: opacity var(--duration-fast) var(--ease-out);
 }
 .dot {
   width: 12px;
@@ -138,6 +251,9 @@
   background: var(--color-text);
   border: 2px solid var(--color-bg);
   box-shadow: 0 0 0 1px var(--color-line-strong);
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
 }
 .marker:hover .dot,
 .marker:focus-visible .dot {
@@ -147,7 +263,17 @@
   outline: none;
 }
 .selected .dot {
-  box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-text);
+  box-shadow:
+    0 0 0 3px var(--color-bg),
+    0 0 0 5px var(--color-text);
+}
+/* Hovered in the menu: the pin lights up. */
+.hot .dot {
+  transform: scale(1.5);
+  box-shadow:
+    0 0 0 3px var(--color-bg),
+    0 0 0 5px var(--color-text),
+    0 0 18px 6px var(--color-line-strong);
 }
 .label {
   display: none;
@@ -166,6 +292,7 @@
 .marker:hover .label,
 .marker:focus-visible .label,
 .selected .label,
+.hot .label,
 .showLabels .label {
   display: inline-flex;
 }

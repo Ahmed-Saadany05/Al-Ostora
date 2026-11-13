@@ -166,3 +166,17 @@ export function regionOutline(id: RegionId): LatLon[][] {
       ];
   }
 }
+
+/** Menu order: the challenge focus first. */
+export const REGION_ORDER: RegionId[] = ['south-pole', 'nearside', 'farside', 'north-pole'];
+
+/**
+ * Where the camera looks to show a whole region. Polar regions are viewed obliquely (±70°) so
+ * the cap reads as a shape rather than a dot.
+ */
+export const REGION_VIEW: Record<RegionId, LatLon> = {
+  'south-pole': { lat: -70, lon: 0 },
+  nearside: { lat: 0, lon: 0 },
+  farside: { lat: 0, lon: 180 },
+  'north-pole': { lat: 70, lon: 0 },
+};
