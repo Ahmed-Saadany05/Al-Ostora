@@ -18,7 +18,7 @@ import { formatLatLon } from './format';
 import { regionOf } from './geo';
 import type { IsoTime, Site } from './types';
 
-export const MAX_COMPARE = 4;
+export const MAX_COMPARE = 5;
 
 export const STEPS = [
   { n: 1, id: 'site', label: 'Choose your site', path: '/mission' },
