@@ -6,7 +6,7 @@ export interface RouteHandle {
   title?: string;
   /** Short uppercase caption in the footer, e.g. "The journey begins". */
   caption?: string;
-  /** Hide the footer status bar on this route (e.g. the cinematic Home). Header stays. */
+  /** Hide the header and the footer status bar on this route (e.g. the cinematic Home). The skip link stays. */
   minimalChrome?: boolean;
 }
 
