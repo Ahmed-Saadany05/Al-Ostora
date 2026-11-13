@@ -34,10 +34,10 @@ interface IntroRefs {
 }
 
 /**
- * Longest we wait for the Moon texture before playing the intro anyway. Matches HeroMoon's imagery
- * timeout: the loading screen covers the wait, so the intro never plays over a half-loaded Moon.
+ * Longest we wait for the Moon (and Step 1's preload) before playing the intro anyway. Matches the
+ * loading screen's cap in HomePage, so the intro never plays under the loader or over a half-loaded Moon.
  */
-const READY_TIMEOUT_MS = 12_000;
+const READY_TIMEOUT_MS = 20_000;
 
 /**
  * About 4 s: stars fade in → Moon rises → light sweep → headline → line → button → pin pulses once.

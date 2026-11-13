@@ -25,9 +25,9 @@ import { useNavigate } from 'react-router-dom';
 import { Euler, Matrix4, PerspectiveCamera, Quaternion, Vector3, type Group } from 'three';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
-import { MoonTrekGlobe } from './globe/MoonTrekGlobe';
+import { DEFAULT_SUN, MoonTrekGlobe } from './globe/MoonTrekGlobe';
 import { createMoonLight } from './globe/moonShading';
-import { VIEWER_LIGHT } from './globe/pickerTypes';
+import { STEP1_NIGHT_FLOOR } from './globe/pickerTypes';
 import { OPENING_VIEW, pickerDisc, preloadPickerGlobe, setMoonHandoff, type Rect } from './globe/moonHandoff';
 import { latLonToVec } from './lib/moonFrame';
 
@@ -109,16 +109,19 @@ function applyView(cam: PerspectiveCamera, v: View, w: number, h: number) {
 }
 
 const toScene = (v: { x: number; y: number; z: number }) => new Vector3(v.x, v.z, -v.y);
+/** MoonTrekGlobe's fixed Moon-fixed → scene turn. */
+const BODY_Q = new Quaternion().setFromEuler(new Euler(-Math.PI / 2, 0, 0));
 
 /**
- * The Moon's orientation that matches Step 1's opening camera: its camera looks at the
+ * The Moon's orientation (and light) that matches Step 1's opening camera: its camera looks at the
  * Moon from OPENING_VIEW with north up; here the camera looks down −Z, so turn the Moon instead.
  */
 function openingPose() {
   const d = toScene(latLonToVec(OPENING_VIEW.lat, OPENING_VIEW.lon)).normalize();
   const look = new Matrix4().lookAt(d, new Vector3(), new Vector3(0, 1, 0));
   const q = new Quaternion().setFromRotationMatrix(look).invert();
-  return { q };
+  const sun = new Vector3(DEFAULT_SUN.x, DEFAULT_SUN.y, DEFAULT_SUN.z).applyQuaternion(BODY_Q).applyQuaternion(q).normalize();
+  return { q, sun };
 }
 
 type Controls = {
@@ -213,8 +216,7 @@ function Scene({
         q0: orient.current.quaternion.clone(),
         q1: pose.q,
         sun0: light.uSun.value.clone(),
-        // End on Step 1's light: from the viewer, slightly above-left (Home's camera looks down −Z, up +Y).
-        sun1: new Vector3(-VIEWER_LIGHT.left, VIEWER_LIGHT.up, 1).normalize(),
+        sun1: pose.sun, // Step 1's fixed Sun, seen from its opening view
         done,
         finished: false,
       };
@@ -243,7 +245,7 @@ function Scene({
       o.quaternion.slerpQuaternions(f.q0, f.q1, e);
       light.uSun.value.copy(f.sun0).lerp(f.sun1, e).normalize();
       light.uExposure.value = EXPOSURE;
-      light.uNightFloor.value = 0.035;
+      light.uNightFloor.value = 0.035 + (STEP1_NIGHT_FLOOR - 0.035) * e; // ends on Step 1's lifted night side
       if (f.t >= 1 && !f.finished) {
         f.finished = true;
         // Snapshot after this frame has been drawn, then hand over.

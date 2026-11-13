@@ -48,7 +48,7 @@ export const KIND_WORD: Record<SiteKind, string> = {
 
 /** Step 1 camera: vertical field of view, and the opening view (also where Home's flight lands). */
 export const PICKER_FOV = 32;
-export const OPENING_VIEW = { lat: -55, lon: 8 } as const;
+export const OPENING_VIEW = { lat: -55, lon: 28 } as const; // turned a little to the left
 
 /**
  * Opening camera distance for a globe box of w × h px: START_DISTANCE, or further back when the box
@@ -69,8 +69,8 @@ export function siteLetter(i: number): string {
 }
 
 /**
- * Step 1 lights the Moon from the viewer (a full Moon, as in the design), from slightly above-left
- * so craters keep a little relief. Offsets are in camera axes (up, left), added to the direction
- * back toward the camera. Home's flight ends on the same light, so the hand-off matches.
+ * Step 1 is lit by a fixed Sun (DEFAULT_SUN, as when the real Moon first went in), so one side is in
+ * shadow. The night side is lifted to this level: clearly dark, but its big features stay visible.
+ * Home's flight ends on the same light and floor, so the hand-off matches.
  */
-export const VIEWER_LIGHT = { up: 0.18, left: 0.12 } as const;
+export const STEP1_NIGHT_FLOOR = 0.3;

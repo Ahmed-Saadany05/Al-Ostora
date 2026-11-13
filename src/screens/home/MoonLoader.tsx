@@ -3,11 +3,12 @@
  * quiet label. It covers Home until the Moon's imagery has arrived, so the intro always plays over
  * a finished Moon instead of tiles popping in mid-animation.
  *
- * Only appears if loading actually takes a moment (warm cache: never shown). Progress counts the
- * Moon Trek tiles as they arrive (a typical first view needs about EXPECTED_TILES); it never claims
- * 100 % until the Moon reports ready.
+ * Only appears if loading actually takes a moment (warm cache: never shown). Progress is half Home's
+ * own Moon (Moon Trek tiles as they land, about EXPECTED_TILES for a first view) and half Step 1's
+ * preload (its 3D code and opening imagery). It never claims 100 % until everything is ready.
  */
 import { useEffect, useState } from 'react';
+import { onStep1Progress, type Step1Progress } from '@/scenes';
 import s from './MoonLoader.module.css';
 
 const SHOW_AFTER_MS = 300;
@@ -18,6 +19,8 @@ export function MoonLoader({ ready }: { ready: boolean }) {
   const [visible, setVisible] = useState(false);
   const [gone, setGone] = useState(false);
   const [tiles, setTiles] = useState(0);
+  const [step1, setStep1] = useState<Step1Progress>({ done: 0, total: 1 });
+  useEffect(() => onStep1Progress(setStep1), []);
 
   // Show only if it takes a while.
   useEffect(() => {
@@ -51,7 +54,9 @@ export function MoonLoader({ ready }: { ready: boolean }) {
   }, [ready]);
 
   if (!visible || gone) return null;
-  const progress = ready ? 1 : Math.min(0.94, 0.06 + (tiles / EXPECTED_TILES) * 0.88);
+  const home = Math.min(1, tiles / EXPECTED_TILES);
+  const pre = step1.total > 0 ? step1.done / step1.total : 1;
+  const progress = ready ? 1 : Math.min(0.96, 0.04 + 0.92 * (0.5 * home + 0.5 * pre));
   return (
     <div className={[s.loader, ready && s.out].filter(Boolean).join(' ')} role="status" aria-live="polite">
       <div className={s.inner}>

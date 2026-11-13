@@ -15,10 +15,10 @@ import { color } from '@/shared/theme/tokens';
 import { useApp } from '@/shared/store/app';
 import type { Site } from '@/shared/types';
 import { Tabs } from '@/shared/ui';
-import { MoonTrekGlobe } from './MoonTrekGlobe';
+import { DEFAULT_SUN, MoonTrekGlobe } from './MoonTrekGlobe';
 import { createMoonLight } from './moonShading';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, siteLetter, VIEWER_LIGHT, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, STEP1_NIGHT_FLOOR, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -148,7 +148,7 @@ function MarkerLayer({
   return (
     // Few sites: names always shown next to the letters (as in the design); many: on hover/selection.
     <div className={[g.anchors, sites.length <= LABELS_ALWAYS_MAX && g.alwaysLabels].filter(Boolean).join(' ')}>
-      {sites.map((site, i) => {
+      {sites.map((site) => {
         const selected = selectedIds.includes(site.id);
         return (
           <div key={site.id} ref={bind(site.id)} className={g.anchor} data-hidden="true">
@@ -159,7 +159,7 @@ function MarkerLayer({
               aria-pressed={selected}
               title={`${site.name} · ${KIND_WORD[site.kind]} · ${formatLatLon(site.lat, site.lon)}`}
             >
-              <span className={g.letter}>{siteLetter(i)}</span>
+              <span className={g.dot} />
               <span className={g.label}>{site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}</span>
             </button>
           </div>
@@ -274,12 +274,19 @@ interface SceneProps {
 function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick, onImageryReady }: SceneProps) {
   const body = useRef<THREE.Group>(null);
   const moonHover = useRef<RegionId | null>(null);
-  // Full Moon: the light comes from the viewer (slightly above-left), whichever way the Moon is turned.
-  const light = useMemo(createMoonLight, []);
-  const axes = useMemo(() => ({ right: new THREE.Vector3(), up: new THREE.Vector3(), back: new THREE.Vector3() }), []);
-  useFrame(({ camera }) => {
-    camera.matrixWorld.extractBasis(axes.right, axes.up, axes.back);
-    light.uSun.value.copy(axes.back).addScaledVector(axes.up, VIEWER_LIGHT.up).addScaledVector(axes.right, -VIEWER_LIGHT.left).normalize();
+  // A fixed Sun on the Moon (one side in shadow, turning with it), with the night side lifted so its
+  // big features stay visible.
+  const light = useMemo(() => {
+    const l = createMoonLight();
+    l.uNightFloor.value = STEP1_NIGHT_FLOOR;
+    return l;
+  }, []);
+  const bodyQ = useMemo(() => new THREE.Quaternion(), []);
+  useFrame(() => {
+    const b = body.current;
+    if (!b) return;
+    b.getWorldQuaternion(bodyQ);
+    light.uSun.value.set(DEFAULT_SUN.x, DEFAULT_SUN.y, DEFAULT_SUN.z).applyQuaternion(bodyQ).normalize();
   });
   const inverse = useMemo(() => new THREE.Matrix4(), []);
   const ray = useMemo(() => new THREE.Ray(), []);
@@ -322,33 +329,9 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
         <sphereGeometry args={[1, 96, 64]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
-      <RimRing />
       <AltitudeAwareControls motion={motion} />
       <CameraDirector goal={goal} motion={motion} />
     </>
-  );
-}
-
-/**
- * Thin dark rim just outside the Moon's edge (as in the design): a camera-facing ring scaled each
- * frame so it hugs the silhouette at any distance, fading out when zoomed in close.
- */
-function RimRing() {
-  const ring = useRef<THREE.Mesh>(null);
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
-  useFrame(({ camera }) => {
-    const m = ring.current;
-    if (!m) return;
-    const d = camera.position.length();
-    m.quaternion.copy(camera.quaternion);
-    m.scale.setScalar(1 / Math.sqrt(Math.max(1e-4, 1 - 1 / (d * d)))); // silhouette radius in the centre plane
-    if (mat.current) mat.current.opacity = 0.9 * THREE.MathUtils.smoothstep(d, 2.2, 3.6);
-  });
-  return (
-    <mesh ref={ring} renderOrder={-2}>
-      <ringGeometry args={[1.012, 1.034, 160]} />
-      <meshBasicMaterial ref={mat} color="#2a2a2b" transparent depthWrite={false} />
-    </mesh>
   );
 }
 
