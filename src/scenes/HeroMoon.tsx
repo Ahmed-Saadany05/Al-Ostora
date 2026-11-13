@@ -19,7 +19,8 @@
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { PerformanceMonitor } from '@react-three/drei';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Euler, Matrix4, PerspectiveCamera, Quaternion, Vector3, type Group } from 'three';
 import { missionUrl } from '@/shared/mission';
@@ -326,6 +327,9 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
   const navigate = useNavigate();
   const motion = useApp((st) => st.motion);
   const leaving = useRef(false);
+  // Sharp on capable screens; drops to 1× if frames start to slip (slower laptops), back up if it recovers.
+  const maxDpr = Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
+  const [dpr, setDpr] = useState(maxDpr);
 
   const enter = () => {
     if (leaving.current) return;
@@ -371,11 +375,12 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
     <div ref={box} style={{ position: 'absolute', inset: 0 }}>
       <Canvas
         camera={{ position: [0, 0, HOME_DISTANCE], fov: 10, near: 0.1, far: 100 }}
-        dpr={[1, 2]}
+        dpr={dpr}
         // Keeps the last frame readable for the hand-off snapshot.
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         aria-label={label}
       >
+        <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(maxDpr)} flipflops={3} onFallback={() => setDpr(1)} />
         <Scene {...props} controls={controls} onMoonClick={enter} />
       </Canvas>
     </div>
