@@ -32,14 +32,14 @@ export const SECTOR_DISTANCE = 3.3;
 export const SITE_DISTANCE = 1.18; // close-up, ≈ 310 km above the site
 
 export const KIND_ICON: Record<SiteKind, IconName> = {
-  'artemis-candidate': 'pin',
-  'historic-landing': 'check',
-  'failed-landing': 'alert',
+  candidate: 'pin',
+  'landing-site': 'check',
+  'crash-site': 'alert',
   custom: 'plus',
 };
 export const KIND_WORD: Record<SiteKind, string> = {
-  'artemis-candidate': 'Artemis candidate',
-  'historic-landing': 'Landing site',
-  'failed-landing': 'Landing attempt',
+  candidate: 'Candidate',
+  'landing-site': 'Landing site',
+  'crash-site': 'Crash site',
   custom: 'Your pin',
 };

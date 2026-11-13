@@ -8,7 +8,8 @@ import {
   subEarthPoint,
   subSolarPoint,
 } from './demoModel';
-import { DEMO_SITES } from './demoSites';
+import { SITE_CATALOGUE } from '@/data/sites';
+import { horizonInfo } from '../../horizon';
 
 const SUN_KM = 149_597_870;
 const DEMO_TRANSIT_DAYS = 5;
@@ -30,6 +31,7 @@ function sky(site: Site, t: number, params: Params): SkyState {
     earth: { ...earth, illumination: earthIllumination(t) },
     sunVisible: sun.visibleFraction > 0,
     earthVisible: earth.clearanceDeg >= params.commsMinClearanceDeg,
+    horizon: horizonInfo('demo', site.lat),
   };
 }
 
@@ -53,7 +55,8 @@ export const demoProvider: DataProvider = {
   id: 'demo',
   label: 'Demo data',
 
-  listSites: () => latency(DEMO_SITES),
+  // Sites are REAL (sourced catalogue); only the sky numbers are demo.
+  listSites: () => latency(SITE_CATALOGUE),
 
   getHorizon: (site, params) => latency(demoHorizon(site, p(params).observerHeightM)),
 
