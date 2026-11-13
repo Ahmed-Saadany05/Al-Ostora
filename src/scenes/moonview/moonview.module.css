@@ -1,0 +1,113 @@
+/* Stand-on-site 3D view — owner: Pink. Tokens only. */
+
+.view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.grabbing {
+  cursor: grabbing;
+}
+.view canvas {
+  display: block;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+.anchor[data-hidden='true'] {
+  visibility: hidden;
+}
+
+/* Label above a body: centred over it, sitting a little above. */
+.tag {
+  position: absolute;
+  bottom: 26px;
+  left: 0;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: var(--border);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  white-space: nowrap;
+  font-size: var(--text-xs);
+}
+.tag b {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  font-weight: var(--weight-medium);
+}
+.tag .num,
+.tag :global(.num) {
+  font-size: var(--text-lg);
+  color: var(--color-text);
+}
+.tag small {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+.tagSun b {
+  color: var(--color-sun);
+}
+.tagEarth b {
+  color: var(--color-earth);
+}
+
+.compass {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 4px);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.terrainNote {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--color-demo);
+  pointer-events: none;
+}
+
+.dense .tag {
+  bottom: 18px;
+  padding: 2px var(--space-2);
+}
+.dense .tag .num {
+  font-size: var(--text-sm);
+}
