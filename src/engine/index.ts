@@ -9,6 +9,7 @@ import type { HorizonsResponse } from '@/data/horizons/types';
 import { SITE_CATALOGUE } from '@/data/sites';
 import { registerProvider } from '@/shared/data';
 import type { HorizonProfile } from '@/shared/types';
+import { makeAlternatives, measureWith } from './alternatives';
 import { createLiveProvider, recordedFrom } from './provider';
 
 const lolaFiles = import.meta.glob<HorizonProfile>('/src/data/horizons-lola/*.json', { import: 'default' });
@@ -25,6 +26,13 @@ export const liveProvider = createLiveProvider({
 });
 
 registerProvider(liveProvider);
+
+/** Refaey's end-of-plan story (see alternatives.ts). Async: may fetch Horizons data. */
+export const { suggestAlternatives, firstLunarDayHours } = makeAlternatives(
+  measureWith(liveProvider.getMetrics),
+  liveProvider.listSites,
+);
+export type { Alternative, DayHours } from './alternatives';
 
 export { createLiveProvider } from './provider';
 export { gradeSite, LESSONS } from './grading';
