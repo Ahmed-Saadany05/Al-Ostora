@@ -4,7 +4,8 @@
  * The Earth–Moon orbit timelapse (launch/LaunchOrbit3D, loaded lazily) for the planned launch and
  * landing dates. Positions come from an OrbitProvider: `placeholderOrbit` for now (approximate Moon
  * orbit + a stand-in trajectory); the engine's can replace it here. Skip at any time; with motion off
- * it ends straight away. Without WebGL, a short text version plays instead.
+ * it opens at arrival. It ends when the user taps the Moon (or skips). Without WebGL, a short text
+ * version plays instead.
  */
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { formatUtc } from '@/shared/format';

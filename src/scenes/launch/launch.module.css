@@ -4,7 +4,8 @@
   flex: 1;
   min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
   overflow: hidden;
-  background: var(--color-bg);
+  /* Transparent: the app's starfield shows behind the orbit, as in the reference. */
+  background: transparent;
   isolation: isolate;
 }
 .view {
@@ -119,35 +120,155 @@
   }
 }
 
-.hud {
-  position: absolute;
-  left: var(--gutter);
-  bottom: var(--space-5);
-  display: grid;
-  gap: var(--space-1);
-}
-.phase {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  color: var(--color-text);
-}
-.sim {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-.dest {
-  font-size: var(--text-xs);
-  color: var(--color-text-faint);
-}
-.note {
-  position: absolute;
-  left: var(--gutter);
-  top: var(--space-4);
-  font-size: var(--text-2xs);
-  color: var(--color-text-faint);
-}
 .skip {
   position: absolute;
   right: var(--gutter);
   bottom: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- reference layout */
+
+/* Left column: eyebrow, headline, one line. */
+.intro {
+  position: absolute;
+  top: var(--space-7, 56px);
+  left: calc(var(--gutter) + var(--space-6));
+  display: grid;
+  gap: var(--space-4);
+  max-width: 420px;
+  pointer-events: none;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+/* Top-right caption between hairlines. */
+.system {
+  position: absolute;
+  top: var(--space-7, 56px);
+  right: calc(var(--gutter) + var(--space-6));
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.systemTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.systemTitle::before,
+.systemTitle::after {
+  content: '';
+  width: 22px;
+  border-top: var(--border-strong);
+}
+.systemNote {
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+
+/* Bottom centre: three glass cards. */
+.cards {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-3);
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 200px;
+  padding: var(--space-4) var(--space-5);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 11, 0.72);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text-muted);
+}
+.card span {
+  display: grid;
+  gap: 3px;
+}
+.card strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+.card small {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+.cardNow {
+  min-width: 260px;
+  border-color: var(--color-line-strong);
+}
+
+/* End: the prompt under the Moon. */
+.tap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 10px);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: tapIn 0.6s var(--ease-out) both;
+  transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+}
+.tap:hover {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.tapDot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tapDot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: pulse 1.3s var(--ease-out) infinite;
+}
+@keyframes tapIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 18px);
+  }
 }
