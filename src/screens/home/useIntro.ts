@@ -33,8 +33,11 @@ interface IntroRefs {
   handle: RefObject<HeroMoonHandle | null>;
 }
 
-/** Longest we wait for the Moon texture before playing the intro anyway. */
-const READY_TIMEOUT_MS = 3000;
+/**
+ * Longest we wait for the Moon texture before playing the intro anyway. Matches HeroMoon's imagery
+ * timeout: the loading screen covers the wait, so the intro never plays over a half-loaded Moon.
+ */
+const READY_TIMEOUT_MS = 12_000;
 
 /**
  * About 4 s: stars fade in → Moon rises → light sweep → headline → line → button → pin pulses once.
