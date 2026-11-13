@@ -1,0 +1,153 @@
+/* Launch → arrival orbit view — owner: Pink. Tokens only. */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+}
+.view {
+  position: absolute;
+  inset: 0;
+}
+.stage canvas {
+  display: block;
+}
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  visibility: hidden;
+}
+.name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ghostName {
+  top: 0;
+  bottom: auto;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--color-text-faint);
+}
+
+/* The rocket: a pulsing white dot. */
+.rocket {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--color-text);
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+}
+.rocket::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--color-text);
+  animation: pulse 1.3s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* "Your rocket": a small glass note beside the dot that fades out slowly. */
+.toast {
+  position: absolute;
+  left: 14px;
+  top: -30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  animation: toast 5.5s ease-in both;
+}
+.toast::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  bottom: -8px;
+  width: 14px;
+  border-top: 1px solid var(--color-line-strong);
+  transform: rotate(-40deg);
+}
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.hud {
+  position: absolute;
+  left: var(--gutter);
+  bottom: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+}
+.phase {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--color-text);
+}
+.sim {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.dest {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+.note {
+  position: absolute;
+  left: var(--gutter);
+  top: var(--space-4);
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+.skip {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--space-5);
+}
