@@ -22,6 +22,7 @@ import {
   MOON_RADIUS_M,
   latLonToVec,
   pickLatLon,
+  vecToLatLon,
   regionAt,
   regionOutline,
   type LatLon,
@@ -194,46 +195,53 @@ function AltitudeAwareControls({ motion }: { motion: boolean }) {
 }
 
 /**
- * Moves the camera to a goal: turns along the great circle to look at a point and eases the
- * distance at the same time (instant when motion is off). Polar targets are viewed from ±89.5° at most
- * so the orbit controls never sit exactly on the pole.
+ * Moves the camera to a goal (instant when motion is off). The path is interpolated in latitude and
+ * longitude rather than along the great circle: a great-circle path from the far side to a pole
+ * passes over the pole itself, where the orbit controls' spherical coordinates break down and the
+ * view twists. Distance eases on a log scale. Orbit controls are paused during the move.
  */
 function CameraDirector({ goal, motion }: { goal: CameraGoal | null; motion: boolean }) {
   const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as unknown as { update: () => void } | null;
-  const flight = useRef<{ from: THREE.Vector3; to: THREE.Vector3; d0: number; d1: number; t: number; seconds: number } | null>(null);
+  const controls = useThree((s) => s.controls) as unknown as { update: () => void; enabled: boolean } | null;
+  const flight = useRef<{ lat0: number; lon0: number; dLat: number; dLon: number; d0: number; d1: number; t: number; seconds: number } | null>(null);
+
+  const place = (lat: number, lon: number, d: number) => camera.position.copy(toScene(latLonToVec(lat, lon, d)));
 
   useEffect(() => {
     if (!goal) return;
-    const to = toScene(latLonToVec(THREE.MathUtils.clamp(goal.lat, -89.5, 89.5), goal.lon)).normalize();
-    const from = camera.position.clone().normalize();
-    const d0 = camera.position.length();
+    const p = camera.position;
+    const from = vecToLatLon({ x: p.x, y: -p.z, z: p.y }); // scene → Moon-fixed
+    const d0 = p.length();
     const d1 = goal.distance ?? d0;
+    const lat1 = THREE.MathUtils.clamp(goal.lat, -89.5, 89.5);
+    const dLat = lat1 - from.lat;
+    const dLon = ((((goal.lon - from.lon) % 360) + 540) % 360) - 180; // shortest way round
     if (!motion) {
-      camera.position.copy(to.multiplyScalar(d1));
+      place(lat1, goal.lon, d1);
       controls?.update();
       return;
     }
-    const turn = from.angleTo(to);
-    // Longer moves take a little longer; small hover turns stay snappy.
+    const turn = THREE.MathUtils.degToRad(Math.hypot(dLat, dLon * Math.cos(THREE.MathUtils.degToRad((from.lat + lat1) / 2))));
     const seconds = THREE.MathUtils.clamp(0.7 + turn * 0.35 + Math.abs(Math.log(d1 / d0)) * 0.35, 0.7, 1.6);
-    flight.current = { from, to, d0, d1, t: 0, seconds };
+    flight.current = { lat0: from.lat, lon0: from.lon, dLat, dLon, d0, d1, t: 0, seconds };
+    if (controls) controls.enabled = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goal, camera, controls, motion]);
 
-  const q = useMemo(() => new THREE.Quaternion(), []);
-  const full = useMemo(() => new THREE.Quaternion(), []);
   useFrame((_, dt) => {
     const f = flight.current;
     if (!f) return;
     f.t = Math.min(1, f.t + Math.min(dt, 0.05) / f.seconds);
     const e = f.t < 0.5 ? 4 * f.t ** 3 : 1 - (-2 * f.t + 2) ** 3 / 2;
-    full.setFromUnitVectors(f.from, f.to);
-    q.identity().slerp(full, e);
-    // Distance eases on a log scale, so zooming in close feels even rather than sudden at the end.
-    const d = f.d0 * Math.pow(f.d1 / f.d0, e);
-    camera.position.copy(f.from).applyQuaternion(q).multiplyScalar(d);
-    controls?.update();
-    if (f.t >= 1) flight.current = null;
+    place(f.lat0 + f.dLat * e, f.lon0 + f.dLon * e, f.d0 * Math.pow(f.d1 / f.d0, e));
+    camera.lookAt(0, 0, 0);
+    if (f.t >= 1) {
+      flight.current = null;
+      if (controls) {
+        controls.enabled = true;
+        controls.update();
+      }
+    }
   });
   return null;
 }
