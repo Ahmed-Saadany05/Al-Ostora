@@ -8,7 +8,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SitePanorama } from '@/scenes';
+import { interpolateSky, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { nextTransition, useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
@@ -56,9 +56,11 @@ export function StandPage() {
   const [mode, setMode] = useState<'stand' | 'above'>('stand');
   const [verify, setVerify] = useState(false);
 
-  const { data: sky } = useSky(site, time);
+  const { data: fetchedSky } = useSky(site, time);
   const { data: horizon } = useHorizon(site);
   const { data: report } = useDayReport(site, from, days);
+  // Blend the day's samples on the client so scrubbing and timelapses never wait for data.
+  const sky = useMemo(() => interpolateSky(report?.samples, time) ?? fetchedSky, [report, time, fetchedSky]);
   const { data: metrics } = useMetrics(site, from, to);
 
   // Nearby: placeholder suggestion = the closest other catalogue site (the engine suggests one later).
@@ -207,11 +209,11 @@ export function StandPage() {
         label="Timeline"
         tab={
           <span className={st.tabRow}>
-            <Icon name={playing ? 'pause' : 'clock'} size={14} />
+            <Icon name={playing ? 'pause' : 'clock'} size={12} />
             <span className="num">{formatUtc(time)}</span>
             {report && (
               <span className={st.tabStrip}>
-                <SkyTimeline start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} />
+                <SkyTimeline mono start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} />
               </span>
             )}
           </span>

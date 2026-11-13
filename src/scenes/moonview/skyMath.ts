@@ -54,3 +54,77 @@ export function skyPathSegments(samples: PathSample[], r: number, minElDeg = -2)
 export function lightSeconds(distanceKm: number): number {
   return distanceKm / 299_792.458;
 }
+
+// ---------------------------------------------------------------- smooth sky between samples
+
+/** Minimal shapes so this stays pure (structurally compatible with SkyState / BodyPosition). */
+interface BodyLike {
+  azDeg: number;
+  elDeg: number;
+  horizonElDeg: number;
+  clearanceDeg: number;
+  distanceKm: number;
+  angularDiameterDeg: number;
+  visibleFraction: number;
+}
+interface SkyLike {
+  time: string;
+  sun: BodyLike;
+  earth: BodyLike & { illumination: number };
+  sunVisible: boolean;
+  earthVisible: boolean;
+}
+
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+/** Shortest way round the compass (350° → 10° goes through 0°). */
+export function lerpAzDeg(a: number, b: number, k: number): number {
+  const d = ((((b - a) % 360) + 540) % 360) - 180;
+  return (((a + d * k) % 360) + 360) % 360;
+}
+function lerpBody<B extends BodyLike>(a: B, b: B, k: number): B {
+  return {
+    ...a,
+    azDeg: lerpAzDeg(a.azDeg, b.azDeg, k),
+    elDeg: lerp(a.elDeg, b.elDeg, k),
+    horizonElDeg: lerp(a.horizonElDeg, b.horizonElDeg, k),
+    clearanceDeg: lerp(a.clearanceDeg, b.clearanceDeg, k),
+    distanceKm: lerp(a.distanceKm, b.distanceKm, k),
+    angularDiameterDeg: lerp(a.angularDiameterDeg, b.angularDiameterDeg, k),
+    visibleFraction: lerp(a.visibleFraction, b.visibleFraction, k),
+  };
+}
+
+/**
+ * The sky at `time`, blended from the two time-ordered samples around it (DayReport.samples), so
+ * the view follows the clock instantly while scrubbing or in a timelapse instead of waiting for a
+ * new data request per moment. Visibility flips at the nearer sample (the data layer's own answer,
+ * never re-derived here). Null when `time` is outside the samples.
+ */
+export function interpolateSky<S extends SkyLike>(samples: S[] | undefined, time: string): S | null {
+  if (!samples || samples.length === 0) return null;
+  const t = Date.parse(time);
+  if (!Number.isFinite(t)) return null;
+  const first = Date.parse(samples[0].time);
+  const last = Date.parse(samples[samples.length - 1].time);
+  if (t < first || t > last) return null;
+  // Binary search for the last sample at or before t.
+  let lo = 0;
+  let hi = samples.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (Date.parse(samples[mid].time) <= t) lo = mid;
+    else hi = mid - 1;
+  }
+  const a = samples[lo];
+  const b = samples[Math.min(lo + 1, samples.length - 1)];
+  const ta = Date.parse(a.time);
+  const tb = Date.parse(b.time);
+  const k = tb > ta ? (t - ta) / (tb - ta) : 0;
+  const near = k < 0.5 ? a : b;
+  return {
+    ...near,
+    time,
+    sun: lerpBody(a.sun, b.sun, k),
+    earth: { ...lerpBody(a.earth, b.earth, k), illumination: lerp(a.earth.illumination, b.earth.illumination, k) },
+  };
+}

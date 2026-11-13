@@ -29,6 +29,8 @@ export interface SkyTimelineProps {
   onSelectTime?: (time: IsoTime) => void;
   onScrub?: (time: IsoTime) => void;
   size?: 'compact' | 'full';
+  /** Black-and-white lanes (Sun bright, Earth dim) for quiet chrome such as the Moon view's tab. */
+  mono?: boolean;
   /** Accessible name, e.g. "Timeline for Malapert Massif". */
   label?: string;
   className?: string;
@@ -51,6 +53,7 @@ export function SkyTimeline({
   onSelectTime,
   onScrub,
   size = 'compact',
+  mono,
   label = 'Timeline',
   className,
 }: SkyTimelineProps) {
@@ -128,7 +131,7 @@ export function SkyTimeline({
   const best = highlight ? { a: pct(Date.parse(highlight.start)), b: pct(Date.parse(highlight.end)) } : null;
 
   return (
-    <div className={[s.root, s[size], interactive && s.interactive, className].filter(Boolean).join(' ')}>
+    <div className={[s.root, s[size], mono && s.mono, interactive && s.interactive, className].filter(Boolean).join(' ')}>
       {size === 'full' && (
         <div className={s.legend} aria-hidden>
           <span>

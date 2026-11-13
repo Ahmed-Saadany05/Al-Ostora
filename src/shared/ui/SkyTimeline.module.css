@@ -63,6 +63,17 @@
   background: var(--color-earth);
 }
 
+/* Mono: black and white only. */
+.mono .sun .seg {
+  background: rgba(255, 255, 255, 0.9);
+}
+.mono .earth .seg {
+  background: rgba(255, 255, 255, 0.38);
+}
+.mono .best {
+  display: none;
+}
+
 /* Faint marks at each labelled day. */
 .tickMark {
   position: absolute;
