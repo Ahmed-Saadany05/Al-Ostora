@@ -24,7 +24,9 @@
   font-stretch: var(--stretch-body); /* explainer text is body text: normal width */
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  /* The only trigger (Stand on site) sits at the right edge of the page, so open leftward; left: 0 ran off the screen. */
+  right: 0;
+  max-width: calc(100vw - 2 * var(--gutter));
   z-index: var(--z-chrome);
   width: 320px;
   padding: var(--space-4);
