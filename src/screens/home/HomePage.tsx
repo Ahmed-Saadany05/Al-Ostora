@@ -84,8 +84,10 @@ export function HomePage() {
   const journey = useRef(false);
   const blocker = useBlocker(({ nextLocation }) => journey.current && nextLocation.pathname === missionUrl.chooseSite());
   const [briefing, setBriefing] = useState(false);
+  const decided = useRef(false); // the held navigation is dealt with once: shown the briefing, or let through
   useEffect(() => {
-    if (blocker.state !== 'blocked') return;
+    if (blocker.state !== 'blocked' || decided.current) return;
+    decided.current = true;
     if (briefed) blocker.proceed();
     else {
       // The flight's last frame is still held up as an image; the briefing covers it, so let it go.
