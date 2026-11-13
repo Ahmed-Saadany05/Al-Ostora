@@ -105,3 +105,15 @@ export function packBeats(lineCounts: number[], maxLines: number): number[][] {
   if (cur.length > 0) beats.push(cur);
   return beats;
 }
+
+/**
+ * "See it yourself" must never link to a site that is not in the catalogue. If the site is missing, the reply becomes
+ * the panels explainer instead (same position, no note).
+ */
+export function adaptReplies(replies: Reply[], siteExists: (siteId: string) => boolean): Reply[] {
+  return replies.map((r) =>
+    r.action?.type === 'openPlanner' && !siteExists(r.action.siteId)
+      ? { label: 'How panels catch a low Sun', action: { type: 'openExplainer', id: 'upright-panels' } }
+      : r,
+  );
+}

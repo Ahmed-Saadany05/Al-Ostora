@@ -12,10 +12,11 @@ export type RefaeyMood = 'neutral' | 'smile' | 'pointing';
 export type DialogueAction =
   | { type: 'navigate'; to: string }
   | { type: 'openExplainer'; id: string }
-  | { type: 'openPlanner'; siteId: string; date: string } // date = ISO UTC landing time
+  | { type: 'openPlanner'; siteId: string } // opens the site as it is today (no time is set; we have no recording of the landing day)
   | { type: 'collapse' };
 
-export type Reply = { label: string; next?: string; action?: DialogueAction };
+/** `note`: one small secondary line shown just before this reply (e.g. what "See it yourself" really opens). */
+export type Reply = { label: string; next?: string; action?: DialogueAction; note?: string };
 
 export type DialogueNode = {
   id: string;
@@ -65,40 +66,52 @@ export const INTRO: DialogueNode[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 2. Past missions: three landers, three lessons.                      */
+/* 2. Past missions: three landings, three lessons.                     */
 /* ------------------------------------------------------------------ */
 export type Mission = {
   id: string;
-  name: string;
+  name: string; // card title
   agency: string;
-  landed: string; // ISO UTC
-  lesson: 'power' | 'comms' | 'lunar-day';
+  /** Shown after the agency on the card. Defaults to the year of `landed`. */
+  years?: string;
+  landed: string; // ISO UTC (a fact about the mission; not used to set the clock: we have no recording of that day)
+  lesson: 'power' | 'comms' | 'timing';
   outcome: string; // one short line for the mission card
-  siteId: string; // must exist in Hagras's site catalogue (with a cited source)
+  siteId: string; // must exist in Hagras's site catalogue (checked again when the page opens the planner)
   sources: string[];
   story: DialogueNode[];
 };
 
+/** Shown just before "See it yourself": it opens the site today, never the historical day. */
+export const SEE_IT_NOTE = 'This opens the site as it is today, not the original landing day.';
+
+/** The three replies every story ends with. */
+const finale = (siteId: string): Reply[] => [
+  { label: 'See it yourself', action: { type: 'openPlanner', siteId }, note: SEE_IT_NOTE },
+  { label: 'Tell me another story', next: 'missions-hub' },
+  { label: 'Plan my own landing', action: { type: 'navigate', to: '/mission' } },
+];
+
 export const MISSIONS_HUB: DialogueNode = {
   id: 'missions-hub',
   mood: 'smile',
-  lines: ['Three landers, three lessons. Each one taught us something about light or radio.', 'Pick one.'],
+  lines: ['Three landings, three lessons. Each one taught us something about power, radio or timing.', 'Pick one.'],
   replies: [
     { label: 'Athena (2025)', next: 'athena-1' },
     { label: "Chang'e 4 (2019)", next: 'ce4-1' },
-    { label: 'Chandrayaan-3 (2023)', next: 'c3-1' },
+    { label: 'Apollo landings (1969–1972)', next: 'apollo-1' },
   ],
 };
 
 export const MISSIONS: Mission[] = [
   {
-    id: 'im2-athena',
+    id: 'im-2-athena',
     name: 'Athena (IM-2)',
     agency: 'Intuitive Machines / NASA',
     landed: '2025-03-06T17:30:00Z', // TODO(Hagras): confirm exact touchdown time from NASA/IM source
     lesson: 'power',
     outcome: 'Landed in a shaded crater, on its side. Could not recharge.',
-    siteId: 'im2-athena', // TODO(Hagras): add to catalogue with official coordinates + source
+    siteId: 'im-2-athena',
     sources: [
       'https://www.cbsnews.com/news/athena-moon-lander-tips-over-intuitive-machines-mission',
       'https://www.space.com/the-universe/moon/private-intuitive-machines-moon-lander-fell-over-inside-crater-at-lunar-south-pole-photo-reveals',
@@ -129,11 +142,7 @@ export const MISSIONS: Mission[] = [
           'With the Sun this low, a crater wall can hide it for days.',
           "Lying in the cold shade, with its panels pointing the wrong way, Athena couldn't recharge.",
         ],
-        replies: [
-          { label: 'See the sky at that spot', action: { type: 'openPlanner', siteId: 'im2-athena', date: '2025-03-06T17:30:00Z' } },
-          { label: 'Why is the Sun so low?', action: { type: 'openExplainer', id: 'low-sun' } },
-          { label: 'Another story', next: 'missions-hub' },
-        ],
+        replies: finale('im-2-athena'),
       },
     ],
   },
@@ -144,10 +153,11 @@ export const MISSIONS: Mission[] = [
     landed: '2019-01-03T02:26:00Z',
     lesson: 'comms',
     outcome: 'First landing on the far side, where Earth is never in the sky.',
-    siteId: 'change-4', // Hagras: already recorded as a contrast site (45.444°S, 177.599°E)
+    siteId: 'change-4',
     sources: [
       'https://www.guinnessworldrecords.de/world-records/553714-first-landing-on-the-far-side-of-the-moon',
       'https://english.cas.cn/newsroom/news/201901/t20190107_203642.shtml',
+      'https://www.space.com/40646-china-queqiao-moon-relay-satellite-launch.html',
     ],
     story: [
       {
@@ -175,57 +185,72 @@ export const MISSIONS: Mission[] = [
           'It also landed just after sunrise there,',
           'so it had a full lunar day of sunlight ahead of it. Timing is half the plan.',
         ],
-        replies: [
-          { label: 'See its sky', action: { type: 'openPlanner', siteId: 'change-4', date: '2019-01-03T02:26:00Z' } },
-          { label: "Why can't the far side see Earth?", action: { type: 'openExplainer', id: 'farside' } },
-          { label: 'Another story', next: 'missions-hub' },
-        ],
+        replies: finale('change-4'),
       },
     ],
   },
   {
-    id: 'chandrayaan-3',
-    name: 'Chandrayaan-3',
-    agency: 'ISRO (India)',
-    landed: '2023-08-23T12:33:00Z',
-    lesson: 'lunar-day',
-    outcome: 'Landed about 600 km from the south pole; worked for one lunar day.',
-    siteId: 'chandrayaan-3', // TODO(Hagras): add (ISRO: 69.37°S, 32.35°E) with source
+    id: 'apollo',
+    name: 'Apollo landings',
+    agency: 'NASA',
+    years: '1969–1972',
+    landed: '1969-07-20T20:17:40Z', // Apollo 11 (the first of six)
+    lesson: 'timing',
+    outcome: 'Why every crew landed just after sunrise.',
+    siteId: 'apollo-11',
     sources: [
-      'https://spacepolicyonline.com/news/india-says-good-night-to-chandrayaan-3/',
-      'https://www.deccanherald.com/science/space/no-signal-yet-from-vikram-pragyan-isro-2697635',
+      'https://www.amnh.org/explore/videos/space/apollo-mission-landings-and-lunar-phases',
+      'https://ntrs.nasa.gov/api/citations/20230006313/downloads/IAASS%202023%20Paper_Final_24apr23.pdf',
+      'https://ntrs.nasa.gov/api/citations/20230006101/downloads/PowerPoint%20Presentation.pdf',
     ],
     story: [
       {
-        id: 'c3-1',
+        id: 'apollo-1',
         mood: 'smile',
-        lines: [
-          "August 2023. India's Vikram lander touches down about 600 km from the south pole,",
-          'the closest any lander had come to it.',
-        ],
-        replies: [{ label: 'How long did it work?', next: 'c3-2' }],
-      },
-      {
-        id: 'c3-2',
-        mood: 'neutral',
-        lines: [
-          'It was built for one lunar day: about two Earth weeks of sunlight.',
-          'Its little rover, Pragyan, drove about 100 metres. Then the Sun set.',
-        ],
-        replies: [{ label: 'What happens at night?', next: 'c3-3' }],
-      },
-      {
-        id: 'c3-3',
-        mood: 'neutral',
-        lines: [
-          'About two weeks of darkness and deep cold. Vikram went to sleep, hoping to wake at the next sunrise.',
-          'It never answered again.',
-        ],
+        lines: ['Quick quiz: best time to land on the Moon? Noon sounds right.', 'Apollo said: absolutely not.'],
         replies: [
-          { label: 'See its sky', action: { type: 'openPlanner', siteId: 'chandrayaan-3', date: '2023-08-23T12:33:00Z' } },
-          { label: 'Why is a lunar day so long?', action: { type: 'openExplainer', id: 'lunar-day' } },
-          { label: 'Another story', next: 'missions-hub' },
+          { label: 'Why not noon?', next: 'apollo-2' },
+          { label: 'Skip to the lesson', next: 'apollo-5' },
         ],
+      },
+      {
+        id: 'apollo-2',
+        mood: 'neutral',
+        lines: ['At noon there are almost no shadows.', "Rocks and craters melt into one bright grey, and a pilot can't tell a boulder from a bump."],
+        replies: [{ label: 'So when, then?', next: 'apollo-3' }],
+      },
+      {
+        id: 'apollo-3',
+        mood: 'pointing',
+        lines: ['So Apollo landed with the Sun just 5 to 14 degrees above the horizon, soon after local sunrise.', 'Long shadows, readable ground.'],
+        replies: [{ label: 'Was that easy to hit?', next: 'apollo-4' }],
+      },
+      {
+        id: 'apollo-4',
+        mood: 'neutral',
+        lines: ['That window lasted less than a day.', 'Miss it, and the site was out of reach for about a month. Launch dates were built around it.'],
+        replies: [
+          { label: 'Any Sun trouble anyway?', next: 'apollo-4b' },
+          { label: 'Continue', next: 'apollo-5' },
+        ],
+      },
+      {
+        id: 'apollo-4b',
+        mood: 'smile',
+        lines: ['Oh yes. On Apollo 12 the colour TV camera got pointed at the Sun and was knocked out.', 'The Sun wins arguments.'],
+        replies: [{ label: 'Continue', next: 'apollo-5' }],
+      },
+      {
+        id: 'apollo-5',
+        mood: 'pointing',
+        lines: ["Here's the twist: at the south-pole sites NASA is studying,", 'the Sun never climbs past about 7°, and often sits at 1 or 2.'],
+        replies: [{ label: 'So what does that mean?', next: 'apollo-6' }],
+      },
+      {
+        id: 'apollo-6',
+        mood: 'smile',
+        lines: ["Apollo's careful low Sun is basically a polar noon.", "That's why we plan by the real horizon, hour by hour."],
+        replies: finale('apollo-11'),
       },
     ],
   },
