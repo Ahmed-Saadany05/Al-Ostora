@@ -5,6 +5,8 @@ import { useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
+import { RefaeyDock, useRefaey } from './refaey';
+import type { DialogueAction } from './refaey/dialogues/dialogues';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
@@ -26,10 +28,16 @@ const MOON_GAP_PX = 48;
  */
 const RIM_ABOVE_POLE_PER_WIDTH = 0.0116;
 
+/** The Home dialogues have no data tokens and no conditions. */
+const REFAEY_HOME_CONTEXT = { horizons: false, values: {}, flags: {} } as const;
+
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
   const navigate = useNavigate();
+  const openNode = useRefaey((st) => st.openNode);
+  const collapse = useRefaey((st) => st.collapse);
+  const dialogueOpen = useRefaey((st) => st.open);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -68,6 +76,21 @@ export function HomePage() {
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
+
+  // Refaey's intro ends in two choices. "Plan a future mission" reuses Pink's flight of the Moon into Step 1;
+  // "Explore past missions" is a plain navigation (handled by the dock).
+  const onRefaeyAction = useCallback(
+    (a: DialogueAction) => {
+      if (a.type === 'navigate' && a.to === missionUrl.chooseSite()) {
+        collapse();
+        if (handle.current) handle.current.enterStep1();
+        else navigate(a.to);
+        return true;
+      }
+      return false;
+    },
+    [collapse, navigate],
+  );
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
@@ -113,11 +136,7 @@ export function HomePage() {
               variant="primary"
               size="md"
               icon="arrowRight"
-              onClick={() => {
-                // Same as clicking the Moon: it flies into Step 1. Without the Moon, go straight there.
-                if (handle.current) handle.current.enterStep1();
-                else navigate(missionUrl.chooseSite());
-              }}
+              onClick={() => openNode('intro-hello')}
             >
               {HOME_COPY.begin}
             </Button>
@@ -130,10 +149,13 @@ export function HomePage() {
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
       <div ref={pins} className={s.pins} inert={!pinRevealed}>
-        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />}
+        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} suppressCard={dialogueOpen} />}
       </div>
 
       <MotionToggle />
+
+      {/* Refaey: the small portrait bottom-right once the intro has played; Begin opens the intro dialogue. */}
+      {introDone && <RefaeyDock screen="home" aboveStatusBar={false} context={REFAEY_HOME_CONTEXT} onAction={onRefaeyAction} />}
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>

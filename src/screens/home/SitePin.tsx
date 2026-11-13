@@ -19,7 +19,7 @@ const EDGE_PX = 12;
 /** The card starts a little above the pin's own height, so its first line is level with the label. */
 const CARD_RISE_PX = 18;
 
-export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime; view: SkyView; x: number; y: number }) {
+export function SitePin({ site, time, view, x, y, suppressCard = false }: { site: Site; time: IsoTime; view: SkyView; x: number; y: number; suppressCard?: boolean }) {
   const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -31,7 +31,8 @@ export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime;
   const [cardAt, setCardAt] = useState({ x: 0, y: 0 });
   // The Demo marker follows the data; if there is none, only the active provider id is known.
   const source = view.status === 'ready' ? view.sky.source : getProvider().id === 'demo' ? 'demo' : undefined;
-  const open = (hover || focus) && !dismissed;
+  // The card stays closed while Refaey is talking (his bubble opens in the same corner).
+  const open = (hover || focus) && !dismissed && !suppressCard;
 
   /*
    * The card opens to the right of the pin's label, so it never sits over the headline, the line or the buttons
