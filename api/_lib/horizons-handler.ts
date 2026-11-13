@@ -14,6 +14,11 @@ const AU_KM = 149_597_870.7;
 const MAX_ROWS = 20_000;
 const MAX_DAYS = 800;
 const TIMEOUT_MS = 25_000;
+/**
+ * JPL asks API clients for an application-specific User-Agent with contact info.
+ * TODO(team): add the agreed team contact email — never a personal address.
+ */
+const USER_AGENT = 'RefaeyOnTheMoon/0.1 (+https://github.com/Ahmed-Saadany05/Al-Ostora; NASA Space Apps 2026)';
 
 const memoryCache = new Map<string, HorizonsResponse>();
 
@@ -98,7 +103,8 @@ export function buildHorizonsUrl(q: Required<HorizonsQuery>, stepHorizons: strin
     START_TIME: `'${hzTime(q.start)}'`,
     STOP_TIME: `'${hzTime(q.stop)}'`,
     STEP_SIZE: `'${stepHorizons}'`,
-    QUANTITIES: "'4,13,20'", // 4 az/el, 13 angular diameter, 20 range
+    // 4 az/el, 13 angular diameter, 20 range; Earth also 10 = illuminated fraction (its phase)
+    QUANTITIES: q.target === 'earth' ? "'4,10,13,20'" : "'4,13,20'",
     ANG_FORMAT: "'DEG'",
     CSV_FORMAT: "'YES'",
   };
@@ -110,7 +116,10 @@ const MONTHS: Record<string, string> = {
   Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
 };
 
-/** Parse the CSV block between $$SOE and $$EOE. */
+/**
+ * Parse the CSV block between $$SOE and $$EOE. Column positions are read from the header row
+ * (the line starting "Date__"), so extra columns or rise/set markers can't shift the values.
+ */
 export function parseEphemeris(result: string): HorizonsRow[] {
   const soe = result.indexOf('$$SOE');
   const eoe = result.indexOf('$$EOE');
@@ -118,6 +127,24 @@ export function parseEphemeris(result: string): HorizonsRow[] {
     const msg = result.split('\n').find((l) => /error|cannot|no ephemeris/i.test(l));
     throw new Error(`Horizons returned no ephemeris${msg ? `: ${msg.trim()}` : ''}`);
   }
+  const headerLine = result
+    .slice(0, soe)
+    .split('\n')
+    .reverse()
+    .find((l) => l.trim().startsWith('Date__'));
+  if (!headerLine) throw new Error('Horizons output has no column header');
+  const head = headerLine.split(',').map((x) => x.trim());
+  const col = (re: RegExp, required = true) => {
+    const i = head.findIndex((h) => re.test(h));
+    if (i < 0 && required) throw new Error(`Horizons column missing: ${re}`);
+    return i;
+  };
+  const iAz = col(/^Azi/);
+  const iEl = col(/^Elev/);
+  const iDiam = col(/^Ang-diam/);
+  const iDelta = col(/^delta$/);
+  const iIllu = col(/^Illu%/, false);
+
   return result
     .slice(soe + 5, eoe)
     .trim()
@@ -125,19 +152,35 @@ export function parseEphemeris(result: string): HorizonsRow[] {
     .filter(Boolean)
     .map((line) => {
       const c = line.split(',').map((x) => x.trim());
-      // c: date, solar-presence, lunar-presence, az, el, ang-diam("), delta(AU), deldot
       const m = /^(\d{4})-(\w{3})-(\d{2}) (\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/.exec(c[0]);
       if (!m) throw new Error(`Unexpected Horizons date: ${c[0]}`);
       const sec = m[6] ? m[6].padStart(2, '0') : '00';
       const time = new Date(`${m[1]}-${MONTHS[m[2]]}-${m[3]}T${m[4]}:${m[5]}:${sec}Z`).toISOString();
-      return {
+      const row: HorizonsRow = {
         time,
-        azDeg: Number(c[3]),
-        elDeg: Number(c[4]),
-        angularDiameterDeg: Number(c[5]) / 3600,
-        distanceKm: Number(c[6]) * AU_KM,
+        azDeg: Number(c[iAz]),
+        elDeg: Number(c[iEl]),
+        angularDiameterDeg: Number(c[iDiam]) / 3600,
+        distanceKm: Number(c[iDelta]) * AU_KM,
       };
+      if (iIllu >= 0 && c[iIllu] !== '' && Number.isFinite(Number(c[iIllu]))) row.illuminationPct = Number(c[iIllu]);
+      return row;
     });
+}
+
+/** Horizons sometimes answers 502/503 under load — retry a few times with a pause. */
+async function fetchHorizonsWithRetry(url: string) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { 'User-Agent': USER_AGENT },
+    });
+    if ((res.status === 502 || res.status === 503 || res.status === 429) && attempt < 4) {
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+      continue;
+    }
+    return res;
+  }
 }
 
 export async function handleHorizons(request: Request): Promise<Response> {
@@ -154,7 +197,7 @@ export async function handleHorizons(request: Request): Promise<Response> {
   if (hit) return json(200, hit, true);
 
   try {
-    const res = await fetch(horizonsUrl, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const res = await fetchHorizonsWithRetry(horizonsUrl);
     const body = (await res.json()) as { result?: string; error?: string; message?: string };
     if (!res.ok || !body.result) {
       return json(502, { error: `Horizons error: ${body.error ?? body.message ?? res.status}`, horizonsUrl });

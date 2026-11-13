@@ -11,8 +11,8 @@
  * uses a real landing site from Wueller et al. 2026 (open data, Zenodo 17084058): the published
  * site closest to the middle of that region's sites (rule applied by script, see data README).
  *
- * Shackleton rim: NASA M2M-30044 (2025) Table A2.1-1, R04/Site04 — centre of NASA's PGDA LOLA
- * study area (5–10 m). Same values appear in Rev A (2023); the 2022 baseline has no such table.
+ * Shackleton rim (R04) and Connecting Ridge (R01): NASA M2M-30044 (2025) Table A2.1-1 — centres of NASA's PGDA LOLA
+ * study areas (5–10 m). Region-centre points, not the sunniest spots (agreed with Goda).
  *
  * NOT YET INCLUDED (no verified coordinates):
  *  - Upcoming targets without a published point: IM-3, Blue Ghost 2, Griffin-1, Chang'e 7.
@@ -22,7 +22,6 @@ import type { Mission, Site, SourceRef } from '@/shared/types';
 import {
   ARTEMIS_REGIONS_2022,
   ARTEMIS_REGIONS_2024,
-  DATA_BOOK,
   DATA_BOOK_2025,
   LROC,
   MOON_BASE_RELEASE,
@@ -430,7 +429,7 @@ export const CATALOGUE: Site[] = [
     lat: -89.7668,
     lon: -171.87,
     coordQuality: 'region-site',
-    labels: ['NASA study site · Lunar Surface Data Book (2025), Site04'],
+    labels: ['Shackleton rim region (NASA Data Book centre point)'],
     story:
       'The rim of Shackleton, a 21 km crater almost exactly on the south pole. Parts of the rim catch sunlight for most of the year, while the crater floor has not seen the Sun for billions of years.',
     missions: [],
@@ -441,10 +440,13 @@ export const CATALOGUE: Site[] = [
   site({
     id: 'connecting-ridge',
     name: 'Shackleton Connecting Ridge',
-    lat: -89.468,
-    lon: -137.4,
-    coordQuality: 'planned-target',
-    labels: ['Moon Base I target (2026) · former Artemis landing candidate (2022)'],
+    lat: -89.4632,
+    lon: -137.49,
+    coordQuality: 'region-site',
+    labels: [
+      'Moon Base I target (2026) · former Artemis landing candidate (2022)',
+      'Connecting Ridge (NASA Data Book centre point)',
+    ],
     story: 'A long ridge between Shackleton and de Gerlache craters, almost on the south pole. It stays sunlit for long stretches while nearby crater floors stay frozen in shadow.',
     missions: [
       {
@@ -459,6 +461,6 @@ export const CATALOGUE: Site[] = [
         note: 'Demonstrates capabilities that reduce risk for crewed Artemis landings in 2028.',
       },
     ],
-    refs: [DATA_BOOK, MOON_BASE_RELEASE, ARTEMIS_REGIONS_2022],
+    refs: [DATA_BOOK_2025, MOON_BASE_RELEASE, ARTEMIS_REGIONS_2022],
   }),
 ];
