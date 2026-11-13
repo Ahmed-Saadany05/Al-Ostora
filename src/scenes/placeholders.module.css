@@ -68,6 +68,16 @@
 }
 .pin:hover {
   color: var(--color-text);
+  z-index: 2;
+}
+/* Names only on hover / focus / selection — keeps the map uncluttered. */
+.pin .pinLabel {
+  display: none;
+}
+.pin:hover .pinLabel,
+.pin:focus-visible .pinLabel,
+.pinSelected .pinLabel {
+  display: inline;
 }
 .pin:hover .pinDot {
   transform: scale(1.25);
