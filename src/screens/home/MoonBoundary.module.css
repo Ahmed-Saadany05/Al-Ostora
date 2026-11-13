@@ -1,0 +1,11 @@
+/* Same framing as the 3D dome: crest at 55% of the hero height, 1.8 × the viewport wide, lit from the right. */
+.fallback {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 180%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 80% 0%, var(--color-text-muted), var(--color-surface-raised) 35%, var(--color-bg) 60%);
+}
