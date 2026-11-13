@@ -10,7 +10,8 @@
  *  - March along the great circle from the site; for each terrain sample
  *      e = atan2(r_t·cos γ − r_o, r_t·sin γ),  r_o = R + h_site + observer, r_t = R + h(point)
  *    and keep the maximum → curvature is exact (3-D, spherical Moon of R = 1737.4 km).
- *  - Nested DEMs: finest available to 5 km, 80 m (or 60 m) to 100 km, 240 m to 310 km.
+ *  - Nested DEMs: finest available to 3 km, 80 m (or 60 m) to 100 km, 240 m to 310 km.
+ *    A fine map that is refused or slower than 3 min falls back to the next coarser one.
  *  - Heights: float32 metres above the 1737.4 km sphere, NaN = no data (skipped).
  * Output: src/data/horizons-lola/<siteId>.json matching HorizonProfile (+ `meta`).
  */
@@ -25,7 +26,8 @@ const OUT = path.join(ROOT, 'src/data/horizons-lola');
 const OUT_VALIDATION = path.join(ROOT, 'scripts/horizons/validation');
 const AZ_STEP = 0.5;
 const OBSERVER_M = 2;
-const NEAR_KM = 5;
+const NEAR_KM = 3; // fine terrain matters most close by; 80 m beyond (keeps NASA requests small)
+const FINE_TIMEOUT_MS = 180_000; // give up on a slow fine map after 3 min and fall back
 const MID_KM = 100;
 const MAX_KM = 310;
 const NEAR_ORDER = ['87S_5M', '83S_10M', '80S_20M', '75S_30M', '60S_60M'];
@@ -55,7 +57,13 @@ async function loadFirstWorking(order, x, y, km, label, id) {
   for (const key of order) {
     if (!(await covers(key, x, y, km * 1000))) continue;
     try {
-      const win = await loadWindow(key, x, y, km * 1000);
+      const t = Date.now();
+      console.log(`  … ${id}: loading ${label} ${key}`);
+      const win = await Promise.race([
+        loadWindow(key, x, y, km * 1000),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('took longer than 3 min')), FINE_TIMEOUT_MS)),
+      ]);
+      console.log(`    ${key} ready in ${((Date.now() - t) / 1000).toFixed(0)} s`);
       if (!Number.isFinite(win.sample(x, y))) throw new Error('no data at the site');
       return { win, key };
     } catch (e) {

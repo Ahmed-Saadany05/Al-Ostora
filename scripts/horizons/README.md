@@ -13,8 +13,8 @@ npm run horizons -- --validation # Gläser 2018 points S and C1 at 0 m and 2 m �
 - **720 azimuths (0.5°)**, geographic: clockwise from lunar north.
 - Along each great-circle ray, e = atan2(r_t·cos γ − r_o, r_t·sin γ), keeping the maximum. Here r_o = R + h_site + 2 m and r_t = R + h(point), with R = 1737.4 km. Lunar curvature is therefore exact.
 - **Nested DEMs** (Barker 2021):
-  - 0–5 km: the finest map that loads (5 m → 10 m → 20 m → 30 m → 60 m)
-  - 5–100 km: 80 m (60 m south of 80° S coverage)
+  - 0–3 km: the finest map that loads within 3 minutes (5 m → 10 m → 20 m → 30 m → 60 m)
+  - 3–100 km: 80 m (60 m where the 80 m map doesn't reach)
   - 100–310 km: 240 m
 - If a map fails to load, the script falls back to the next coarser one. **Each file records the maps it actually used** (`dem.layers`), its reach, the site height and the fraction of samples without data.
 - Frame: MOON_ME (DE421). Heights are float32 metres above the sphere; NaN = no data (skipped).
