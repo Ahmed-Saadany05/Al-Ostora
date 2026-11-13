@@ -1,8 +1,8 @@
 .hero {
   position: relative;
   flex: 1;
-  /* The shared status bar is hidden on Home (route flag minimalChrome), so only the header is subtracted. */
-  min-height: calc(100vh - var(--header-height));
+  /* The header and the status bar are both hidden on Home (route flag minimalChrome). */
+  min-height: 100vh;
   overflow: hidden;
   /* Opaque: covers the shell's own static starfield so Home's layers can fade in on their own. */
   background: var(--color-bg);
@@ -15,27 +15,41 @@
   z-index: var(--z-scene);
 }
 
-/* Moon: full-bleed, behind everything. The intro lifts this layer into place. */
-.moon {
+/* The 3D scene: full-bleed, behind everything. */
+.scene {
   position: absolute;
   inset: 0;
   z-index: var(--z-scene);
 }
 
-/* Text: one left-aligned column above the dome. */
+/* Text: one left-aligned column above the dome, with plenty of empty space around it. */
 .copy {
   position: relative;
   z-index: var(--z-content);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-4);
+  gap: var(--space-5);
   max-width: 1200px; /* the display headline stays on one line up to 1920 */
-  padding: var(--space-6) var(--gutter) var(--space-4);
+  padding: var(--space-9) var(--gutter) var(--space-4);
+}
+
+/* The headline is revealed through this box: it and .headline slide opposite ways, so the text stays put and
+   only the clip edge moves (transform only). */
+.mask {
+  overflow: hidden;
+  width: fit-content;
 }
 
 .headline {
-  display: block;
+  width: fit-content;
+  /* room for the wide-tracked start state, so it is never clipped at the box edges */
+  padding-inline: var(--space-6);
+  margin-inline: calc(-1 * var(--space-6));
+}
+
+.char {
+  display: inline-block;
 }
 
 /*
@@ -65,11 +79,57 @@
   pointer-events: none;
 }
 
-.credit {
+/* Moved by the scene with transform; opacity set there too. */
+.earthLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: var(--z-content);
+  opacity: 0;
+  translate: -100% -50%; /* ends at the point the scene sets, vertically centred on Earth */
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  will-change: transform, opacity;
+}
+
+.corners {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-content);
+  pointer-events: none;
+  /* Keeps the small corner texts legible over the lit Moon. */
+  background: linear-gradient(to top, var(--color-overlay), transparent 110px);
+}
+
+/* Bottom-left: the featured site's coordinates, small mono. */
+.coords {
   position: absolute;
   left: var(--gutter);
-  bottom: var(--space-4);
-  z-index: var(--z-content);
+  bottom: var(--space-5);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Bottom-right: the texture credit. */
+.credit {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--space-5);
+  max-width: 60ch;
+  text-align: right;
   font-size: var(--text-2xs);
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
+}
+
+.fade {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-chrome);
+  background: var(--color-bg);
+  opacity: 0;
+  pointer-events: none;
 }

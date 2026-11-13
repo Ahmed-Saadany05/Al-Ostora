@@ -53,3 +53,15 @@ export const CREDITS = {
   positions: 'Sun and Earth positions: NASA JPL Horizons',
   positionsSourceIds: ['nasa-jpl-horizons'],
 } as const satisfies { positionsSourceIds: SourceId[] } & Record<string, unknown>;
+
+/** The Moon on Home is NASA's SVS CGI Moon Kit (LRO LROC colour + LOLA relief), loaded from public/moon. */
+export const SVS_CREDIT = {
+  text: 'Moon imagery: NASA’s Scientific Visualization Studio (LRO LROC + LOLA)',
+  sourceIds: ['nasa-svs-moon-kit'],
+} as const satisfies { sourceIds: SourceId[] } & Record<string, unknown>;
+
+/** Earth's libration loop is sped up (one month → ~90 s): say so whenever Earth is shown moving. */
+export const EARTH_LABEL = {
+  moving: 'Time-lapse',
+  still: 'Illustration',
+} as const;
