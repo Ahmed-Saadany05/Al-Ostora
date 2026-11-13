@@ -11,8 +11,10 @@
  * uses a real landing site from Wueller et al. 2026 (open data, Zenodo 17084058): the published
  * site closest to the middle of that region's sites (rule applied by script, see data README).
  *
+ * Shackleton rim: NASA M2M-30044 (2025) Table A2.1-1, R04/Site04 — centre of NASA's PGDA LOLA
+ * study area (5–10 m). Same values appear in Rev A (2023); the 2022 baseline has no such table.
+ *
  * NOT YET INCLUDED (no verified coordinates):
- *  - Shackleton rim (awaiting the exact edition of the Data Book table A2.1-1).
  *  - Upcoming targets without a published point: IM-3, Blue Ghost 2, Griffin-1, Chang'e 7.
  */
 import { regionOf } from '@/shared/geo';
@@ -21,6 +23,7 @@ import {
   ARTEMIS_REGIONS_2022,
   ARTEMIS_REGIONS_2024,
   DATA_BOOK,
+  DATA_BOOK_2025,
   LROC,
   MOON_BASE_RELEASE,
   NSSDC,
@@ -419,6 +422,20 @@ export const CATALOGUE: Site[] = [
     'On the rim of de Gerlache crater, very close to the pole, where the Sun skims the horizon all year.'),
   region('slater-plain', 'Slater Plain', 'SP07', -87.1306, 127.857,
     'A comparatively smooth plain near Slater crater: gentle ground for a lander to set down on.'),
+
+  // ------------------------------------------------------------------ NASA south-pole study sites
+  site({
+    id: 'shackleton-rim',
+    name: 'Shackleton Rim',
+    lat: -89.7668,
+    lon: -171.87,
+    coordQuality: 'region-site',
+    labels: ['NASA study site · Lunar Surface Data Book (2025), Site04'],
+    story:
+      'The rim of Shackleton, a 21 km crater almost exactly on the south pole. Parts of the rim catch sunlight for most of the year, while the crater floor has not seen the Sun for billions of years.',
+    missions: [],
+    refs: [DATA_BOOK_2025],
+  }),
 
   // ------------------------------------------------------------------ Artemis / Moon Base
   site({

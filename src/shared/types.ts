@@ -76,7 +76,8 @@ export interface Mission {
  *  - measured       hardware seen in LRO Camera images (≈ ±15–30 m)
  *  - reported       published by the agency / NASA catalogue but not image-confirmed (≈ km)
  *  - planned-target an announced landing point for a mission that hasn't flown
- *  - region-site    a published candidate landing site inside a NASA region (≈ the region; regions are ~15 km)
+ *  - region-site    a published point standing for a study/candidate area (NASA Data Book centre, or a
+ *                   peer-reviewed landing site inside a NASA region; areas are ~km to ~15 km)
  *  - custom         typed or clicked by the user
  */
 export type CoordQuality = 'measured' | 'reported' | 'planned-target' | 'region-site' | 'custom';

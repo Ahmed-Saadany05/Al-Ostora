@@ -17,6 +17,12 @@ export const DATA_BOOK: SourceRef = {
   url: 'https://ntrs.nasa.gov/api/citations/20220015275/downloads/ACD-50044%20Lunar%20Surface%20Data%20Book_100622.pdf',
 };
 
+/** Table A2.1-1 "Lunar South Pole Features": centres of the PGDA LOLA DEM site polygons, accurate to 5–10 m. */
+export const DATA_BOOK_2025: SourceRef = {
+  label: 'NASA Moon to Mars Lunar Surface Data Book, M2M-30044 (Mar 2025), Table A2.1-1 — R04/Site04 Shackleton Rim',
+  url: 'https://ntrs.nasa.gov/api/citations/20250002845/downloads/M2M-30044%20Lunar%20Surface%20Data%20Book%20Baseline_Final.pdf',
+};
+
 export const MOON_BASE_RELEASE: SourceRef = {
   label: 'NASA Release 26-046 (26 May 2026) — Moon Base I will land on the Shackleton Connecting Ridge',
   url: 'https://www.nasa.gov/news-release/nasa-provides-update-on-moon-base-rovers-landers-missions/',
