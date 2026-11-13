@@ -1,60 +1,84 @@
-/* Refaey: a small portrait bottom-right, and a bubble above it. Kit tokens only; transform and opacity only. */
-.dock {
-  position: fixed;
-  right: var(--gutter);
-  bottom: var(--space-5);
-  z-index: var(--z-drawer);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-3);
-  /* the dock itself never blocks the page; its two children do */
-  pointer-events: none;
+/*
+ * Refaey on the scene. No chat bubble, no box: his half-body (Home) or a bust (other screens) and his words as large text.
+ * Kit tokens only; transform and opacity are the only things that animate.
+ */
+
+/* Sizes: the circular busts. */
+.corner,
+.dockOpen {
+  --bust-sm: calc(var(--space-6) + var(--space-5)); /* 56 px */
+  --bust-lg: calc(var(--space-9) + var(--space-5)); /* 120 px */
+  --dock-bottom: var(--space-5);
 }
 .aboveBar {
-  /* the shared status bar sits at the bottom of the screen on every page except Home */
-  bottom: calc(var(--statusbar-height) + var(--space-4));
+  /* the shared status bar sits at the bottom of every page except Home */
+  --dock-bottom: calc(var(--statusbar-height) + var(--space-4));
 }
 
-.portrait {
-  pointer-events: auto;
-  width: var(--space-8);
-  height: var(--space-8);
-  padding: 0;
-  border: var(--border-strong);
+/* Speech: the type size follows the width: 24 px at 1280, capped at 32. */
+.talk,
+.stageText {
+  --say: clamp(var(--text-lg), 1.875vw, var(--text-2xl));
+}
+
+.bust {
+  display: block;
+  flex: none;
+  overflow: hidden;
   border-radius: 50%;
   background: var(--color-surface-raised);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: transform var(--duration-base) var(--ease-out);
+  border: var(--border-strong);
 }
-.portrait:hover {
-  transform: scale(1.04);
+.bust img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.art {
+
+/* ---------------------------------------------------------------- Home stage */
+.stage {
+  /* the half-body is 596 x 560; its fingertip is ~95% across and ~45% down */
+  --art-h: 58vh;
+  --art-w: calc(var(--art-h) * 596 / 560);
+  --hand-x: calc(var(--art-w) * 0.95);
+  --hand-y: calc(100vh - var(--art-h) * 0.55);
+  /* bottom of the centred title: half the viewport plus half its height */
+  --title-bottom: calc(50vh + var(--text-display) * var(--leading-tight) / 2);
+}
+
+.stageArt {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: var(--z-content);
+  width: var(--art-w);
+  height: var(--art-h);
+  pointer-events: none;
+  /* waits for the page copy to finish fading out (--duration-base), then rises */
+  animation: rise var(--duration-slow) var(--ease-out) var(--duration-base) backwards;
+}
+.half {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.panel {
-  pointer-events: auto;
-  display: grid;
-  gap: var(--space-4);
-  /* wide enough that two typical sentences fit in four visual lines, so most nodes are one beat */
-  width: min(420px, calc(100vw - 2 * var(--gutter)));
-  padding: var(--space-4) var(--space-5);
-  border: var(--border);
-  border-radius: var(--radius-md);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  box-shadow: var(--shadow-panel);
-  animation: rise var(--duration-base) var(--ease-out);
+.stageText {
+  position: fixed;
+  z-index: var(--z-content);
+  left: calc(var(--hand-x) + var(--space-5));
+  /* level with his hand, but never up into the title */
+  top: max(calc(var(--title-bottom) + var(--space-5)), calc(var(--hand-y) - var(--space-8)));
+  width: min(36ch, calc(100vw - var(--hand-x) - var(--space-5) - var(--gutter)));
+  max-height: calc(100vh - var(--space-5));
+  animation: fade var(--duration-base) var(--ease-out) var(--duration-base) backwards;
 }
+
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(var(--space-2));
+    transform: translateY(var(--space-7));
   }
   to {
     opacity: 1;
@@ -62,24 +86,85 @@
   }
 }
 
-.bubble {
-  position: relative;
-  display: grid;
-  gap: var(--space-2);
+/* ---------------------------------------------------------------- other screens */
+.corner {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--dock-bottom);
+  z-index: var(--z-drawer);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform var(--duration-base) var(--ease-out);
 }
-.title {
+.corner:hover {
+  transform: scale(1.05);
+}
+
+.dockOpen {
+  position: fixed;
+  left: var(--gutter);
+  bottom: var(--dock-bottom);
+  z-index: var(--z-drawer);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  max-width: calc(100vw - 2 * var(--gutter));
+}
+.dockOpen .talk {
+  width: min(36ch, calc(100vw - 2 * var(--gutter) - var(--bust-lg) - var(--space-4)));
+}
+
+/* A soft dark scrim behind the text only (no glow, no border): keeps it readable when it crosses the lit Moon or a card. */
+.scrim {
+  position: fixed;
+  isolation: isolate;
+}
+.stageText.scrim {
+  position: fixed;
+}
+.scrim::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-6)) calc(-1 * var(--space-7));
+  z-index: -1;
+  /* full strength over the text, fading out only beyond it */
+  background: radial-gradient(closest-side, var(--color-overlay) 70%, transparent);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- the words */
+.talk {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.speaker {
+  margin: 0;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
 }
-.line {
+.topic {
   margin: 0;
-  font-size: var(--text-md);
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+.lines {
+  position: relative;
+}
+.line {
+  margin: 0 0 var(--space-2);
+  font-size: var(--say);
+  line-height: 1.3;
+  text-align: start;
+  text-wrap: pretty;
   color: var(--color-text);
 }
-/* Counts visual lines at the bubble's width; never seen or heard. */
+/* Counts visual lines at the real width and type; never seen or heard. */
 .measure {
   position: absolute;
   inset: 0 0 auto 0;
@@ -87,15 +172,39 @@
   pointer-events: none;
 }
 
+/* A short fade (opacity only) when the beat or the node changes. */
+.fade {
+  animation: fade var(--duration-fast) linear;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Choices: a vertical list of large text with an arrow, left-aligned. Ghost styling, not pills. */
 .replies {
   display: grid;
-  gap: var(--space-2);
+  justify-items: start;
+  gap: var(--space-1);
 }
 .reply {
-  justify-content: flex-start;
   height: auto;
-  min-height: 44px;
-  padding-block: var(--space-2);
+  min-height: 0;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-sm);
+  justify-content: flex-start;
   white-space: normal;
   text-align: start;
+  font-size: clamp(var(--text-md), 1.4vw, var(--text-xl));
+  color: var(--color-text-muted);
+}
+.reply:hover,
+.reply:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
 }

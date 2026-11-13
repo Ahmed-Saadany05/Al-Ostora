@@ -1,4 +1,5 @@
-export { RefaeyDock, type DockProps } from './RefaeyDock';
-export { Refaey, ART } from './Refaey';
-export { DialoguePanel } from './DialoguePanel';
+export { RefaeyStage } from './RefaeyStage';
+export { RefaeyDock } from './RefaeyDock';
+export { RefaeyBust, RefaeyHalf, ART } from './Refaey';
+export { DialogueText } from './DialogueText';
 export { useRefaey } from './store';

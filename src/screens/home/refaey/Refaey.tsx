@@ -1,65 +1,36 @@
-import type { ReactElement } from 'react';
 import { REFAEY_COPY } from './copy';
 import type { RefaeyMood } from './dialogues/dialogues';
+import bustNeutral from './art/refaey-bust-neutral.svg';
+import bustSmile from './art/refaey-bust-smile.svg';
+import halfPointing from './art/refaey-half-pointing.svg';
 import s from './refaey.module.css';
 
-/*
- * PLACEHOLDER ART. Each mood is one small SVG drawn with the kit's colours (currentColor and tokens).
- * To swap in the real portraits, replace the entries of ART (an <img> or an <svg> per mood). Nothing else changes.
+/**
+ * Refaey's art, one SVG per mood. The busts are square crops and the half-body is cut flat at the waist, so they are
+ * never shown raw: busts go in a circle (RefaeyBust), the half-body is anchored to the bottom edge of the screen
+ * (RefaeyStage). To swap the art, replace the files in ./art (or the entries below).
  */
-const HEAD = <circle cx="32" cy="32" r="22" fill="var(--color-surface-raised)" stroke="currentColor" strokeWidth="1.5" />;
-const VISOR = <ellipse cx="32" cy="31" rx="15" ry="11" fill="var(--color-bg)" stroke="currentColor" strokeWidth="1" />;
-const EYES = (
-  <>
-    <circle cx="26.5" cy="30" r="1.8" fill="currentColor" />
-    <circle cx="37.5" cy="30" r="1.8" fill="currentColor" />
-  </>
-);
-
-export const ART: Record<RefaeyMood, ReactElement> = {
-  neutral: (
-    <>
-      {HEAD}
-      {VISOR}
-      {EYES}
-      <path d="M27 37h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-    </>
-  ),
-  smile: (
-    <>
-      {HEAD}
-      {VISOR}
-      {EYES}
-      <path d="M26.5 36.5q5.5 5 11 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-    </>
-  ),
-  pointing: (
-    <>
-      {HEAD}
-      {VISOR}
-      {EYES}
-      <path d="M26.5 36.5q5.5 5 11 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <path d="M50 44l8-9M58 35l-1.5 4.5M58 35l-4.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </>
-  ),
+export const ART: Record<RefaeyMood, string> = {
+  neutral: bustNeutral,
+  smile: bustSmile,
+  pointing: halfPointing,
 };
 
-/** Refaey's portrait. Decorative by default (the button or panel around it carries the name). */
-export function Refaey({ mood = 'neutral', size = 64, label }: { mood?: RefaeyMood; size?: number; label?: string }) {
+/** The circular bust for a mood. The half-body has no bust, so "pointing" uses the smiling one. */
+const BUST: Record<RefaeyMood, string> = { neutral: bustNeutral, smile: bustSmile, pointing: bustSmile };
+
+/** Refaey's head and shoulders in a circle (the square crop's corners are never shown). Decorative: the control around it is named. */
+export function RefaeyBust({ mood = 'smile', size }: { mood?: RefaeyMood; size: string }) {
   return (
-    <svg
-      className={s.art}
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      role={label ? 'img' : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-      focusable="false"
-    >
-      {ART[mood]}
-    </svg>
+    <span className={s.bust} style={{ width: size, height: size }}>
+      <img src={BUST[mood]} alt="" width={256} height={256} draggable={false} />
+    </span>
   );
 }
 
-export const portraitLabel = (mood: RefaeyMood) => REFAEY_COPY.portrait[mood];
+/** The half-body pointing pose, anchored to the bottom edge of the screen by its parent. */
+export function RefaeyHalf() {
+  return <img className={s.half} src={ART.pointing} alt="" draggable={false} />;
+}
+
+export const refaeyName = REFAEY_COPY.name;

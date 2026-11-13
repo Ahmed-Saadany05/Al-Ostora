@@ -5,7 +5,7 @@ import { useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
-import { RefaeyDock, useRefaey } from './refaey';
+import { RefaeyStage, useRefaey } from './refaey';
 import type { DialogueAction } from './refaey/dialogues/dialogues';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
@@ -35,9 +35,10 @@ const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroM
 
 export function HomePage() {
   const navigate = useNavigate();
-  const openNode = useRefaey((st) => st.openNode);
+  const begin = useRefaey((st) => st.begin);
   const collapse = useRefaey((st) => st.collapse);
-  const dialogueOpen = useRefaey((st) => st.open);
+  // While Refaey is on stage the promise line, Begin, About, the pin and its Demo label fade away (opacity only).
+  const stageOpen = useRefaey((st) => st.open);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -92,6 +93,11 @@ export function HomePage() {
     [collapse, navigate],
   );
 
+  // Give focus back to Begin once it is no longer inert (it is inert while Refaey is on stage, until the next render).
+  const focusBegin = useCallback(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => under.current?.querySelector<HTMLElement>('a, button')?.focus()));
+  }, []);
+
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
   return (
@@ -127,7 +133,7 @@ export function HomePage() {
             {HOME_COPY.headlineLead}
           </DisplayHeading>
         </div>
-        <div ref={under} className={s.under}>
+        <div ref={under} className={s.under} data-away={stageOpen} inert={stageOpen}>
           <div data-intro>
             <Lead align="center">{HOME_COPY.line}</Lead>
           </div>
@@ -136,7 +142,7 @@ export function HomePage() {
               variant="primary"
               size="md"
               icon="arrowRight"
-              onClick={() => openNode('intro-hello')}
+              onClick={() => begin('intro-hello')}
             >
               {HOME_COPY.begin}
             </Button>
@@ -148,14 +154,18 @@ export function HomePage() {
       </div>
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
-      <div ref={pins} className={s.pins} inert={!pinRevealed}>
-        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} suppressCard={dialogueOpen} />}
+      <div ref={pins} className={s.pins} inert={!pinRevealed || stageOpen}>
+        {SHOW_SITE_PIN && site && pinAt && (
+          <div className={s.pinFade} data-away={stageOpen}>
+            <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />
+          </div>
+        )}
       </div>
 
       <MotionToggle />
 
-      {/* Refaey: the small portrait bottom-right once the intro has played; Begin opens the intro dialogue. */}
-      {introDone && <RefaeyDock screen="home" aboveStatusBar={false} context={REFAEY_HOME_CONTEXT} onAction={onRefaeyAction} />}
+      {/* Refaey: nothing at all until Begin. Then his half-body rises bottom-left and his words appear beside his hand. */}
+      <RefaeyStage screen="home" context={REFAEY_HOME_CONTEXT} onAction={onRefaeyAction} onClose={focusBegin} />
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>

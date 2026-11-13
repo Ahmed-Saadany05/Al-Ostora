@@ -1,92 +1,45 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Refaey, portraitLabel } from './Refaey';
-import { DialoguePanel, type PanelContent } from './DialoguePanel';
+import { useEffect, useRef } from 'react';
+import { RefaeyBust } from './Refaey';
+import { DialogueText } from './DialogueText';
 import { REFAEY_COPY } from './copy';
-import type { DialogueAction, Reply } from './dialogues/dialogues';
-import { resolveNode, type ResolveContext } from './logic';
-import { askReplies, getNode, hasExplainer, EXPLAIN_PREFIX, type AskScreen, type RuntimeNode } from './registry';
+import { useConversation, type ConversationOptions } from './useConversation';
 import { useRefaey } from './store';
 import s from './refaey.module.css';
 
-export interface DockProps {
-  /** Which screen's "Ask Refaey" questions to offer. */
-  screen: AskScreen;
-  /** Token values and conditions for this screen (see logic.ts). */
-  context: Omit<ResolveContext, 'terminalLabel' | 'hasExplainer'>;
-  /** Handle an action yourself (return true); otherwise navigate, open explainers and collapse are handled here. */
-  onAction?: (action: DialogueAction) => boolean | void;
-  /** Sit above the shared status bar (every screen except Home, which hides it). Default true. */
-  aboveStatusBar?: boolean;
-  /** Replace node lookup (the dev sandbox adds test nodes). */
-  lookup?: (id: string, backTo?: string) => RuntimeNode | undefined;
-}
-
 /**
- * Refaey on a screen: a small portrait bottom-right; click it for "Ask Refaey" (2–3 scripted questions for the screen);
- * or a screen/moment opens a bubble above it. State (which node, what was seen) lives in the store.
+ * Refaey on every screen except Home, and only once Begin has been used: a small circular bust (56 px, bottom-right).
+ * Click it for "Ask Refaey" (2–3 scripted questions for the screen), or let a moment open. Open, he is a 120 px bust at
+ * the bottom-left with his words as text to its right; Esc puts him back in the corner.
  */
-export function RefaeyDock({ screen, context, onAction, aboveStatusBar = true, lookup = getNode }: DockProps) {
-  const navigate = useNavigate();
-  const { open, mode, nodeId, trail, openAsk, goto, back, collapse } = useRefaey();
-  const portrait = useRef<HTMLButtonElement>(null);
-  const backTo = trail[trail.length - 1];
+export function RefaeyDock({ aboveStatusBar = true, ...options }: ConversationOptions & { aboveStatusBar?: boolean }) {
+  const begun = useRefaey((st) => st.begun);
+  const openAsk = useRefaey((st) => st.openAsk);
+  const { open, content, mood, shouldClose, handle, collapse } = useConversation(options);
+  const corner = useRef<HTMLButtonElement>(null);
 
-  const ctx: ResolveContext = useMemo(() => ({ ...context, terminalLabel: REFAEY_COPY.ok, hasExplainer }), [context]);
-
-  const node = open && mode === 'node' && nodeId ? lookup(nodeId, backTo) : undefined;
-  const resolved = useMemo(() => (node ? resolveNode(node, ctx, (id) => lookup(id, backTo)) : null), [node, ctx, lookup, backTo]);
-
-  // A node that is not allowed to show (a condition, or no line has its data) closes instead of showing nothing.
   useEffect(() => {
-    if (open && mode === 'node' && nodeId && !resolved) collapse();
-  }, [open, mode, nodeId, resolved, collapse]);
+    if (shouldClose) collapse();
+  }, [shouldClose, collapse]);
 
-  const collapseAndReturnFocus = () => {
+  const close = () => {
     collapse();
-    requestAnimationFrame(() => portrait.current?.focus());
+    requestAnimationFrame(() => corner.current?.focus());
   };
 
-  const content: PanelContent | null =
-    open && mode === 'ask'
-      ? { key: 'ask', title: REFAEY_COPY.askTitle, lines: [], replies: askReplies(screen).filter((r) => !(r.action?.type === 'openExplainer' && !hasExplainer(r.action.id))).slice(0, 3) }
-      : resolved
-        ? { key: resolved.id, title: resolved.title, lines: resolved.lines, replies: resolved.replies }
-        : null;
-
-  const handle = (reply: Reply) => {
-    if (reply.next) {
-      // "Back" from an explainer steps back along the trail instead of growing it.
-      if (reply.next === backTo && nodeId?.startsWith(EXPLAIN_PREFIX)) back();
-      else goto(reply.next);
-      return;
-    }
-    const a = reply.action;
-    if (!a) return;
-    if (onAction?.(a) === true) return;
-    if (a.type === 'collapse') collapseAndReturnFocus();
-    else if (a.type === 'openExplainer') goto(EXPLAIN_PREFIX + a.id);
-    else if (a.type === 'navigate') {
-      collapse();
-      navigate(a.to);
-    }
-  };
-
-  const mood = resolved?.mood ?? 'neutral';
-
+  if (!begun) return null;
+  const place = aboveStatusBar ? s.aboveBar : '';
   return (
-    <aside className={[s.dock, aboveStatusBar ? s.aboveBar : ''].join(' ')} aria-label={REFAEY_COPY.name}>
-      {content && <DialoguePanel content={content} onReply={handle} onCollapse={collapseAndReturnFocus} />}
-      <button
-        ref={portrait}
-        type="button"
-        className={s.portrait}
-        aria-label={open ? REFAEY_COPY.collapse : REFAEY_COPY.askOpen}
-        aria-expanded={open}
-        onClick={() => (open ? collapseAndReturnFocus() : openAsk())}
-      >
-        <Refaey mood={mood} label={portraitLabel(mood)} />
-      </button>
+    <aside aria-label={REFAEY_COPY.name}>
+      {open && content ? (
+        <div className={[s.dockOpen, s.scrim, place].join(' ')}>
+          <RefaeyBust mood={mood} size="var(--bust-lg)" />
+          <DialogueText content={content} onReply={(r) => handle(r, close)} onCollapse={close} />
+        </div>
+      ) : (
+        <button ref={corner} type="button" className={[s.corner, place].join(' ')} aria-label={REFAEY_COPY.askOpen} onClick={openAsk}>
+          <RefaeyBust mood="smile" size="var(--bust-sm)" />
+        </button>
+      )}
     </aside>
   );
 }

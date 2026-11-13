@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 import { Button, DisplayHeading, Eyebrow, Page } from '@/shared/ui';
 import { RefaeyDock } from './RefaeyDock';
+import { RefaeyStage } from './RefaeyStage';
 import { getNode, type RuntimeNode } from './registry';
 import { useRefaey } from './store';
 
@@ -26,7 +27,8 @@ const IDS = ['intro-hello', 'intro-thumb', 'intro-choice', 'missions-hub', 'athe
 export function RefaeySandbox() {
   const [horizons, setHorizons] = useState(false);
   const [lola, setLola] = useState(false);
-  const { openNode, openAsk, collapse, seen } = useRefaey();
+  const [stage, setStage] = useState(false);
+  const { openNode, openAsk, collapse, seen, begun } = useRefaey();
   const context = useMemo(() => ({ horizons, values: horizons ? FAKE : {}, flags: { horizonLola: lola } }), [horizons, lola]);
   const lookup = (id: string, backTo?: string) => (id === LONG.id ? LONG : getNode(id, backTo));
   return (
@@ -42,6 +44,12 @@ export function RefaeySandbox() {
         </label>{' '}
         <label>
           <input type="checkbox" checked={lola} onChange={(e) => setLola(e.target.checked)} /> LOLA horizon
+        </label>{' '}
+        <label>
+          <input type="checkbox" checked={stage} onChange={(e) => setStage(e.target.checked)} /> Home stage (half-body)
+        </label>{' '}
+        <label>
+          <input type="checkbox" checked={begun} onChange={(e) => useRefaey.setState({ begun: e.target.checked })} /> Begin used once
         </label>
       </p>
       <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
@@ -58,7 +66,7 @@ export function RefaeySandbox() {
         </Button>
       </p>
       <p>Seen this session: {Object.keys(seen).join(', ') || 'none'}</p>
-      <RefaeyDock screen="mission" context={context} lookup={lookup} />
+      {stage ? <RefaeyStage screen="home" context={context} lookup={lookup} /> : <RefaeyDock screen="mission" context={context} lookup={lookup} />}
     </Page>
   );
 }

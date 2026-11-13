@@ -7,9 +7,6 @@ export const REFAEY_COPY = {
   back: 'Back',
   ok: 'OK',
   collapse: 'Close the conversation',
-  portrait: {
-    neutral: 'Refaey, listening',
-    smile: 'Refaey, smiling',
-    pointing: 'Refaey, pointing',
-  },
+  /** The speaker label above his line. */
+  speaker: 'Refaey',
 } as const;

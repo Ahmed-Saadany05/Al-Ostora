@@ -5,33 +5,35 @@ import type { Reply } from './dialogues/dialogues';
 import { packBeats, type ResolvedNode } from './logic';
 import s from './refaey.module.css';
 
-/** Content of one bubble: a resolved dialogue node, or the Ask menu (no lines, only questions). */
+/** Content of one beat of talk: a resolved dialogue node, or the Ask menu (no lines, only questions). */
 export type PanelContent = Pick<ResolvedNode, 'title' | 'lines' | 'replies'> & { key: string };
 
-/** A bubble longer than this many visual lines is split into beats with a Next button. Text is never truncated. */
+/** A node longer than this many visual lines is split into beats with a Next choice. Text is never truncated. */
 const MAX_VISUAL_LINES = 4;
 
 /**
- * The speech bubble and up to three reply buttons. Keyboard: Tab and Shift+Tab move between replies, arrow keys do
- * too, Enter chooses, Esc collapses. The bubble is announced politely when it changes.
+ * Refaey's words as large text directly on the scene (no bubble, no box): a small "Refaey" label, the line, then a
+ * vertical list of choices with an arrow. Keyboard: Tab and arrows move between choices, Enter chooses, Esc closes.
  * Beats: each line of a node is one sentence; whole lines are grouped so a beat is at most four visual lines.
  */
-export function DialoguePanel({
+export function DialogueText({
   content,
   onReply,
   onCollapse,
+  className,
 }: {
   content: PanelContent;
   onReply: (reply: Reply) => void;
   onCollapse: () => void;
+  className?: string;
 }) {
   const root = useRef<HTMLElement>(null);
-  const bubble = useRef<HTMLDivElement>(null);
+  const lines = useRef<HTMLDivElement>(null);
   const measure = useRef<HTMLDivElement>(null);
   const [beats, setBeats] = useState<number[][]>([content.lines.map((_, i) => i)]);
   const [beat, setBeat] = useState(0);
 
-  // Measure how many visual lines each sentence takes at the bubble's real width, then group them into beats.
+  // Count the visual lines each sentence takes at the real width and font, then group them into beats.
   useLayoutEffect(() => {
     setBeat(0);
     const compute = () => {
@@ -39,22 +41,20 @@ export function DialoguePanel({
       if (!m || content.lines.length === 0) return setBeats([content.lines.map((_, i) => i)]);
       const counts = [...m.children].map((p) => {
         const el = p as HTMLElement;
-        const lh = parseFloat(getComputedStyle(el).lineHeight);
-        return Math.max(1, Math.round(el.offsetHeight / lh));
+        return Math.max(1, Math.round(el.offsetHeight / parseFloat(getComputedStyle(el).lineHeight)));
       });
       setBeats(packBeats(counts, MAX_VISUAL_LINES));
     };
     compute();
     const ro = new ResizeObserver(compute);
-    if (bubble.current) ro.observe(bubble.current);
+    if (lines.current) ro.observe(lines.current);
     return () => ro.disconnect();
   }, [content.key, content.lines]);
 
   const lastBeat = beat >= beats.length - 1;
   const shown = (beats[Math.min(beat, beats.length - 1)] ?? []).map((i) => content.lines[i]);
 
-  // Put focus on the first reply when the bubble changes (or its beats are known: the buttons are replaced then),
-  // so the keyboard can answer straight away.
+  // Focus the first choice when the text changes (or its beats are known: the choices are replaced then).
   useEffect(() => {
     root.current?.querySelector<HTMLElement>('[data-reply]')?.focus();
   }, [content.key, beat, beats.length]);
@@ -66,25 +66,33 @@ export function DialoguePanel({
       onCollapse();
       return;
     }
-    const arrows = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'];
-    if (!arrows.includes(e.key)) return;
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) return;
     const items = [...(root.current?.querySelectorAll<HTMLElement>('[data-reply]') ?? [])];
     if (items.length === 0) return;
     e.preventDefault();
-    const at = items.indexOf(document.activeElement as HTMLElement);
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
-    items[(at + step + items.length) % items.length].focus();
+    items[(items.indexOf(document.activeElement as HTMLElement) + step + items.length) % items.length].focus();
   };
 
+  const choice = (label: string, onClick: () => void) => (
+    <Button key={label} variant="ghost" size="md" icon="arrowRight" className={s.reply} data-reply onClick={onClick}>
+      {label}
+    </Button>
+  );
+
   return (
-    <section ref={root} className={s.panel} role="dialog" aria-label={REFAEY_COPY.name} onKeyDown={onKeyDown}>
-      <div ref={bubble} className={s.bubble} aria-live="polite">
-        {content.title && <p className={s.title}>{content.title}</p>}
-        {shown.map((line) => (
-          <p key={line} className={s.line}>
-            {line}
-          </p>
-        ))}
+    <section ref={root} className={[s.talk, className].filter(Boolean).join(' ')} role="dialog" aria-label={REFAEY_COPY.name} onKeyDown={onKeyDown}>
+      <p className={s.speaker}>{REFAEY_COPY.speaker}</p>
+      {content.title && <p className={s.topic}>{content.title}</p>}
+      <div ref={lines} className={s.lines} aria-live="polite">
+        {/* Only this part is re-created (and fades in) when the beat or the node changes. */}
+        <div key={`${content.key}:${beat}`} className={s.fade}>
+          {shown.map((line) => (
+            <p key={line} className={s.line}>
+              {line}
+            </p>
+          ))}
+        </div>
         {/* Same width and type as the real lines, invisible: used only to count visual lines. */}
         <div ref={measure} className={s.measure} aria-hidden>
           {content.lines.map((line, i) => (
@@ -94,18 +102,8 @@ export function DialoguePanel({
           ))}
         </div>
       </div>
-      <div className={s.replies}>
-        {lastBeat ? (
-          content.replies.map((r) => (
-            <Button key={r.label} variant="secondary" size="md" icon={null} className={s.reply} data-reply onClick={() => onReply(r)}>
-              {r.label}
-            </Button>
-          ))
-        ) : (
-          <Button variant="secondary" size="md" icon="arrowRight" className={s.reply} data-reply onClick={() => setBeat((b) => b + 1)}>
-            {REFAEY_COPY.next}
-          </Button>
-        )}
+      <div key={`${content.key}:${beat}:r`} className={[s.replies, s.fade].join(' ')}>
+        {lastBeat ? content.replies.map((r) => choice(r.label, () => onReply(r))) : choice(REFAEY_COPY.next, () => setBeat((b) => b + 1))}
       </div>
     </section>
   );
