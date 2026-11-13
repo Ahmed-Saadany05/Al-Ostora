@@ -24,8 +24,8 @@ export function ChooseSitePage() {
   const pins = [...(catalogue ?? []), ...sites.filter((x) => x.kind === 'custom')];
   const next =
     sites.length === 0 ? null : sites.length === 1 ? (
-      <Button variant="primary" size="lg" to={missionUrl.stand(sites[0].id)}>
-        Stand on {sites[0].kind === 'custom' ? 'your pin' : sites[0].name}
+      <Button variant="primary" size="lg" to={missionUrl.dates(sites[0].id)}>
+        Compare dates · {sites[0].kind === 'custom' ? 'your pin' : sites[0].name}
       </Button>
     ) : (
       <Button variant="primary" size="lg" to={missionUrl.compare(siteIds)}>
