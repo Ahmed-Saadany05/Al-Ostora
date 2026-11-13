@@ -263,7 +263,7 @@ export interface Params {
   panelType?: 'vertical-fixed' | 'vertical-rotating' | 'tracking' | 'flat';
   /** Battery limit: longest darkness the mission can survive, hours. */
   maxDarknessH?: number;
-  /** Weights for matchScore (engine). Placeholder values until Goda sets them. */
+  /** Weights for matchScore (engine). */
   scoreWeights: { power: number; comms: number; darkness: number };
 }
 
@@ -271,7 +271,10 @@ export const DEFAULT_PARAMS: Params = {
   observerHeightM: 2,
   commsMinClearanceDeg: 0,
   stepMinutes: 60,
-  scoreWeights: { power: 0.4, comms: 0.3, darkness: 0.3 }, // TODO(Goda): real defaults
+  // Agreed with Goda (engine): equal weights, a rotating vertical array, a 150 h battery limit.
+  scoreWeights: { power: 1 / 3, comms: 1 / 3, darkness: 1 / 3 },
+  panelType: 'vertical-rotating',
+  maxDarknessH: 150,
 };
 
 // ---------------------------------------------------------------- Constants
