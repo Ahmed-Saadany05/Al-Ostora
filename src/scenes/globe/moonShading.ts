@@ -20,7 +20,7 @@ export interface MoonLight {
   uNightFloor: { value: number };
   /** Overall exposure. Lunar soil is as dark as worn asphalt; photos are exposed brighter. */
   uExposure: { value: number };
-  /** 1 = data layer (LOLA relief): show only day/night, keep the map's own shading. */
+  /** 1 = data layer (LOLA relief): no Sun shading or night side at all — the map shows as published. */
   uMaskOnly: { value: number };
 }
 
@@ -79,8 +79,9 @@ export function addMoonShading(material: THREE.Material, light: MoonLight) {
           float body = mix(lit0, lommel, 0.85);
           // Half the Sun's 0.53° disk is sin(0.265°) ≈ 0.0046 above/below the horizon.
           float day = smoothstep(-0.0046, 0.0046, mu0);
-          float shade = mix(day * min(body, 1.25), day, uMaskOnly);
-          outgoingLight *= max(shade, uNightFloor) * uExposure;
+          float shade = day * min(body, 1.25);
+          // The relief map is data (height as colour): show it fully lit everywhere, no shadows.
+          outgoingLight *= mix(max(shade, uNightFloor) * uExposure, 1.0, uMaskOnly);
         }
         #include <opaque_fragment>`,
       );
