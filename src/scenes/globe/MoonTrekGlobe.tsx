@@ -2,21 +2,24 @@
  * MOON TREK GLOBE — the shared lunar sphere used by every globe scene (owner: Pink).
  *
  * NASA Moon Trek WMTS imagery draped on a generated 1,737.4 km sphere with 3d-tiles-renderer:
- *   GeneratedSurfacePlugin   → sphere geometry, tiled like the LRO WAC mosaic, with its imagery
- *   ImageOverlayPlugin       → optional LOLA colour-relief layer on top (Imagery / Relief switch)
+ *   GeneratedSurfacePlugin   → sphere geometry tiled like the layer, textured with its imagery
  *   TilesFadePlugin          → sharper tiles fade in while you zoom
  *   UpdateOnChangePlugin     → no tile work while nothing moves
+ *
+ * Each layer (Imagery = LRO WAC, Relief = LOLA) is its own generated surface; switching remounts it.
+ * (Adding/removing overlays
+ * on a live ImageOverlayPlugin is not safe in 3d-tiles-renderer 0.5.4: it throws during streaming
+ * and on dispose, so this component never does it.)
  *
  * Render it inside an R3F <Canvas>. One scene unit = one lunar radius; the Moon sits at the origin
  * with north up (+Y). Children are placed in the Moon-fixed frame (+Z north, +X 0° lon) in METRES,
  * so `latLonToVec(lat, lon, MOON_RADIUS_M)` positions things on the surface.
  */
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { TilesPlugin, TilesRenderer } from '3d-tiles-renderer/r3f';
 import {
   GeneratedSurfacePlugin,
-  ImageOverlayPlugin,
   TilesFadePlugin,
   UpdateOnChangePlugin,
   WMTSTilesOverlay,
@@ -32,7 +35,7 @@ import {
   type MoonLayerId,
   type MoonTrekLayer,
 } from '../lib/moonTrek';
-import { addMoonShading, createMoonLight, shadeLoadedModel } from './moonShading';
+import { addMoonShading, createMoonLight, shadeLoadedModel, type MoonLight } from './moonShading';
 
 /** Sizes the library's reference ellipsoid (WGS84 by default) to the Moon before the root loads. */
 class MoonEllipsoidPlugin {
@@ -58,6 +61,24 @@ function makeOverlay(l: MoonTrekLayer) {
   return new WMTSTilesOverlay(options as unknown as ConstructorParameters<typeof WMTSTilesOverlay>[0]);
 }
 
+/** One Moon Trek layer as a streamed, generated sphere. */
+function LayerTiles({ layerId, light, onLoaded }: { layerId: MoonLayerId; light: MoonLight; onLoaded: () => void }) {
+  const onLoadModel = useMemo(() => shadeLoadedModel(light), [light]);
+  // Plugin args are constructor-argument arrays and must stay stable (TilesPlugin re-creates on change).
+  const surfaceArgs = useMemo(
+    () => [{ overlay: makeOverlay(MOON_TREK_LAYERS[layerId]), applyOverlayTexture: true, useRecommendedSettings: false }],
+    [layerId],
+  );
+  return (
+    <TilesRenderer errorTarget={1.5} onLoadModel={onLoadModel} onTilesLoadEnd={onLoaded}>
+      <TilesPlugin plugin={MoonEllipsoidPlugin} />
+      <TilesPlugin plugin={GeneratedSurfacePlugin} args={surfaceArgs} />
+      <TilesPlugin plugin={TilesFadePlugin} />
+      <TilesPlugin plugin={UpdateOnChangePlugin} />
+    </TilesRenderer>
+  );
+}
+
 /** Moon-fixed (Z-up) → scene (Y-up): one fixed turn, applied once, here. */
 const BODY_ROTATION = new THREE.Euler(-Math.PI / 2, 0, 0);
 const DEFAULT_SUN: Vec3 = { x: 0.82, y: -0.42, z: -0.38 };
@@ -81,29 +102,17 @@ export const MoonTrekGlobe = forwardRef<THREE.Group, MoonTrekGlobeProps>(functio
   useImperativeHandle(ref, () => body.current as THREE.Group, []);
 
   const light = useMemo(createMoonLight, []);
-  const onLoadModel = useMemo(() => shadeLoadedModel(light), [light]);
 
-  // Overlay instances must stay stable: TilesPlugin re-creates the plugin when its args change.
-  const mosaic = useMemo(() => makeOverlay(MOON_TREK_LAYERS.mosaic), []);
-  const relief = useMemo(() => makeOverlay(MOON_TREK_LAYERS.relief), []);
-  // Plugin args are passed as constructor-argument arrays.
-  const surfaceArgs = useMemo(
-    () => [{ overlay: mosaic, applyOverlayTexture: true, useRecommendedSettings: false }],
-    [mosaic],
-  );
-  const overlayArgs = useMemo(() => [{ overlays: [] }], []);
-  const [overlayPlugin, setOverlayPlugin] = useState<ImageOverlayPlugin | null>(null);
-  // The 0.5.4 typings describe the ref as the plugin class; at runtime it is the instance.
-  const overlayRef = useCallback((p: unknown) => setOverlayPlugin(p as ImageOverlayPlugin | null), []);
-  const reliefShown = useRef(false);
-
+  // Switching layers remounts the surface (the grey placeholder sphere shows while new tiles load).
+  const ready = useRef(false);
+  const onLoaded = () => {
+    if (ready.current) return;
+    ready.current = true;
+    onImageryReady?.();
+  };
   useEffect(() => {
     light.uMaskOnly.value = layer === 'relief' ? 1 : 0;
-    if (!overlayPlugin) return;
-    if (layer === 'relief' && !reliefShown.current) overlayPlugin.addOverlay(relief);
-    if (layer !== 'relief' && reliefShown.current) overlayPlugin.deleteOverlay(relief);
-    reliefShown.current = layer === 'relief';
-  }, [layer, overlayPlugin, relief, light]);
+  }, [layer, light]);
 
   // Placeholder body under the tiles so the globe is never blank while imagery streams in.
   const fallbackMaterial = useMemo(() => {
@@ -112,13 +121,6 @@ export const MoonTrekGlobe = forwardRef<THREE.Group, MoonTrekGlobeProps>(functio
     return m;
   }, [light]);
   useEffect(() => () => fallbackMaterial.dispose(), [fallbackMaterial]);
-
-  const ready = useRef(false);
-  const onTilesLoadEnd = () => {
-    if (ready.current) return;
-    ready.current = true;
-    onImageryReady?.();
-  };
 
   const q = useMemo(() => new THREE.Quaternion(), []);
   useFrame(() => {
@@ -135,13 +137,7 @@ export const MoonTrekGlobe = forwardRef<THREE.Group, MoonTrekGlobeProps>(functio
       <mesh rotation={[Math.PI / 2, 0, 0]} material={fallbackMaterial} renderOrder={-1}>
         <sphereGeometry args={[MOON_RADIUS_M * 0.998, 128, 64]} />
       </mesh>
-      <TilesRenderer errorTarget={1.5} onLoadModel={onLoadModel} onTilesLoadEnd={onTilesLoadEnd}>
-        <TilesPlugin plugin={MoonEllipsoidPlugin} />
-        <TilesPlugin plugin={GeneratedSurfacePlugin} args={surfaceArgs} />
-        <TilesPlugin plugin={ImageOverlayPlugin} args={overlayArgs} ref={overlayRef} />
-        <TilesPlugin plugin={TilesFadePlugin} />
-        <TilesPlugin plugin={UpdateOnChangePlugin} />
-      </TilesRenderer>
+      <LayerTiles key={layer} layerId={layer} light={light} onLoaded={onLoaded} />
       {children}
     </group>
   );
