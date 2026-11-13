@@ -43,9 +43,9 @@ export interface HeroMoonProps {
   onDiveComplete?: () => void;
   /** Start unlit so the intro can sweep the light across. */
   startDark?: boolean;
-  /** Called once the first Moon Trek imagery is on the sphere. Never called on failure. */
+  /** Called once the first Moon Trek imagery is on the sphere — also if it arrives after onTextureFailed. */
   onTextureReady?: () => void;
-  /** Called if the imagery did not arrive in time; the plain sphere stays. */
+  /** Called if the imagery did not arrive in time (the plain sphere shows meanwhile). */
   onTextureFailed?: () => void;
   /** Pin position in CSS pixels, relative to this component's box. */
   onPinScreen?: (p: { x: number; y: number } | null) => void;
@@ -164,7 +164,9 @@ function Scene({
   } | null>(null);
   const q = useMemo(() => ({ lean: new Quaternion(), tilt: new Quaternion(), spin: new Quaternion(), e: new Euler() }), []);
 
-  // Imagery arrives → tell the page (credit + intro start). Too slow → report failure instead.
+  // Imagery arrives → tell the page (credit + intro start). Too slow → report failure so the intro
+  // can go on, but if the imagery still arrives later, report it then too: it is on screen, so the
+  // page must show its credit.
   const onImageryReady = () => {
     if (ready.current) return;
     ready.current = true;
@@ -172,10 +174,7 @@ function Scene({
   };
   useEffect(() => {
     const t = setTimeout(() => {
-      if (!ready.current) {
-        ready.current = true;
-        onTextureFailed?.();
-      }
+      if (!ready.current) onTextureFailed?.();
     }, IMAGERY_TIMEOUT_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
