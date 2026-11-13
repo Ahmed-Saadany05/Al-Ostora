@@ -15,10 +15,10 @@ import { color } from '@/shared/theme/tokens';
 import { useApp } from '@/shared/store/app';
 import type { Site } from '@/shared/types';
 import { Tabs } from '@/shared/ui';
-import { MoonTrekGlobe } from './MoonTrekGlobe';
+import { DEFAULT_SUN, MoonTrekGlobe } from './MoonTrekGlobe';
 import { createMoonLight } from './moonShading';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, VIEWER_LIGHT, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, STEP1_NIGHT_FLOOR, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -274,12 +274,19 @@ interface SceneProps {
 function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick, onImageryReady }: SceneProps) {
   const body = useRef<THREE.Group>(null);
   const moonHover = useRef<RegionId | null>(null);
-  // Full Moon: the light comes from the viewer (slightly above-left), whichever way the Moon is turned.
-  const light = useMemo(createMoonLight, []);
-  const axes = useMemo(() => ({ right: new THREE.Vector3(), up: new THREE.Vector3(), back: new THREE.Vector3() }), []);
-  useFrame(({ camera }) => {
-    camera.matrixWorld.extractBasis(axes.right, axes.up, axes.back);
-    light.uSun.value.copy(axes.back).addScaledVector(axes.up, VIEWER_LIGHT.up).addScaledVector(axes.right, -VIEWER_LIGHT.left).normalize();
+  // A fixed Sun on the Moon (one side in shadow, turning with it), with the night side lifted so its
+  // big features stay visible.
+  const light = useMemo(() => {
+    const l = createMoonLight();
+    l.uNightFloor.value = STEP1_NIGHT_FLOOR;
+    return l;
+  }, []);
+  const bodyQ = useMemo(() => new THREE.Quaternion(), []);
+  useFrame(() => {
+    const b = body.current;
+    if (!b) return;
+    b.getWorldQuaternion(bodyQ);
+    light.uSun.value.set(DEFAULT_SUN.x, DEFAULT_SUN.y, DEFAULT_SUN.z).applyQuaternion(bodyQ).normalize();
   });
   const inverse = useMemo(() => new THREE.Matrix4(), []);
   const ray = useMemo(() => new THREE.Ray(), []);
