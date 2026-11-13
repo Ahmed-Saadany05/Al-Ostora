@@ -357,7 +357,7 @@ export function LaunchPage() {
       {/* Next steps */}
       <div className={s.sumActions}>
         <Button variant="ghost" icon={null} leadingIcon="orbit" className={s.verifyBtn} onClick={() => setVerify(true)}>
-          Check against NASA <span className={s.verifyBtnSub}>· JPL Horizons</span>
+          Check against <span className={s.verifyBtnSub}>JPL Horizons</span>
         </Button>
         <span className={s.grow} />
         <Button variant="secondary" leadingIcon="clock" icon={null} to={missionUrl.date(site.id)}>

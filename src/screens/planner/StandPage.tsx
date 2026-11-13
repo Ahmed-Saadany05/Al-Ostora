@@ -10,11 +10,11 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
-import { nextTransition, useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
+import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
 import { useTime } from '@/shared/store/time';
-import { LUNAR, type Site, type SkyState } from '@/shared/types';
+import { LUNAR, type Site, type IsoTime, type TimeWindow } from '@/shared/types';
 import {
   Button,
   EmptyState,
@@ -102,9 +102,21 @@ export function StandPage() {
       </Page>
     );
 
-  const ahead = report?.samples.filter((x) => x.time >= time) ?? [];
-  const sunUp = (x: SkyState) => x.sunVisible;
-  const earthUp = (x: SkyState) => x.earthVisible;
+  // Countdowns from the report's Sun / Earth WINDOWS, not the hourly samples (Goda's review #7):
+  // the live engine refines window edges to ~±15 s, so these are minute-accurate. They are relative
+  // to the clock `time` (which moves when you play / scrub), unlike useMetrics' next*, which are
+  // relative to the start of the lunar day.
+  //   up now  → the end of the window you are in (null if it runs past this lunar day)
+  //   down now → the start of the next window (null if none before this lunar day ends)
+  const nextChange = (windows: TimeWindow[] | undefined, up: boolean): IsoTime | null => {
+    if (!windows) return null;
+    const t = Date.parse(time);
+    if (up) {
+      const w = windows.find((x) => Date.parse(x.start) <= t && t <= Date.parse(x.end));
+      return w && !(w.clipped && Date.parse(w.end) >= Date.parse(to) - 60_000) ? w.end : null;
+    }
+    return windows.find((x) => Date.parse(x.start) > t)?.start ?? null;
+  };
   const status = sky
     ? sky.sunVisible && sky.earthVisible
       ? 'Sunlit and in contact with Earth'
@@ -182,8 +194,8 @@ export function StandPage() {
             </span>
           }
         >
-          <BodyCard kind="sun" body={sky.sun} visible={sky.sunVisible} now={time} next={nextTransition(ahead, sunUp, sky.sunVisible)} source={sky.source} />
-          <BodyCard kind="earth" body={sky.earth} visible={sky.earthVisible} now={time} next={nextTransition(ahead, earthUp, sky.earthVisible)} source={sky.source} />
+          <BodyCard kind="sun" body={sky.sun} visible={sky.sunVisible} now={time} next={nextChange(report?.sunWindows, sky.sunVisible)} source={sky.source} />
+          <BodyCard kind="earth" body={sky.earth} visible={sky.earthVisible} now={time} next={nextChange(report?.earthWindows, sky.earthVisible)} source={sky.source} />
           <HowFarCard earthKm={sky.earth.distanceKm} sunKm={sky.sun.distanceKm} source={sky.source} />
         </PeekPanel>
       )}
@@ -236,7 +248,7 @@ export function StandPage() {
               <Icon name="plus" size={14} /> Compare
             </Link>
             <button type="button" className={fs.dockLink} onClick={() => setVerify(true)}>
-              <Icon name="orbit" size={14} /> Check against NASA
+              <Icon name="orbit" size={14} /> Check against JPL Horizons
             </button>
             {sky && <SourceBadge source={sky.source} />}
           </div>

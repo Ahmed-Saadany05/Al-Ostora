@@ -948,7 +948,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
-/* "Check against NASA" button (Steps 2 and 5): a trust badge with a slow shimmer every few seconds.
+/* "Check against JPL Horizons" button (Steps 2 and 5): a trust badge with a slow shimmer every few seconds.
    Doubled class = beats the kit's .ghost padding/border without touching shared code. */
 .verifyBtn.verifyBtn {
   position: relative;
@@ -3134,4 +3134,10 @@
   bottom: calc(100% + 8px);
   left: auto;
   right: 0;
+}
+
+/* Verify: the on-sky angle rows (the real check) stand out from the raw Δ rows. */
+.verifySep td {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
 }

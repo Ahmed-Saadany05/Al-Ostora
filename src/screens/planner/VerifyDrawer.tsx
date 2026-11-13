@@ -22,11 +22,25 @@ import { Button, Drawer, ErrorState, Icon, LoadingState, Pill } from '@/shared/u
 import { usePlannerParams } from './SettingsDrawer';
 import s from './flow.module.css';
 
-/** Max difference that still counts as "matches". Confirm with Goda's interpolation accuracy. */
-const TOLERANCE_DEG = 0.05;
+/**
+ * Max on-sky angle between our direction and JPL's that still counts as "matches".
+ * Team validation standard (Goda): ≤ 0.01°. Live checks put the engine at ~0.000002° from Horizons.
+ */
+const TOLERANCE_DEG = 0.01;
 
 const MINUTE = 60_000;
 const floorToMinute = (iso: IsoTime) => new Date(Math.floor(Date.parse(iso) / MINUTE) * MINUTE).toISOString();
+
+/**
+ * On-sky angle between two directions (azimuth, elevation), in degrees — the great-circle distance.
+ * This is the fair measure: a raw azimuth difference overstates errors for bodies high in the sky
+ * (near the zenith, a big azimuth change is a tiny move on the sky).
+ */
+function separationDeg(az1: number, el1: number, az2: number, el2: number) {
+  const r = Math.PI / 180;
+  const c = Math.sin(el1 * r) * Math.sin(el2 * r) + Math.cos(el1 * r) * Math.cos(el2 * r) * Math.cos((az1 - az2) * r);
+  return Math.acos(Math.min(1, Math.max(-1, c))) / r;
+}
 
 /** Shortest signed angle from b to a, in −180…+180. */
 const azDiff = (a: number, b: number) => ((((a - b + 540) % 360) + 360) % 360) - 180;
@@ -74,10 +88,15 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
     { label: 'Earth azimuth', ours: sky?.earth.azDeg, jpl: jplEarth?.azDeg, az: true }, // V4
   ].map((r) => {
     const delta = r.ours === undefined || r.jpl === undefined ? undefined : r.az ? azDiff(r.ours, r.jpl) : r.ours - r.jpl; // V2
-    return { ...r, delta, ok: delta === undefined ? undefined : Math.abs(delta) <= TOLERANCE_DEG };
+    return { ...r, delta };
   });
-  const worst = Math.max(0, ...rows.map((r) => (r.delta === undefined ? 0 : Math.abs(r.delta))));
-  const allOk = rows.every((r) => r.ok);
+  // The verdict is judged per body on the on-sky angle between the two directions (≤ TOLERANCE_DEG).
+  const seps = [
+    { label: 'Sun: angle between the two', v: sky && jplSun ? separationDeg(sky.sun.azDeg, sky.sun.elDeg, jplSun.azDeg, jplSun.elDeg) : undefined },
+    { label: 'Earth: angle between the two', v: sky && jplEarth ? separationDeg(sky.earth.azDeg, sky.earth.elDeg, jplEarth.azDeg, jplEarth.elDeg) : undefined },
+  ].map((x) => ({ ...x, ok: x.v === undefined ? undefined : x.v <= TOLERANCE_DEG }));
+  const worst = Math.max(0, ...seps.map((x) => x.v ?? 0));
+  const allOk = seps.every((x) => x.ok);
   const retry = (
     <Button variant="secondary" leadingIcon="clock" icon={null} onClick={() => setAttempt((n) => n + 1)}>
       Try again
@@ -89,14 +108,14 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
       open={open}
       onClose={onClose}
       eyebrow={`${site.name} · ${formatUtc(at)}`}
-      title="Check against NASA"
+      title="Check against JPL Horizons"
       source="horizons"
       // No footer action: the raw JPL links were removed on purpose (the drawer closes with ✕ / Esc).
       next={null}
     >
       <p className={s.muted}>
-        Our position of the Sun and Earth next to NASA JPL Horizons, for the same spot and the same minute. Elevations are above the
-        flat horizon, because JPL doesn't know the terrain.
+        Our position of the Sun and Earth next to JPL Horizons, for the same spot and the same minute. Elevations are above the flat
+        horizon, because JPL doesn't know the terrain. A match means our direction is within {formatDeg(TOLERANCE_DEG, 2, false)} of JPL's on the sky.
       </p>
 
       {!res && !error && <LoadingState compact title="Asking JPL Horizons…" />}
@@ -120,7 +139,7 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
               (allOk ? (
                 <Pill tone="good" icon="check" label={`Matches JPL within ${formatDeg(TOLERANCE_DEG, 2, false)}`} />
               ) : (
-                <Pill tone="warn" icon="alert" label={`Differs by up to ${formatDeg(worst, 2, false)}`} />
+                <Pill tone="warn" icon="alert" label={`Differs by up to ${formatDeg(worst, 4, false)}`} />
               ))}
             {sky && !isLive && <Pill tone="demo" icon="beaker" label="Ours is demo data" />}
           </div>
@@ -132,7 +151,7 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
                 <th>Ours</th>
                 <th>JPL</th>
                 <th>Δ</th>
-                {isLive && <th aria-label="Result" />}
+                <th aria-label="Result" />
               </tr>
             </thead>
             <tbody>
@@ -141,13 +160,23 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
                   <td>{r.label}</td>
                   <td className="num">{r.ours === undefined ? '—' : formatDeg(r.ours, 2, !r.az)}</td>
                   <td className="num">{r.jpl === undefined ? '—' : formatDeg(r.jpl, 2, !r.az)}</td>
-                  <td className="num">{r.delta === undefined ? '—' : formatDeg(r.delta, 2)}</td>
-                  {isLive && (
-                    <td className={r.ok ? s.verifyOk : s.verifyOff}>
-                      <Icon name={r.ok ? 'check' : 'alert'} size={14} />
-                      <span className="visually-hidden">{r.ok ? 'matches' : 'differs'}</span>
-                    </td>
-                  )}
+                  <td className="num">{r.delta === undefined ? '—' : formatDeg(r.delta, 3)}</td>
+                  <td />
+                </tr>
+              ))}
+              {/* The real check: how far apart the two directions are on the sky. */}
+              {seps.map((x) => (
+                <tr key={x.label} className={s.verifySep}>
+                  <td colSpan={3}>{x.label}</td>
+                  <td className="num">{x.v === undefined ? '—' : formatDeg(x.v, 4, false)}</td>
+                  <td className={isLive ? (x.ok ? s.verifyOk : s.verifyOff) : undefined}>
+                    {isLive && x.ok !== undefined && (
+                      <>
+                        <Icon name={x.ok ? 'check' : 'alert'} size={14} />
+                        <span className="visually-hidden">{x.ok ? 'matches' : 'differs'}</span>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -156,7 +185,7 @@ export function VerifyDrawer({ site, time, open, onClose }: { site: Site; time: 
           {sky && !isLive && (
             <p className={s.muted}>
               Our numbers come from the demo provider right now: realistic but made up, so they are <strong>not expected</strong> to match
-              JPL. With live NASA data, this panel shows ✓ when each row is within {formatDeg(TOLERANCE_DEG, 2, false)}.
+              JPL. With live data, this panel shows ✓ when each direction is within {formatDeg(TOLERANCE_DEG, 2, false)} of JPL's on the sky.
             </p>
           )}
         </>
