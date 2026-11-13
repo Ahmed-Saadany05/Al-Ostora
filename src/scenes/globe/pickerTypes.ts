@@ -67,3 +67,10 @@ export const FIT_DISTANCE = -1;
 export function siteLetter(i: number): string {
   return i < 26 ? String.fromCharCode(65 + i) : siteLetter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
 }
+
+/**
+ * Step 1 lights the Moon from the viewer (a full Moon, as in the design), from slightly above-left
+ * so craters keep a little relief. Offsets are in camera axes (up, left), added to the direction
+ * back toward the camera. Home's flight ends on the same light, so the hand-off matches.
+ */
+export const VIEWER_LIGHT = { up: 0.18, left: 0.12 } as const;

@@ -16,8 +16,9 @@ import { useApp } from '@/shared/store/app';
 import type { Site } from '@/shared/types';
 import { Tabs } from '@/shared/ui';
 import { MoonTrekGlobe } from './MoonTrekGlobe';
+import { createMoonLight } from './moonShading';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, siteLetter, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, siteLetter, VIEWER_LIGHT, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -273,6 +274,13 @@ interface SceneProps {
 function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick, onImageryReady }: SceneProps) {
   const body = useRef<THREE.Group>(null);
   const moonHover = useRef<RegionId | null>(null);
+  // Full Moon: the light comes from the viewer (slightly above-left), whichever way the Moon is turned.
+  const light = useMemo(createMoonLight, []);
+  const axes = useMemo(() => ({ right: new THREE.Vector3(), up: new THREE.Vector3(), back: new THREE.Vector3() }), []);
+  useFrame(({ camera }) => {
+    camera.matrixWorld.extractBasis(axes.right, axes.up, axes.back);
+    light.uSun.value.copy(axes.back).addScaledVector(axes.up, VIEWER_LIGHT.up).addScaledVector(axes.right, -VIEWER_LIGHT.left).normalize();
+  });
   const inverse = useMemo(() => new THREE.Matrix4(), []);
   const ray = useMemo(() => new THREE.Ray(), []);
 
@@ -304,7 +312,7 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
 
   return (
     <>
-      <MoonTrekGlobe ref={body} layer={layer} onImageryReady={onImageryReady}>
+      <MoonTrekGlobe ref={body} layer={layer} light={light} onImageryReady={onImageryReady}>
         <RegionGlow hover={hoverRegion} active={activeRegion} motion={motion} />
         <RegionOutlines hovered={hoverRegion} />
         <ScreenAnchors anchors={anchors} els={els} />
