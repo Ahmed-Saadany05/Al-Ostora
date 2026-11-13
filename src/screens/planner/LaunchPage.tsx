@@ -13,13 +13,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { LaunchSequence } from '@/scenes';
 import { useDayReport, usePlanLaunch, useSky } from '@/shared/data';
+import { Explain } from '@/screens/home/Explain';
 import { formatLatLon } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
 import { LUNAR } from '@/shared/types';
-import { Button, EmptyState, LoadingState, OwnerNote, Page, SourceBadge, StepHeader } from '@/shared/ui';
+import { Button, EmptyState, LoadingState, Page, SourceBadge, StepHeader } from '@/shared/ui';
 import { IMAGE_CREDIT, dayTime, human, missionStory } from './DatePage';
 import { VerifyDrawer } from './VerifyDrawer';
 import { usePlannerParams } from './SettingsDrawer';
+import { DataError } from './DataError';
 import s from './flow.module.css';
 
 const cls = (...c: (string | false | undefined | null)[]) => c.filter(Boolean).join(' ');
@@ -224,11 +226,11 @@ function LanderFeed({ items }: { items: FeedItem[] }) {
 export function LaunchPage() {
   const params = usePlannerParams();
   const { site, launchDate, loading } = useMission();
-  const { data: plan } = usePlanLaunch(site, launchDate);
+  const { data: plan, error: ePlan } = usePlanLaunch(site, launchDate);
   const landing = plan?.landingDate;
   const on = landing ? site : undefined;
-  const { data: sky } = useSky(on, landing ?? '', params);
-  const { data: afterReport } = useDayReport(on, landing ?? '', LUNAR.synodicDays, params);
+  const { data: sky, error: eSky } = useSky(on, landing ?? '', params);
+  const { data: afterReport, error: eAfter } = useDayReport(on, landing ?? '', LUNAR.synodicDays, params);
 
   const [landed, setLanded] = useState(false);
   const [verify, setVerify] = useState(false);
@@ -318,6 +320,7 @@ export function LaunchPage() {
         back={{ to: missionUrl.date(site.id), label: 'Change date' }}
         meta={<span className="num">{formatLatLon(site.lat, site.lon)}</span>}
       />
+      <DataError errors={[ePlan, eSky, eAfter]} />
 
       {/* 1. Verdict + the Moon */}
       <section className={s.sumHero}>
@@ -327,7 +330,10 @@ export function LaunchPage() {
           <p className={s.sumLead}>
             Launch <b className="num">{dayTime(plan.launchDate)}</b>, land <b className="num">{dayTime(landing)}</b>, after <b>{plan.transitDays} days</b> in space.
           </p>
-          {sky && <SourceBadge source={sky.source} />}
+          <span className={s.sumTags}>
+            {sky && <SourceBadge source={sky.source} />}
+            {site.region === 'farside' ? <Explain id="farside" /> : site.region.endsWith('pole') ? <Explain id="low-sun" /> : <Explain id="libration" />}
+          </span>
         </div>
         <SummaryMoon sunlit={sun} contact={earth} lat={site.lat} lon={site.lon} site={site.name} />
       </section>
@@ -366,7 +372,6 @@ export function LaunchPage() {
       </p>
 
       <VerifyDrawer site={site} time={landing} open={verify} onClose={() => setVerify(false)} />
-      <OwnerNote owner="Aser (summary) · Pink (3D launch)">The launch animation is a text stand-in until Pink's 3D sequence lands.</OwnerNote>
     </Page>
   );
 }

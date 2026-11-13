@@ -8,14 +8,23 @@
  *  - commsMinClearanceDeg: how far above the ridge Earth must be to count as "in contact".
  *  - stepMinutes: how often the sky is sampled. Smaller → more exact countdowns, more work.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '@/shared/store/app';
 import { DEFAULT_PARAMS, type Params } from '@/shared/types';
 import { Button, Drawer, Pill } from '@/shared/ui';
 import s from './flow.module.css';
 
-/** The settings every planner page passes into useSky / useDayReport / useMetrics / useHorizon. */
-export const usePlannerParams = () => useApp((st) => st.params);
+/**
+ * The settings every planner page passes into useSky / useDayReport / useMetrics / useHorizon.
+ * ONLY the three Lander settings: passing the whole Params object would also send the stored
+ * scoreWeights and override the engine's own defaults (Goda's note), changing the match score.
+ */
+export function usePlannerParams(): Partial<Params> {
+  const observerHeightM = useApp((st) => st.params.observerHeightM);
+  const commsMinClearanceDeg = useApp((st) => st.params.commsMinClearanceDeg);
+  const stepMinutes = useApp((st) => st.params.stepMinutes);
+  return useMemo(() => ({ observerHeightM, commsMinClearanceDeg, stepMinutes }), [observerHeightM, commsMinClearanceDeg, stepMinutes]);
+}
 
 type Core = Pick<Params, 'observerHeightM' | 'commsMinClearanceDeg' | 'stepMinutes'>;
 

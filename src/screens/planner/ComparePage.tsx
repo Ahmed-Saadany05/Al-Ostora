@@ -13,13 +13,15 @@ import { Canvas } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDayReport, useHorizon, useMetrics } from '@/shared/data';
+import { Explain } from '@/screens/home/Explain';
 import { formatDuration, formatUtc } from '@/shared/format';
 import { MAX_COMPARE, missionUrl, useMission } from '@/shared/mission';
 import { LUNAR, type IsoTime, type Site, type SiteMetrics } from '@/shared/types';
-import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, OwnerNote, Page, ProgressRing, StepHeader, Tabs } from '@/shared/ui';
+import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, Page, ProgressRing, StepHeader, Tabs } from '@/shared/ui';
 import { EXAG, SiteScene } from './CompareScene3D';
 import { useLunarDay } from './useLunarDay';
 import { SettingsButton, usePlannerParams } from './SettingsDrawer';
+import { DataError } from './DataError';
 import s from './flow.module.css';
 
 interface Candidate {
@@ -213,11 +215,16 @@ export function ComparePage() {
   const dates = compareBy === 'dates';
 
   // Fixed number of hook calls (one per slot, up to 5) — rules of hooks.
-  const m0 = useMetrics(candidates[0]?.site, candidates[0]?.from ?? from, candidates[0]?.to ?? from, params).data;
-  const m1 = useMetrics(candidates[1]?.site, candidates[1]?.from ?? from, candidates[1]?.to ?? from, params).data;
-  const m2 = useMetrics(candidates[2]?.site, candidates[2]?.from ?? from, candidates[2]?.to ?? from, params).data;
-  const m3 = useMetrics(candidates[3]?.site, candidates[3]?.from ?? from, candidates[3]?.to ?? from, params).data;
-  const m4 = useMetrics(candidates[4]?.site, candidates[4]?.from ?? from, candidates[4]?.to ?? from, params).data;
+  const q0 = useMetrics(candidates[0]?.site, candidates[0]?.from ?? from, candidates[0]?.to ?? from, params);
+  const m0 = q0.data;
+  const q1 = useMetrics(candidates[1]?.site, candidates[1]?.from ?? from, candidates[1]?.to ?? from, params);
+  const m1 = q1.data;
+  const q2 = useMetrics(candidates[2]?.site, candidates[2]?.from ?? from, candidates[2]?.to ?? from, params);
+  const m2 = q2.data;
+  const q3 = useMetrics(candidates[3]?.site, candidates[3]?.from ?? from, candidates[3]?.to ?? from, params);
+  const m3 = q3.data;
+  const q4 = useMetrics(candidates[4]?.site, candidates[4]?.from ?? from, candidates[4]?.to ?? from, params);
+  const m4 = q4.data;
   const metrics = [m0, m1, m2, m3, m4];
 
   const rows = candidates.map((c, i) => ({ c, m: metrics[i] }));
@@ -312,6 +319,8 @@ export function ComparePage() {
           }
         />
 
+        <DataError errors={[q0.error, q1.error, q2.error, q3.error, q4.error]} />
+
         {/* Best match summary: one line (the winner's column also glows and carries ★). */}
         {best && scored.length > 1 && (
           <div className={s.cqSummary}>
@@ -327,6 +336,9 @@ export function ComparePage() {
                   · best window from <b className="num">{dayShort(best.m!.bestWindow.start)}</b>
                 </>
               )}
+              <span className={s.explainEnd}>
+                <Explain id="best-window" />
+              </span>
             </p>
           </div>
         )}
@@ -401,8 +413,6 @@ export function ComparePage() {
             </li>
           )}
         </ol>
-
-        <OwnerNote owner="Aser">Match score values come from the engine (Goda); the page explains what they mean, not the formula.</OwnerNote>
 
         <Drawer open={adding} onClose={() => setAdding(false)} eyebrow={`${candidates.length} of ${MAX_COMPARE} sites`} title="Add a site" next={null}>
           <input

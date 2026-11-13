@@ -203,15 +203,13 @@
 /* ---------------------------------------------------------------- cards */
 
 .card {
+  /* No box (Aser): a soft dark fade behind the text so it stays readable over the 3D Moon. */
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  box-shadow: var(--shadow-panel);
+  border-radius: 24px;
+  background: radial-gradient(130% 120% at 50% 50%, color-mix(in srgb, var(--color-surface) 78%, transparent), transparent 80%);
 }
 .cardHead {
   display: flex;

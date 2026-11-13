@@ -18,12 +18,14 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDayReport, useMetrics, usePlanLaunch, useSky } from '@/shared/data';
+import { Explain } from '@/screens/home/Explain';
 import { formatDuration, formatLatLon, hoursBetween } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
 import { LUNAR, type IsoTime, type SkyState, type TimeWindow } from '@/shared/types';
-import { Button, EmptyState, Icon, LoadingState, OwnerNote, Page, Pill, SourceBadge, StepHeader } from '@/shared/ui';
+import { Button, EmptyState, Icon, LoadingState, Page, Pill, SourceBadge, StepHeader } from '@/shared/ui';
 import { EarthPhase, SunOrb } from './skyIcons';
 import { SettingsButton, usePlannerParams } from './SettingsDrawer';
+import { DataError } from './DataError';
 import s from './flow.module.css';
 
 const HOUR = 3_600_000;
@@ -650,7 +652,7 @@ export function DatePage() {
 
   // Earliest launch = next full hour from now (fixed for this visit so cache keys stay stable).
   const [earliestLaunch] = useState(() => Math.ceil(Date.now() / HOUR) * HOUR);
-  const { data: probe } = usePlanLaunch(site, iso(earliestLaunch));
+  const { data: probe, error: eProbe } = usePlanLaunch(site, iso(earliestLaunch));
   const transitMs = probe ? probe.transitDays * DAY : undefined;
   const eL = probe ? Date.parse(probe.landingDate) : undefined; // earliest possible touchdown
 
@@ -661,7 +663,7 @@ export function DatePage() {
   const base = eL === undefined ? undefined : Number.isFinite(lunar) ? Math.max(eL, lunar) : eL;
   const range = (k: number) => (base === undefined ? ['', ''] : [iso(base + k * LUNAR_MS), iso(base + (k + 1) * LUNAR_MS)]);
   const live = base !== undefined ? site : undefined;
-  const { data: c0 } = useMetrics(live, range(0)[0], range(0)[1], params);
+  const { data: c0, error: eC0 } = useMetrics(live, range(0)[0], range(0)[1], params);
   const { data: c1 } = useMetrics(live, range(1)[0], range(1)[1], params);
   const { data: c2 } = useMetrics(live, range(2)[0], range(2)[1], params);
   const toLaunch = (w: TimeWindow | null | undefined) =>
@@ -697,11 +699,11 @@ export function DatePage() {
   const { data: dialReport } = useDayReport(transitMs !== undefined ? site : undefined, dialFrom, DIAL_DAYS + 1, params);
 
   // Touchdown: its sky, the lunar day around it, and what comes after.
-  const { data: sky } = useSky(landing ? site : undefined, landing ?? '', params);
+  const { data: sky, error: eSky } = useSky(landing ? site : undefined, landing ?? '', params);
   const viewFrom = landingMs !== undefined ? iso(midnight(landingMs - 7 * DAY)) : '';
   const viewTo = landingMs !== undefined ? iso(midnight(landingMs - 7 * DAY) + LUNAR_MS) : '';
   useEffect(() => setFocus(null), [landing]);
-  const { data: afterReport } = useDayReport(landing ? site : undefined, landing ?? '', LUNAR.synodicDays, params);
+  const { data: afterReport, error: eAfter } = useDayReport(landing ? site : undefined, landing ?? '', LUNAR.synodicDays, params);
   const { data: viewMetrics } = useMetrics(landing ? site : undefined, viewFrom, viewTo, params);
   const { data: after } = useMetrics(landing ? site : undefined, landing ?? '', landingMs !== undefined ? iso(landingMs + LUNAR_MS) : '', params);
 
@@ -773,6 +775,7 @@ export function DatePage() {
         meta={<span className="num">{formatLatLon(site.lat, site.lon)}</span>}
         aside={<SettingsButton />}
       />
+      <DataError errors={[eProbe, eC0, eSky, eAfter]} />
 
       {/* 1. The answer + the flight */}
       <section className={s.traj}>
@@ -795,7 +798,12 @@ export function DatePage() {
           </div>
           {chances.length > 0 && (
             <div className={s.chances}>
-              <p className={s.label}>Best launch chances</p>
+              <p className={s.chancesHead}>
+                <span className={s.label}>Best launch chances</span>
+                <span className={s.explainEnd}>
+                  <Explain id="best-window" />
+                </span>
+              </p>
               <div className={s.chanceRow}>
                 {chances.map((c, i) => (
                   <button
@@ -971,6 +979,7 @@ export function DatePage() {
               Use the recommended launch
             </Button>
           )}
+          {site.region === 'farside' ? <Explain id="farside" /> : site.region.endsWith('pole') ? <Explain id="low-sun" /> : <Explain id="libration" />}
         </section>
       </div>
 
@@ -1008,8 +1017,6 @@ export function DatePage() {
           )}
         </div>
       </section>
-
-      <OwnerNote owner="Aser">Transit time comes from the engine (Goda) and is shown to the user.</OwnerNote>
     </Page>
   );
 }

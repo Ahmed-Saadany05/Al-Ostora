@@ -229,6 +229,9 @@ export function StandPage() {
                 <Icon name="sun" size={14} /> Jump to best
               </button>
             )}
+            <span className={fs.explainUp}>
+              <Explain id="best-window" />
+            </span>
             <Link className={fs.dockLink} to={missionUrl.chooseSite([site.id])}>
               <Icon name="plus" size={14} /> Compare
             </Link>
