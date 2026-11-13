@@ -86,9 +86,12 @@ describe('live provider', () => {
     expect(m.longestNightH).toBeLessThan(3.2);
     expect(m.sunlitFraction).toBeCloseTo(1 - m.longestNightH / 8, 3);
     expect(m.gates.sunAtLanding).toBe(true);
+    // Whole-number scores (like the demo provider); breakdown points to 1 decimal.
+    for (const v of [m.matchScore, m.powerScore, m.commsScore, m.darknessScore]) expect(Number.isInteger(v)).toBe(true);
     const sum = m.scoreBreakdown.reduce((s, l) => s + l.points, 0);
-    expect(m.matchScore).toBeCloseTo(sum, 9);
-    expect(m.matchScore).toBeCloseTo((m.powerScore + m.commsScore + m.darknessScore) / 3, 9);
+    expect(Math.abs(m.matchScore - sum)).toBeLessThanOrEqual(0.5 + 0.15);
+    const exact = (100 * m.sunlitFraction + 100 * m.earthVisibleFraction + m.darknessScore) / 3;
+    expect(Math.abs(m.matchScore - exact)).toBeLessThanOrEqual(1);
     expect(m.nextSunset).not.toBeNull();
     expect(m.nextSunrise).not.toBeNull();
     expect(m.panelType).toBe('vertical-rotating');
