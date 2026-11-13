@@ -9,9 +9,9 @@ import s from './StarLayers.module.css';
  * drift faster, for depth). Each has its own seed so stars never double up.
  */
 const LAYERS = [
-  { seed: 11, density: 0.00006, shift: 3, speed: 2 },
-  { seed: 23, density: 0.00007, shift: 5, speed: 3.5 },
-  { seed: 37, density: 0.00004, shift: 8, speed: 5.5 },
+  { seed: 11, density: 0.00006, shift: 3, speed: 6 },
+  { seed: 23, density: 0.00007, shift: 5, speed: 10 },
+  { seed: 37, density: 0.00004, shift: 8, speed: 16 },
 ] as const;
 
 /**

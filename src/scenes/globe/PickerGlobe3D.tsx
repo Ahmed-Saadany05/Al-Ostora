@@ -17,7 +17,7 @@ import type { Site } from '@/shared/types';
 import { Icon, Tabs } from '@/shared/ui';
 import { MoonTrekGlobe } from './MoonTrekGlobe';
 import { RegionGlow } from './RegionGlow';
-import { KIND_ICON, KIND_WORD, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { KIND_ICON, KIND_WORD, OPENING_VIEW, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -30,6 +30,7 @@ import {
   type Vec3,
 } from '../lib/moonFrame';
 import { MOON_TREK_CREDIT, MOON_TREK_LAYERS, type MoonLayerId } from '../lib/moonTrek';
+import { rememberPickerStage } from './moonHandoff';
 import g from './globe.module.css';
 
 // ---------------------------------------------------------------- helpers
@@ -38,7 +39,7 @@ import g from './globe.module.css';
 const toScene = (v: Vec3) => new THREE.Vector3(v.x, v.z, -v.y);
 /** Opening view: above the last selected site, else from 55° S so the south pole (the challenge focus) and near side show. */
 const startPosition = (site?: Site) =>
-  toScene(site ? latLonToVec(THREE.MathUtils.clamp(site.lat, -75, 75), site.lon, START_DISTANCE) : latLonToVec(-55, 8, START_DISTANCE));
+  toScene(site ? latLonToVec(THREE.MathUtils.clamp(site.lat, -75, 75), site.lon, START_DISTANCE) : latLonToVec(OPENING_VIEW.lat, OPENING_VIEW.lon, START_DISTANCE));
 const MIN_DISTANCE = 1.025; // ≈ 43 km above the surface
 const MAX_DISTANCE = 6;
 const LABELS_BELOW_DISTANCE = 1.6;
@@ -256,9 +257,10 @@ interface SceneProps {
   els: AnchorEls;
   onMoonHoverRegion: (r: RegionId | null) => void;
   onMoonClick: (p: LatLon) => void;
+  onImageryReady?: () => void;
 }
 
-function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick }: SceneProps) {
+function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick, onImageryReady }: SceneProps) {
   const body = useRef<THREE.Group>(null);
   const moonHover = useRef<RegionId | null>(null);
   const inverse = useMemo(() => new THREE.Matrix4(), []);
@@ -292,7 +294,7 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
 
   return (
     <>
-      <MoonTrekGlobe ref={body} layer={layer}>
+      <MoonTrekGlobe ref={body} layer={layer} onImageryReady={onImageryReady}>
         <RegionGlow hover={hoverRegion} active={activeRegion} motion={motion} />
         <RegionOutlines hovered={hoverRegion} />
         <ScreenAnchors anchors={anchors} els={els} />
@@ -322,14 +324,27 @@ export default function PickerGlobe3D({
   onMoonHoverRegion,
   onMoonClick,
   fromHome,
+  onImageryReady,
 }: PickerGlobe3DProps) {
   const motion = useApp((s) => s.motion);
   const [layer, setLayer] = useState<MoonLayerId>('mosaic');
-  const [start] = useState(() =>
-    // From Home: begin where Home's push-in ended — close over the south pole (the dome's crest).
-    fromHome ? toScene(latLonToVec(-80, 0, 1.3)) : startPosition(sites.find((x) => x.id === selectedIds[selectedIds.length - 1])),
-  );
+  // From Home the flight already happened there: open exactly on the opening view it landed on.
+  const [start] = useState(() => startPosition(fromHome ? undefined : sites.find((x) => x.id === selectedIds[selectedIds.length - 1])));
   const els = useRef(new Map<string, HTMLElement>());
+  // Tell the Home flight where this Moon really sits, so the next flight lands on it exactly.
+  const stage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stage.current;
+    if (!el) return;
+    const save = () => {
+      const r = el.getBoundingClientRect();
+      rememberPickerStage({ left: r.left, top: r.top + scrollY, width: r.width, height: r.height });
+    };
+    save();
+    const ro = new ResizeObserver(save);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // Pins appear only once a sector is chosen, and only that sector's sites.
   const shownSites = useMemo(() => (activeRegion ? sites.filter((x) => x.region === activeRegion) : []), [sites, activeRegion]);
   const anchors = useMemo<Anchor[]>(
@@ -339,12 +354,13 @@ export default function PickerGlobe3D({
 
   return (
     <div
+      ref={stage}
       className={g.stage}
       data-globe
       role="application"
       aria-label="3D Moon. Drag to turn, scroll to zoom. Choose a sector, then a site, or click the Moon to drop a pin at those coordinates."
     >
-      <Canvas camera={{ fov: 32, near: 0.002, far: 40, position: start }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }}>
+      <Canvas camera={{ fov: PICKER_FOV, near: 0.002, far: 40, position: start }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }}>
         <Scene
           layer={layer}
           motion={motion}
@@ -355,6 +371,7 @@ export default function PickerGlobe3D({
           els={els}
           onMoonHoverRegion={onMoonHoverRegion}
           onMoonClick={onMoonClick}
+          onImageryReady={onImageryReady}
         />
       </Canvas>
       <MarkerLayer sites={shownSites} selectedIds={selectedIds} hotSiteId={hotSiteId} onSelectSite={onSelectSite} ripple={ripple} els={els} />
