@@ -318,9 +318,11 @@ export default function PickerGlobe3D({
   const [layer, setLayer] = useState<MoonLayerId>('mosaic');
   const [start] = useState(() => startPosition(sites.find((x) => x.id === selectedIds[selectedIds.length - 1])));
   const els = useRef(new Map<string, HTMLElement>());
+  // Pins appear only once a sector is chosen, and only that sector's sites.
+  const shownSites = useMemo(() => (activeRegion ? sites.filter((x) => x.region === activeRegion) : []), [sites, activeRegion]);
   const anchors = useMemo<Anchor[]>(
-    () => [...sites.map(({ id, lat, lon }) => ({ id, lat, lon })), ...(ripple ? [{ id: RIPPLE_ID, lat: ripple.lat, lon: ripple.lon }] : [])],
-    [sites, ripple],
+    () => [...shownSites.map(({ id, lat, lon }) => ({ id, lat, lon })), ...(ripple ? [{ id: RIPPLE_ID, lat: ripple.lat, lon: ripple.lon }] : [])],
+    [shownSites, ripple],
   );
 
   return (
@@ -343,7 +345,7 @@ export default function PickerGlobe3D({
           onMoonClick={onMoonClick}
         />
       </Canvas>
-      <MarkerLayer sites={sites} selectedIds={selectedIds} hotSiteId={hotSiteId} onSelectSite={onSelectSite} ripple={ripple} els={els} />
+      <MarkerLayer sites={shownSites} selectedIds={selectedIds} hotSiteId={hotSiteId} onSelectSite={onSelectSite} ripple={ripple} els={els} />
 
       <div className={[g.hud, g.bottomLeftHud].join(' ')}>
         <Tabs
