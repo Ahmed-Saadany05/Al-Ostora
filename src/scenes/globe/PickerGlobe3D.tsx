@@ -322,33 +322,9 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
         <sphereGeometry args={[1, 96, 64]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
-      <RimRing />
       <AltitudeAwareControls motion={motion} />
       <CameraDirector goal={goal} motion={motion} />
     </>
-  );
-}
-
-/**
- * Thin dark rim just outside the Moon's edge (as in the design): a camera-facing ring scaled each
- * frame so it hugs the silhouette at any distance, fading out when zoomed in close.
- */
-function RimRing() {
-  const ring = useRef<THREE.Mesh>(null);
-  const mat = useRef<THREE.MeshBasicMaterial>(null);
-  useFrame(({ camera }) => {
-    const m = ring.current;
-    if (!m) return;
-    const d = camera.position.length();
-    m.quaternion.copy(camera.quaternion);
-    m.scale.setScalar(1 / Math.sqrt(Math.max(1e-4, 1 - 1 / (d * d)))); // silhouette radius in the centre plane
-    if (mat.current) mat.current.opacity = 0.9 * THREE.MathUtils.smoothstep(d, 2.2, 3.6);
-  });
-  return (
-    <mesh ref={ring} renderOrder={-2}>
-      <ringGeometry args={[1.012, 1.034, 160]} />
-      <meshBasicMaterial ref={mat} color="#2a2a2b" transparent depthWrite={false} />
-    </mesh>
   );
 }
 
