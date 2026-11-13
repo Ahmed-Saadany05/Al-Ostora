@@ -15,6 +15,18 @@
   height: 100%;
 }
 
+/* Arriving from Home: the Moon pulls back first, then the title and menu fade in. */
+.enter .menu,
+.enter .title {
+  animation: enterFade var(--duration-slow) var(--ease-out) 0.9s both;
+}
+@keyframes enterFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 /* Small title, top-left over the Moon; fades away once a sector is chosen. */
 .title {
   position: absolute;

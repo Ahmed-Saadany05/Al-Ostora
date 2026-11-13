@@ -22,6 +22,8 @@ export interface PickerGlobe3DProps extends SitePickerGlobeProps {
   ripple: (LatLon & { key: number }) | null;
   onMoonHoverRegion: (region: RegionId | null) => void;
   onMoonClick: (p: LatLon) => void;
+  /** Opened by clicking the Home Moon: start close over the south pole (see moonHandoff). */
+  fromHome?: boolean;
 }
 
 /** Camera distances in lunar radii. */

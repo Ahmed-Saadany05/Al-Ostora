@@ -321,10 +321,14 @@ export default function PickerGlobe3D({
   ripple,
   onMoonHoverRegion,
   onMoonClick,
+  fromHome,
 }: PickerGlobe3DProps) {
   const motion = useApp((s) => s.motion);
   const [layer, setLayer] = useState<MoonLayerId>('mosaic');
-  const [start] = useState(() => startPosition(sites.find((x) => x.id === selectedIds[selectedIds.length - 1])));
+  const [start] = useState(() =>
+    // From Home: begin where Home's push-in ended — close over the south pole (the dome's crest).
+    fromHome ? toScene(latLonToVec(-80, 0, 1.3)) : startPosition(sites.find((x) => x.id === selectedIds[selectedIds.length - 1])),
+  );
   const els = useRef(new Map<string, HTMLElement>());
   // Pins appear only once a sector is chosen, and only that sector's sites.
   const shownSites = useMemo(() => (activeRegion ? sites.filter((x) => x.region === activeRegion) : []), [sites, activeRegion]);

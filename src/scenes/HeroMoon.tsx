@@ -9,12 +9,19 @@
  * sphere far wider than the viewport, so only its top arc shows — a dome whose crest sits at
  * CREST_FROM_TOP of the height. The surface is Moon Trek imagery (LRO WAC) streamed with
  * 3d-tiles-renderer and lit with the airless shading shared with the step 1 globe.
+ *
+ * Clicking the Moon pushes in towards the crest and opens Step 1, whose globe continues the move
+ * (see globe/moonHandoff.ts).
  */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import gsap from 'gsap';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Vector3, type Group } from 'three';
+import { missionUrl } from '@/shared/mission';
+import { useApp } from '@/shared/store/app';
 import { MoonTrekGlobe } from './globe/MoonTrekGlobe';
+import { markMoonHandoff, preloadPickerGlobe } from './globe/moonHandoff';
 import { createMoonLight } from './globe/moonShading';
 import { latLonToVec } from './lib/moonFrame';
 
@@ -62,7 +69,10 @@ const EXPOSURE = 1.25;
 /** If no imagery has arrived by then, report a failure so the intro never waits for nothing. */
 const IMAGERY_TIMEOUT_MS = 12_000;
 
-type Controls = { dive: () => void; sweep: (sec: number) => void };
+type Controls = { dive: () => void; sweep: (sec: number) => void; enter: (done: () => void) => void };
+/** Clicking the Moon: a short push in towards the crest (the south pole) before Step 1 takes over. */
+const ENTER_ZOOM = 1.9;
+const ENTER_SECONDS = 0.75;
 
 function Scene({
   autoRotate,
@@ -74,8 +84,10 @@ function Scene({
   onTextureFailed,
   onPinScreen,
   controls,
-}: HeroMoonProps & { controls: { current: Controls | null } }) {
+  onMoonClick,
+}: HeroMoonProps & { controls: { current: Controls | null }; onMoonClick: () => void }) {
   const camera = useThree((st) => st.camera);
+  const gl = useThree((st) => st.gl);
   const { width, height } = useThree((st) => st.size);
   const spin = useRef<Group>(null);
   const pinAnchor = useRef<Group>(null);
@@ -110,6 +122,16 @@ function Scene({
         ease: 'power3.inOut',
         onUpdate: () => camera.updateProjectionMatrix(),
         onComplete: onDiveComplete,
+      });
+    },
+    enter: (done) => {
+      gsap.killTweensOf(camera);
+      gsap.to(camera, {
+        zoom: ENTER_ZOOM,
+        duration: ENTER_SECONDS,
+        ease: 'power2.in',
+        onUpdate: () => camera.updateProjectionMatrix(),
+        onComplete: done,
       });
     },
     sweep: (sec) => {
@@ -157,6 +179,18 @@ function Scene({
         <group rotation={[0, 0, tiltTowardSouthPole ? Math.PI : 0]}>
           <group ref={spin}>
             <MoonTrekGlobe light={light} onImageryReady={onImageryReady} />
+            {/* Click target: the Moon itself (not the sky around it) opens Step 1. */}
+            <mesh
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoonClick();
+              }}
+              onPointerOver={() => (gl.domElement.style.cursor = 'pointer')}
+              onPointerOut={() => (gl.domElement.style.cursor = '')}
+            >
+              <sphereGeometry args={[1, 64, 48]} />
+              <meshBasicMaterial colorWrite={false} depthWrite={false} />
+            </mesh>
             {pinAt && <group ref={pinAnchor} position={pinAt} />}
           </group>
         </group>
@@ -167,6 +201,24 @@ function Scene({
 
 export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: string }>(function HeroMoon({ label, ...props }, ref) {
   const controls = useRef<Controls | null>(null);
+  const navigate = useNavigate();
+  const motion = useApp((st) => st.motion);
+  const leaving = useRef(false);
+  // Click the Moon → push in, then Step 1 picks up the same Moon and pulls back out (moonHandoff).
+  const enter = () => {
+    if (leaving.current) return;
+    leaving.current = true;
+    const loaded = preloadPickerGlobe().catch(() => undefined);
+    const go = () => {
+      markMoonHandoff();
+      navigate(missionUrl.chooseSite());
+    };
+    if (!motion || !controls.current) {
+      void loaded.then(go);
+      return;
+    }
+    controls.current.enter(() => void loaded.then(go));
+  };
   useImperativeHandle(
     ref,
     () => ({ diveToSouthPole: () => controls.current?.dive(), playLightSweep: (sec) => controls.current?.sweep(sec) }),
@@ -175,7 +227,7 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <Canvas orthographic camera={{ position: [0, 0, 3000], zoom: 1, near: 1, far: 6000 }} dpr={[1, 2]} gl={{ antialias: true, alpha: true }} aria-label={label}>
-        <Scene {...props} controls={controls} />
+        <Scene {...props} controls={controls} onMoonClick={enter} />
       </Canvas>
     </div>
   );
