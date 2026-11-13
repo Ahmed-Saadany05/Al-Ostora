@@ -13,6 +13,7 @@ import { useTime } from '@/shared/store/time';
 import { LUNAR, type SkyState } from '@/shared/types';
 import type { SitePanoramaProps } from './contracts';
 import { SitePanoramaStrip } from './SitePanoramaStrip';
+import { interpolateSky } from './moonview/skyMath';
 import { placeholderTerrain, seedFrom } from './moonview/terrain';
 
 const MoonView3D = lazy(() => import('./moonview/MoonView3D'));
@@ -56,6 +57,8 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
   const { data: report } = useDayReport(compact || !webgl ? undefined : site, rangeStart, LUNAR.synodicDays);
   const terrain = useMemo(() => placeholderTerrain(seedFrom(site.id)), [site.id]);
+  // The sky at exactly `time`, blended from the samples: no lag while scrubbing or in a timelapse.
+  const live = useMemo(() => interpolateSky(report?.samples, time) ?? sky, [report, time, sky]);
 
   const strip = <SitePanoramaStrip {...props} />;
   if (compact || !webgl) return strip;
@@ -63,13 +66,14 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
     <ViewBoundary fallback={strip}>
       <Suspense fallback={null}>
         <MoonView3D
-          sky={sky}
+          sky={live}
+          site={{ lat: site.lat, lon: site.lon, name: site.kind === 'custom' ? 'your pin' : site.name }}
           samples={report?.samples}
           terrain={terrain}
           mode={mode}
           dense={dense}
-          sunLabel={{ next: sky ? nextLabel(report?.samples, time, 'sun', sky.sunVisible) : null }}
-          earthLabel={{ next: sky ? nextLabel(report?.samples, time, 'earth', sky.earthVisible) : null }}
+          sunLabel={{ next: live ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}
+          earthLabel={{ next: live ? nextLabel(report?.samples, time, 'earth', live.earthVisible) : null }}
         />
       </Suspense>
     </ViewBoundary>

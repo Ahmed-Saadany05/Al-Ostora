@@ -48,6 +48,8 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   border: var(--border);
+  /* The planet in the mark is opaque: filled with the tile's own colour, so the ring hides behind it. */
+  --icon-fill: var(--color-surface-raised);
 }
 
 .wordmark {

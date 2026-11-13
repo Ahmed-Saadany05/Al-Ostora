@@ -3,12 +3,13 @@
  *
  * Full-screen 3D Moon view (SitePanorama) with the overlays tucked into edge drawers (PeekPanel):
  * right = Sun, Earth and How far away; left = Nearby; bottom = the timeline. Hover to peek, click to
- * pin. "Compare side by side" shows two Moon views (?with=<site id>). Launch → the launch-date step.
+ * pin. "Compare side by side" shows two Moon views (?with=<site id>). ?at=ISO opens it at that moment
+ * (from Compare dates). Launch → the launch-date step.
  * Numbers come only from the data hooks (demo provider now, the engine later).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SitePanorama } from '@/scenes';
+import { interpolateSky, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { nextTransition, useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
@@ -24,11 +25,11 @@ import {
   LoadingState,
   Page,
   Pill,
+  SkyTimeline,
   SourceBadge,
   Tabs,
-  TimelineLegend,
-  TimelineStrip,
 } from '@/shared/ui';
+import { timelapseTo } from '@/shared/store/timelapse';
 import { PeekPanel } from './stand/PeekPanel';
 import { SideBySide } from './stand/SideBySide';
 import { BodyCard, HowFarCard, NearbyCard } from './stand/StandCards';
@@ -56,9 +57,17 @@ export function StandPage() {
   const [mode, setMode] = useState<'stand' | 'above'>('stand');
   const [verify, setVerify] = useState(false);
 
-  const { data: sky } = useSky(site, time);
+  // Arriving from "Compare dates" with ?at=ISO: open the view at that moment (once per link).
+  const at = params.get('at');
+  useEffect(() => {
+    if (at) setTime(at);
+  }, [at, setTime]);
+
+  const { data: fetchedSky } = useSky(site, time);
   const { data: horizon } = useHorizon(site);
   const { data: report } = useDayReport(site, from, days);
+  // Blend the day's samples on the client so scrubbing and timelapses never wait for data.
+  const sky = useMemo(() => interpolateSky(report?.samples, time) ?? fetchedSky, [report, time, fetchedSky]);
   const { data: metrics } = useMetrics(site, from, to);
 
   // Nearby: placeholder suggestion = the closest other catalogue site (the engine suggests one later).
@@ -131,8 +140,8 @@ export function StandPage() {
       {/* Top-left: where you are. */}
       {!partner && (
         <div className={st.titleBlock}>
-          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.chooseSite([site.id])}>
-            Back to sites
+          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.dates(site.id)}>
+            Back to dates
           </Button>
           <Eyebrow>
             {site.region.replace('-', ' ')} · <span className="num">{formatLatLon(site.lat, site.lon)}</span>
@@ -207,11 +216,11 @@ export function StandPage() {
         label="Timeline"
         tab={
           <span className={st.tabRow}>
-            <Icon name={playing ? 'pause' : 'clock'} size={14} />
+            <Icon name={playing ? 'pause' : 'clock'} size={12} />
             <span className="num">{formatUtc(time)}</span>
             {report && (
               <span className={st.tabStrip}>
-                <TimelineStrip start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} cells={40} ticks={0} size="sm" />
+                <SkyTimeline mono start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} />
               </span>
             )}
           </span>
@@ -225,9 +234,8 @@ export function StandPage() {
               <span className="num">{formatUtc(time)}</span>
             </div>
             <span className={st.grow} />
-            <TimelineLegend />
             {metrics?.bestWindow && (
-              <Button variant="secondary" onClick={() => setTime(metrics.bestWindow!.start)}>
+              <Button variant="secondary" onClick={() => timelapseTo(metrics.bestWindow!.start)}>
                 Jump to best
               </Button>
             )}
@@ -236,14 +244,17 @@ export function StandPage() {
             </Button>
           </div>
           {report ? (
-            <TimelineStrip
+            <SkyTimeline
+              size="full"
+              label={`Timeline for ${site.name}`}
               start={from}
               end={to}
               sunWindows={report.sunWindows}
               earthWindows={report.earthWindows}
               highlight={metrics?.bestWindow}
               now={time}
-              onSelectTime={setTime}
+              onSelectTime={(t) => timelapseTo(t)}
+              onScrub={setTime}
             />
           ) : (
             <LoadingState compact />

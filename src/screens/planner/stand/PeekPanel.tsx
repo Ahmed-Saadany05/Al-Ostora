@@ -1,12 +1,14 @@
 /**
  * Edge drawer for the Moon view (Step 2). Hidden by default as a slim glass tab on the edge that
- * shows live values; hovering (or keyboard focus) slides the panel in, leaving slides it back.
- * Clicking the tab pins it open; clicking again unpins it (back to hover-to-peek).
+ * shows live values. Hover (or keyboard focus) slides the panel in and the tab fades away; leaving
+ * slides it back after a short grace delay. Hover-only: no click-to-pin.
  * Animations use the motion tokens, so they are instant when motion is off.
  */
-import { useState, type ReactNode } from 'react';
-import { Icon } from '@/shared/ui';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import st from './stand.module.css';
+
+/** Time to move from the tab into the panel (or back) without it closing. */
+const CLOSE_DELAY_MS = 220;
 
 export function PeekPanel({
   side,
@@ -23,34 +25,34 @@ export function PeekPanel({
   children: ReactNode;
   className?: string;
 }) {
-  const [pinned, setPinned] = useState(false);
   const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
-  const open = pinned || hover || focus;
+  const timer = useRef<number>(undefined);
+  const open = hover || focus;
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const enter = () => {
+    window.clearTimeout(timer.current);
+    setHover(true);
+  };
+  const leave = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setHover(false), CLOSE_DELAY_MS);
+  };
 
   return (
     <div
-      className={[st.peek, st[side], open && st.open, pinned && st.pinned, className].filter(Boolean).join(' ')}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      className={[st.peek, st[side], open && st.open, className].filter(Boolean).join(' ')}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
       onFocus={() => setFocus(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocus(false);
       }}
     >
-      <button
-        type="button"
-        className={st.tab}
-        aria-expanded={open}
-        aria-pressed={pinned}
-        aria-label={`${label}: ${pinned ? 'pinned open, click to hide' : 'click to keep open'}`}
-        onClick={() => setPinned((p) => !p)}
-      >
+      <div className={st.tab} tabIndex={0} role="button" aria-expanded={open} aria-label={`${label}: hover to show`}>
         {tab}
-        <span className={st.pinMark} aria-hidden>
-          <Icon name={pinned ? 'check' : 'plus'} size={11} />
-        </span>
-      </button>
+      </div>
       <div className={st.panel} inert={!open}>
         {children}
       </div>

@@ -8,6 +8,7 @@ import { Button, DisplayHeading, Lead } from '@/shared/ui';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
+import { MoonLoader } from './MoonLoader';
 import { MotionToggle } from './MotionToggle';
 import { SitePin } from './SitePin';
 import { StarLayers } from './StarLayers';
@@ -105,6 +106,9 @@ export function HomePage() {
       </div>
 
       <MotionToggle />
+
+      {/* First visit: black loading screen until the Moon imagery is in, then the intro plays. */}
+      <MoonLoader ready={textured || moonSettled} />
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>
