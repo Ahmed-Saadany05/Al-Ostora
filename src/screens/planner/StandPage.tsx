@@ -3,10 +3,11 @@
  *
  * Full-screen 3D Moon view (SitePanorama) with the overlays tucked into edge drawers (PeekPanel):
  * right = Sun, Earth and How far away; left = Nearby; bottom = the timeline. Hover to peek, click to
- * pin. "Compare side by side" shows two Moon views (?with=<site id>). Launch → the launch-date step.
+ * pin. "Compare side by side" shows two Moon views (?with=<site id>). ?at=ISO opens it at that moment
+ * (from Compare dates). Launch → the launch-date step.
  * Numbers come only from the data hooks (demo provider now, the engine later).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
@@ -55,6 +56,12 @@ export function StandPage() {
   const setTime = useTime((x) => x.setTime);
   const [mode, setMode] = useState<'stand' | 'above'>('stand');
   const [verify, setVerify] = useState(false);
+
+  // Arriving from "Compare dates" with ?at=ISO: open the view at that moment (once per link).
+  const at = params.get('at');
+  useEffect(() => {
+    if (at) setTime(at);
+  }, [at, setTime]);
 
   const { data: sky } = useSky(site, time);
   const { data: horizon } = useHorizon(site);
@@ -131,8 +138,8 @@ export function StandPage() {
       {/* Top-left: where you are. */}
       {!partner && (
         <div className={st.titleBlock}>
-          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.chooseSite([site.id])}>
-            Back to sites
+          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.dates(site.id)}>
+            Back to dates
           </Button>
           <Eyebrow>
             {site.region.replace('-', ' ')} · <span className="num">{formatLatLon(site.lat, site.lon)}</span>
