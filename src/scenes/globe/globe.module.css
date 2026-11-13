@@ -21,16 +21,6 @@
   animation: enterFade var(--duration-slow) var(--ease-out) 0.1s both;
 }
 
-/* The Home flight's last frame, laid exactly where it was on screen, until the live globe is ready. */
-.snapshot {
-  position: fixed;
-  z-index: var(--z-content);
-  pointer-events: none;
-  transition: opacity 0.45s var(--ease-out);
-}
-.snapshotGone {
-  opacity: 0;
-}
 @keyframes enterFade {
   from {
     opacity: 0;

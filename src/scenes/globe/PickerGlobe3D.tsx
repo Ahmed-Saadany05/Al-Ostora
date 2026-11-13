@@ -17,7 +17,7 @@ import type { Site } from '@/shared/types';
 import { Icon, Tabs } from '@/shared/ui';
 import { MoonTrekGlobe } from './MoonTrekGlobe';
 import { RegionGlow } from './RegionGlow';
-import { KIND_ICON, KIND_WORD, OPENING_VIEW, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_ICON, KIND_WORD, OPENING_VIEW, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -41,7 +41,7 @@ const toScene = (v: Vec3) => new THREE.Vector3(v.x, v.z, -v.y);
 const startPosition = (site?: Site) =>
   toScene(site ? latLonToVec(THREE.MathUtils.clamp(site.lat, -75, 75), site.lon, START_DISTANCE) : latLonToVec(OPENING_VIEW.lat, OPENING_VIEW.lon, START_DISTANCE));
 const MIN_DISTANCE = 1.025; // ≈ 43 km above the surface
-const MAX_DISTANCE = 6;
+const MAX_DISTANCE = 12;
 const LABELS_BELOW_DISTANCE = 1.6;
 const CLICK_SLOP_PX = 5;
 
@@ -203,7 +203,17 @@ function AltitudeAwareControls({ motion }: { motion: boolean }) {
  */
 function CameraDirector({ goal, motion }: { goal: CameraGoal | null; motion: boolean }) {
   const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
   const controls = useThree((s) => s.controls) as unknown as { update: () => void; enabled: boolean } | null;
+
+  // Opening distance fitted to this box (narrow boxes step back so the whole Moon shows).
+  useEffect(() => {
+    camera.position.setLength(openingDistance(size.width, size.height));
+    controls?.update();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const flight = useRef<{ lat0: number; lon0: number; dLat: number; dLon: number; d0: number; d1: number; t: number; seconds: number } | null>(null);
 
   const place = (lat: number, lon: number, d: number) => camera.position.copy(toScene(latLonToVec(lat, lon, d)));
@@ -213,7 +223,8 @@ function CameraDirector({ goal, motion }: { goal: CameraGoal | null; motion: boo
     const p = camera.position;
     const from = vecToLatLon({ x: p.x, y: -p.z, z: p.y }); // scene → Moon-fixed
     const d0 = p.length();
-    const d1 = goal.distance ?? d0;
+    const box = sizeRef.current;
+    const d1 = goal.distance === FIT_DISTANCE ? openingDistance(box.width, box.height) : (goal.distance ?? d0);
     const lat1 = THREE.MathUtils.clamp(goal.lat, -89.5, 89.5);
     const dLat = lat1 - from.lat;
     const dLon = ((((goal.lon - from.lon) % 360) + 540) % 360) - 180; // shortest way round

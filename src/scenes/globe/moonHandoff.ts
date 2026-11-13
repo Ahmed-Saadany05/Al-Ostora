@@ -2,12 +2,12 @@
  * Home → Step 1 hand-off (owner: Pink).
  *
  * The Home Moon flies on its own full-page canvas to exactly where Step 1's Moon will sit (left
- * column, opening view, same light), then takes a snapshot of its last frame and navigates. Step 1
- * shows that snapshot on top of its globe until its own imagery has loaded, then fades it out — so
- * the page change is invisible. If Step 1 has been opened before, its measured Moon rectangle is
+ * column, opening view, same light), then puts a snapshot of its last frame on the page (outside
+ * React, so it is there through the route change and while Step 1 is still loading) and navigates.
+ * Step 1 fades the snapshot away once its own imagery has loaded — so the page change is invisible. If Step 1 has been opened before, its measured Moon rectangle is
  * reused for a pixel-exact landing; otherwise it is predicted from the page layout.
  */
-import { OPENING_VIEW, PICKER_FOV, START_DISTANCE } from './pickerTypes';
+import { OPENING_VIEW, openingDistance, PICKER_FOV } from './pickerTypes';
 
 export interface Rect {
   left: number;
@@ -27,8 +27,45 @@ const FRESH_MS = 4000;
 const STAGE_KEY = 'refaey-picker-stage';
 let pending: { at: number; data: MoonHandoff } | null = null;
 
+let overlay: HTMLImageElement | null = null;
+let overlayTimer = 0;
+
 export function setMoonHandoff(data: MoonHandoff) {
   pending = { at: performance.now(), data };
+  if (!data.snapshot) return;
+  // Shown right now, above the page content (below the header), until Step 1 releases it.
+  overlay?.remove();
+  const img = document.createElement('img');
+  img.src = data.snapshot;
+  img.alt = '';
+  img.setAttribute('aria-hidden', 'true');
+  Object.assign(img.style, {
+    position: 'fixed',
+    left: `${data.rect.left}px`,
+    top: `${data.rect.top}px`,
+    width: `${data.rect.width}px`,
+    height: `${data.rect.height}px`,
+    zIndex: '11',
+    pointerEvents: 'none',
+    transition: 'opacity 0.45s ease-out',
+  });
+  document.body.appendChild(img);
+  overlay = img;
+  // Never leave it up for good if Step 1 is slow or never mounts a globe.
+  window.clearTimeout(overlayTimer);
+  overlayTimer = window.setTimeout(() => releaseMoonHandoff(0), 6000);
+}
+
+/** Fade the hand-off snapshot out (after `delayMs`) and remove it. */
+export function releaseMoonHandoff(delayMs: number) {
+  const img = overlay;
+  if (!img) return;
+  overlay = null;
+  window.clearTimeout(overlayTimer);
+  window.setTimeout(() => {
+    img.style.opacity = '0';
+    window.setTimeout(() => img.remove(), 500);
+  }, delayMs);
 }
 
 /** The hand-off, once, if Home just flew here. */
@@ -84,12 +121,13 @@ export function pickerStage(): Rect {
   return { left, top, width: innerWidthPx - 380 - gap, height };
 }
 
-/** The Moon's disc in Step 1's opening view: centre and radius in viewport px. */
+/** The Moon's disc in Step 1's opening view: centre, radius in viewport px, and camera distance. */
 export function pickerDisc(stage = pickerStage()) {
-  // Perspective silhouette of a unit sphere seen from START_DISTANCE with a PICKER_FOV vertical view.
+  // Perspective silhouette of a unit sphere seen from `distance` with a PICKER_FOV vertical view.
+  const distance = openingDistance(stage.width, stage.height);
   const half = Math.tan(((PICKER_FOV / 2) * Math.PI) / 180);
-  const radius = (stage.height / 2) * (1 / Math.sqrt(START_DISTANCE ** 2 - 1)) / half;
-  return { x: stage.left + stage.width / 2, y: stage.top + stage.height / 2, radius };
+  const radius = (stage.height / 2) * (1 / Math.sqrt(distance ** 2 - 1)) / half;
+  return { x: stage.left + stage.width / 2, y: stage.top + stage.height / 2, radius, distance };
 }
 
 export { OPENING_VIEW };

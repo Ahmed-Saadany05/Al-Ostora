@@ -27,7 +27,6 @@ import { useApp } from '@/shared/store/app';
 import { DEFAULT_SUN, MoonTrekGlobe } from './globe/MoonTrekGlobe';
 import { createMoonLight } from './globe/moonShading';
 import { OPENING_VIEW, pickerDisc, preloadPickerGlobe, setMoonHandoff, type Rect } from './globe/moonHandoff';
-import { START_DISTANCE } from './globe/pickerTypes';
 import { latLonToVec } from './lib/moonFrame';
 
 export interface HeroMoonPin {
@@ -123,7 +122,7 @@ function openingPose() {
 type Controls = {
   dive: () => void;
   sweep: (sec: number) => void;
-  fly: (target: { x: number; y: number; radius: number }, done: (snapshot: string | null) => void) => void;
+  fly: (target: { x: number; y: number; radius: number; distance: number }, done: (snapshot: string | null) => void) => void;
 };
 
 function Scene({
@@ -209,7 +208,7 @@ function Scene({
       flight.current = {
         t: 0,
         from: homeView(),
-        to: { d: START_DISTANCE, r: target.radius, cx: target.x, cy: target.y },
+        to: { d: target.distance, r: target.radius, cx: target.x, cy: target.y },
         q0: orient.current.quaternion.clone(),
         q1: pose.q,
         sun0: light.uSun.value.clone(),
@@ -336,7 +335,7 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
     // Target: Step 1's Moon disc, in this canvas's pixels (from its top-left).
     const r = el.getBoundingClientRect();
     const disc = pickerDisc();
-    const target = { x: disc.x - r.left, y: disc.y - r.top, radius: disc.radius };
+    const target = { x: disc.x - r.left, y: disc.y - r.top, radius: disc.radius, distance: disc.distance };
     const rect: Rect = { left: r.left, top: r.top, width: r.width, height: r.height };
     // Everything else on Home steps back while the Moon flies.
     const section = el.closest('section');

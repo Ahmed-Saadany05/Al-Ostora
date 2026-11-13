@@ -12,8 +12,8 @@ import { Pill } from '@/shared/ui';
 import type { SitePickerGlobeProps } from './contracts';
 import { SitePickerMap } from './SitePickerMap';
 import { SectorMenu } from './globe/SectorMenu';
-import { SECTOR_DISTANCE, SITE_DISTANCE, START_DISTANCE, type CameraGoal } from './globe/pickerTypes';
-import { preloadPickerGlobe, takeMoonHandoff } from './globe/moonHandoff';
+import { FIT_DISTANCE, SECTOR_DISTANCE, SITE_DISTANCE, type CameraGoal } from './globe/pickerTypes';
+import { preloadPickerGlobe, releaseMoonHandoff, takeMoonHandoff } from './globe/moonHandoff';
 import { REGION_VIEW, regionAt, type LatLon, type RegionId } from './lib/moonFrame';
 import g from './globe/globe.module.css';
 
@@ -57,19 +57,10 @@ function Loading() {
 export function SitePickerGlobe(props: SitePickerGlobeProps) {
   const { sites, selectedIds, onSelectSite, onPickCoords, layout, title, footer } = props;
   const [webgl] = useState(hasWebGL);
-  // Just flew here from Home? Its last frame covers the globe until our own imagery has loaded.
-  const [handoff] = useState(takeMoonHandoff);
-  const fromHome = handoff !== null;
-  const [snapshotGone, setSnapshotGone] = useState(false);
-  const onImageryReady = useCallback(() => {
-    window.setTimeout(() => setSnapshotGone(true), SNAPSHOT_HOLD_MS);
-  }, []);
-  useEffect(() => {
-    if (!handoff) return;
-    // Never leave the snapshot up for good if imagery is slow.
-    const t = window.setTimeout(() => setSnapshotGone(true), 6000);
-    return () => window.clearTimeout(t);
-  }, [handoff]);
+  // Just flew here from Home? Its last frame (put on the page by moonHandoff) covers the globe until
+  // our own imagery has loaded and sharpened, then fades.
+  const [fromHome] = useState(() => takeMoonHandoff() !== null);
+  const onImageryReady = useCallback(() => releaseMoonHandoff(SNAPSHOT_HOLD_MS), []);
 
   const [active, setActive] = useState<RegionId | null>(null);
   const [menuHover, setMenuHover] = useState<RegionId | null>(null);
@@ -104,7 +95,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
     const from = active;
     setActive(null);
     setHotSiteId(null);
-    if (from) go(REGION_VIEW[from], START_DISTANCE);
+    if (from) go(REGION_VIEW[from], FIT_DISTANCE);
   };
   const chooseSite = (id: string) => {
     const site = sites.find((x) => x.id === id);
@@ -147,22 +138,7 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
     </GlobeBoundary>
   );
 
-  const snapshot = handoff?.snapshot ? (
-    <img
-      src={handoff.snapshot}
-      alt=""
-      aria-hidden
-      className={[g.snapshot, snapshotGone && g.snapshotGone].filter(Boolean).join(' ')}
-      style={{ left: handoff.rect.left, top: handoff.rect.top, width: handoff.rect.width, height: handoff.rect.height }}
-    />
-  ) : null;
-
-  if (layout !== 'full') return (
-    <>
-      {globe}
-      {snapshot}
-    </>
-  );
+  if (layout !== 'full') return globe;
 
   return (
     <div className={[g.layout, fromHome && g.enter].filter(Boolean).join(' ')}>
@@ -186,7 +162,6 @@ export function SitePickerGlobe(props: SitePickerGlobeProps) {
         onCoords={(lat, lon) => pin({ lat, lon })}
         footer={footer}
       />
-      {snapshot}
     </div>
   );
 }
