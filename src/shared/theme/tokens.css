@@ -1,0 +1,124 @@
+/*
+ * DESIGN TOKENS — the only place colours, fonts, sizes and motion are defined.
+ * Use var(--token) in CSS. In TS / three.js use the mirror in tokens.ts.
+ * Keep both files in sync (owner: Hagras).
+ *
+ * Look: black space, white type, hairlines, outline pills. Colour is rare and
+ * always means something (sun = warm, earth = blue) and is always paired with
+ * an icon or a word.
+ */
+:root {
+  /* ---- surfaces */
+  --color-bg: #000000;
+  --color-surface: #0b0b0c;
+  --color-surface-raised: #131315;
+  --color-surface-hover: #1a1a1d;
+  --color-overlay: rgba(0, 0, 0, 0.72);
+  --color-glass: rgba(14, 14, 16, 0.66);
+
+  /* ---- text */
+  --color-text: #f5f5f4;
+  --color-text-muted: #a8a8a6;
+  --color-text-faint: #6b6b69;
+  --color-text-inverse: #000000;
+
+  /* ---- lines */
+  --color-line: rgba(255, 255, 255, 0.12);
+  --color-line-strong: rgba(255, 255, 255, 0.32);
+  --color-focus: #ffffff;
+
+  /* ---- meaning (always pair with an icon or label) */
+  --color-sun: #f4c26b;
+  --color-sun-soft: rgba(244, 194, 107, 0.14);
+  --color-earth: #7cb4ff;
+  --color-earth-soft: rgba(124, 180, 255, 0.14);
+  --color-good: #8fd6a5;
+  --color-good-soft: rgba(143, 214, 165, 0.14);
+  --color-warn: #f0b35e;
+  --color-warn-soft: rgba(240, 179, 94, 0.14);
+  --color-bad: #f28b82;
+  --color-bad-soft: rgba(242, 139, 130, 0.14);
+  --color-demo: #c9a7ff;
+  --color-demo-soft: rgba(201, 167, 255, 0.14);
+
+  /* ---- type */
+  --font-sans: 'DM Sans Variable', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Instrument Serif', 'Times New Roman', serif; /* italic accent words */
+  --font-mono: 'DM Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace; /* every number */
+
+  --text-2xs: 0.6875rem; /* 11 — eyebrow labels, status bar */
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-md: 1rem; /* 16 */
+  --text-lg: 1.125rem; /* 18 — lead text */
+  --text-xl: 1.5rem; /* 24 */
+  --text-2xl: 2rem; /* 32 */
+  --text-3xl: 3rem; /* 48 */
+  --text-display: clamp(3.5rem, 7vw, 6.5rem); /* hero */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --leading-tight: 1.02;
+  --leading-snug: 1.25;
+  --leading-normal: 1.6;
+  --tracking-display: -0.035em;
+  --tracking-tight: -0.015em;
+  --tracking-label: 0.2em; /* LETTER-SPACED UPPERCASE */
+
+  /* ---- space (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --gutter: clamp(24px, 4vw, 76px);
+
+  /* ---- shape */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --border: 1px solid var(--color-line);
+  --border-strong: 1px solid var(--color-line-strong);
+
+  /* ---- depth */
+  --shadow-panel: 0 24px 60px -24px rgba(0, 0, 0, 0.9);
+  --blur-glass: blur(18px) saturate(140%);
+
+  /* ---- motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 600ms;
+
+  /* ---- layout */
+  --header-height: 104px;
+  --statusbar-height: 72px;
+  --content-max: 1440px;
+  --z-scene: 0;
+  --z-content: 10;
+  --z-chrome: 50;
+  --z-drawer: 80;
+  --z-toast: 100;
+}
+
+/* Motion off (user toggle or OS setting) — components read this. */
+:root[data-motion='off'] {
+  --duration-fast: 0ms;
+  --duration-base: 0ms;
+  --duration-slow: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

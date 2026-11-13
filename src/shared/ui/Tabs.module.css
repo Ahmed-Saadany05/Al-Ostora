@@ -1,0 +1,72 @@
+.tabs {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tab {
+  position: relative;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition:
+    color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
+}
+.tab:hover {
+  color: var(--color-text);
+}
+
+/* ---- text variant: dot under the active item (like the top nav) */
+.text {
+  gap: var(--space-6);
+}
+.text .tab {
+  padding: var(--space-2) 0 var(--space-3);
+}
+.text .tab::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--color-text);
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+.text .active {
+  color: var(--color-text);
+}
+.text .active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---- pill variant: segmented control */
+.pill {
+  gap: 2px;
+  padding: 3px;
+  border: var(--border);
+  border-radius: var(--radius-pill);
+}
+.pill .tab {
+  height: 32px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+}
+.pill .active {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.pill .active:hover {
+  color: var(--color-text-inverse);
+}

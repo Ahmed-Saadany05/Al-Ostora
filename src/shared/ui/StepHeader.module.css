@@ -1,0 +1,29 @@
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.left {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.back {
+  height: 36px;
+  margin-bottom: var(--space-2);
+}
+
+.meta {
+  color: var(--color-text-faint);
+}
+
+.aside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

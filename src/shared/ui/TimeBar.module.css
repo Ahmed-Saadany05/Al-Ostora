@@ -1,0 +1,133 @@
+.bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lane {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.laneLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.laneTrack {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+.band.sun {
+  background: var(--color-sun);
+}
+.band.earth {
+  background: var(--color-earth);
+}
+.laneLabel.sun {
+  color: var(--color-sun);
+}
+.laneLabel.earth {
+  color: var(--color-earth);
+}
+
+/* Slider sits under the lanes; lanes are offset by the label column. */
+.lane + .sliderWrap,
+.lane ~ .sliderWrap {
+  margin-left: calc(64px + var(--space-3));
+}
+
+.sliderWrap {
+  --p: 0%;
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.slider {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--color-text) var(--p), var(--color-line-strong) var(--p));
+}
+.slider::-moz-range-track {
+  height: 2px;
+  background: var(--color-line-strong);
+}
+.slider::-moz-range-progress {
+  height: 2px;
+  background: var(--color-text);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--color-text);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12);
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-text);
+}
+.slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.16);
+}
+.slider:focus-visible {
+  outline: none;
+}
+.slider:focus-visible::-webkit-slider-thumb {
+  outline: 1.5px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+.lane ~ .ends {
+  margin-left: calc(64px + var(--space-3));
+}
+.current {
+  color: var(--color-text);
+}

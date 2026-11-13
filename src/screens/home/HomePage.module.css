@@ -1,0 +1,29 @@
+.hero {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-2) var(--gutter) 0;
+}
+
+/* Big sphere peeking up from the bottom edge. */
+.moon {
+  position: absolute;
+  left: 50%;
+  top: max(62%, 430px);
+  width: min(1500px, 120vw);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+}

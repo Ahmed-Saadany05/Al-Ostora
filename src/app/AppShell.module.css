@@ -1,0 +1,210 @@
+.shell {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+}
+
+.skip {
+  position: absolute;
+  left: var(--space-4);
+  top: -60px;
+  z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.skip:focus {
+  top: var(--space-4);
+}
+
+/* ---- header */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-chrome);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0 var(--gutter);
+  background: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.92) 65%, rgba(0, 0, 0, 0));
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-self: start;
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  border: var(--border);
+}
+
+.wordmark {
+  display: grid;
+  gap: 2px;
+}
+.name {
+  font-size: 1.75rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.tagline {
+  font-size: 0.625rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.navLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) 0;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  transition: color var(--duration-base) var(--ease-out);
+}
+.navLink:hover {
+  color: var(--color-text);
+}
+.navLink::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--color-text);
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+.active {
+  color: var(--color-text);
+}
+.active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---- main */
+.main {
+  position: relative;
+  z-index: var(--z-content);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---- status bar (footer) */
+.status {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-chrome);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  height: var(--statusbar-height);
+  margin: 0 var(--gutter);
+  border-top: var(--border);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.status::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(-1 * var(--gutter));
+  z-index: -1;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.plus {
+  color: var(--color-text);
+}
+
+.demo,
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.demo {
+  color: var(--color-demo);
+}
+.live {
+  color: var(--color-good);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color var(--duration-base) var(--ease-out);
+}
+.toggle:hover {
+  color: var(--color-text);
+}
+
+.credit {
+  margin-left: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .header {
+    grid-template-columns: auto 1fr;
+    height: auto;
+    padding-block: var(--space-4);
+    row-gap: var(--space-3);
+  }
+  .nav {
+    grid-column: 1 / -1;
+    gap: var(--space-5);
+    overflow-x: auto;
+  }
+  .headerEnd,
+  .credit {
+    display: none;
+  }
+}

@@ -1,0 +1,66 @@
+.eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.display {
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+  text-wrap: balance;
+}
+.size-display {
+  font-size: var(--text-display);
+}
+.size-xl {
+  font-size: var(--text-3xl);
+}
+.size-lg {
+  font-size: var(--text-2xl);
+}
+
+.accent {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  /* Instrument Serif runs small next to the sans — nudge it up. */
+  font-size: 1.08em;
+}
+
+.center {
+  text-align: center;
+}
+.left {
+  text-align: left;
+}
+
+.lead {
+  font-size: var(--text-lg);
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+.lead.center {
+  margin-inline: auto;
+}
+
+.divider {
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: var(--color-line);
+}
+.vdivider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: var(--color-line-strong);
+  vertical-align: middle;
+}

@@ -1,0 +1,245 @@
+/* Placeholder scene styles — owner: Pink. Tokens only. */
+
+/* ---------- flat map (SitePickerGlobe placeholder) */
+.map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.07), transparent 70%),
+    var(--color-surface);
+  cursor: crosshair;
+  overflow: hidden;
+}
+.meridian,
+.parallel {
+  position: absolute;
+  background: var(--color-line);
+  pointer-events: none;
+}
+.meridian {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.parallel {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+.polarBand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 11%;
+  background: linear-gradient(to top, rgba(124, 180, 255, 0.08), transparent);
+  border-top: 1px dashed var(--color-line);
+  pointer-events: none;
+}
+.pin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translate(-6px, -50%);
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+.pinDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--color-text);
+  background: var(--color-bg);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.pinLabel {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.6);
+}
+.pin:hover {
+  color: var(--color-text);
+}
+.pin:hover .pinDot {
+  transform: scale(1.25);
+}
+.pinSelected {
+  color: var(--color-text);
+}
+.pinSelected .pinDot {
+  background: var(--color-text);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.18);
+}
+.mapNote {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-3);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+/* ---------- panorama (SitePanorama placeholder) */
+.pano {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(to bottom, #000 0%, #050608 70%, #0b0c10 100%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.pano:active {
+  cursor: grabbing;
+}
+.panoCompact {
+  min-height: 0;
+  border-radius: 0;
+  cursor: default;
+}
+.panoSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ground {
+  fill: #2b2e36;
+}
+.skyline {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.2;
+}
+.flat {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-dasharray: 4 6;
+  stroke-width: 1;
+}
+
+.body {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.bodyDisk {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.panoCompact .bodyDisk {
+  width: 10px;
+  height: 10px;
+}
+.sun .bodyDisk {
+  background: #fff;
+  box-shadow:
+    0 0 24px 6px rgba(244, 194, 107, 0.55),
+    0 0 60px 20px rgba(244, 194, 107, 0.18);
+}
+.earth .bodyDisk {
+  background: radial-gradient(circle at 35% 35%, #bcd8ff, var(--color-earth) 55%, #1d3c6e);
+  box-shadow: 0 0 18px 2px rgba(124, 180, 255, 0.35);
+}
+.hidden .bodyDisk {
+  opacity: 0.35;
+  box-shadow: none;
+}
+.bodyTag {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  padding: 6px 10px;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.7);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.bodyTag b {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  font-weight: var(--weight-medium);
+}
+.sun .bodyTag b {
+  color: var(--color-sun);
+}
+.earth .bodyTag b {
+  color: var(--color-earth);
+}
+.bodyTag .num {
+  font-size: var(--text-md);
+}
+.bodyTag em {
+  font-style: normal;
+  color: var(--color-text-muted);
+}
+
+.compass {
+  position: absolute;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.dragHint {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+/* ---------- launch (LaunchSequence placeholder) */
+.launch {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+}
+.launchPhase {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-3xl);
+}
+.launchTrack {
+  width: min(520px, 80%);
+  height: 2px;
+  background: var(--color-line-strong);
+}
+.launchFill {
+  display: block;
+  height: 100%;
+  background: var(--color-text);
+  transition: width 1s var(--ease-in-out);
+}
+.launchMeta {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,61 @@
+.ring {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+}
+
+.circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.circle svg {
+  position: absolute;
+  inset: 0;
+}
+
+.track {
+  fill: none;
+  stroke: var(--color-line);
+  stroke-width: 2.4;
+}
+.bar {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--duration-slow) var(--ease-out);
+}
+.sun {
+  stroke: var(--color-sun);
+}
+.earth {
+  stroke: var(--color-earth);
+}
+.good {
+  stroke: var(--color-good);
+}
+.warn {
+  stroke: var(--color-warn);
+}
+.bad {
+  stroke: var(--color-bad);
+}
+.demo {
+  stroke: var(--color-demo);
+}
+.neutral {
+  stroke: var(--color-text);
+}
+
+.value {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

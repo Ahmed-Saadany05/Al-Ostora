@@ -1,0 +1,108 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.md {
+  height: 44px;
+  padding: 0 var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.lg {
+  height: 64px;
+  padding: 0 var(--space-6) 0 calc(var(--space-6) + 8px);
+  font-size: var(--text-lg);
+  gap: var(--space-5);
+}
+
+/* Primary: outline pill on black, fills white on hover (as in the hero). */
+.primary {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: var(--blur-glass);
+}
+.primary:hover:not(:disabled) {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  border-color: var(--color-text);
+}
+
+.secondary {
+  border-color: var(--color-line);
+  color: var(--color-text-muted);
+}
+.secondary:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-hover);
+}
+
+.ghost {
+  color: var(--color-text-muted);
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+.ghost:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.trailing {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.button:hover .trailing {
+  transform: translate(2px, -2px);
+}
+
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
+}
+.iconButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-line-strong);
+}
+.active {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  border-color: var(--color-text);
+}
+.active:hover {
+  color: var(--color-text-inverse);
+}
