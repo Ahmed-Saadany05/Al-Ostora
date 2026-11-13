@@ -6,8 +6,8 @@ export const color = {
   bg: '#000000',
   surface: '#0b0b0c',
   surfaceRaised: '#131315',
-  text: '#f5f5f4',
-  textMuted: '#a8a8a6',
+  text: '#ede9e3',
+  textMuted: '#a39f98',
   textFaint: '#6b6b69',
   line: 'rgba(255,255,255,0.12)',
   lineStrong: 'rgba(255,255,255,0.32)',
@@ -20,8 +20,8 @@ export const color = {
 } as const;
 
 export const font = {
-  sans: "'IBM Plex Sans', system-ui, sans-serif",
-  display: "'IBM Plex Sans', system-ui, sans-serif",
+  sans: "'Saira Variable', system-ui, sans-serif",
+  display: "'Saira Variable', system-ui, sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, Consolas, monospace",
 } as const;
 
