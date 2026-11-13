@@ -265,8 +265,25 @@ export interface Params {
   maxDarknessH?: number;
   /** Weights for matchScore (engine). */
   scoreWeights: { power: number; comms: number; darkness: number };
+  /**
+   * WHEN THE LANDER TOUCHES DOWN — the engine judges the site's gates at this moment.
+   * Priority: launchTime (+ transitId) > landingTime > the range start.
+   * With none of them, metrics.gates.basis comes back 'range-start' (show that in the UI,
+   * not a bare 0 score). Same types as the engine's EngineParams.
+   */
+  /** Launch date chosen by the user; landing = launch + the transit preset. */
+  launchTime?: IsoTime;
+  /** Engine TRANSIT_PRESETS id: 'apollo-11' (4.28 d), 'im-1' (7.72 d, default), 'blue-ghost-1' (46.1 d). */
+  transitId?: string;
+  /** Landing moment given directly (e.g. a past mission's real landing). Used only without launchTime. */
+  landingTime?: IsoTime;
 }
 
+/**
+ * Screens: pass a PARTIAL with only the fields you mean to set, e.g.
+ *   useMetrics(site, from, to, { launchTime, transitId })
+ * Never pass DEFAULT_PARAMS whole — its weights/panel settings would override the engine's.
+ */
 export const DEFAULT_PARAMS: Params = {
   observerHeightM: 2,
   commsMinClearanceDeg: 0,
