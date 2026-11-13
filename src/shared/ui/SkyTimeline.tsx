@@ -1,6 +1,6 @@
 /**
  * SKY TIMELINE — when the Sun and Earth are up over a time range (owner: Pink).
- * Replaces the block strip: two thin continuous lanes (Sun, Earth), the best window as a bracket
+ * Replaces the block strip: two thin continuous lanes (Sun, Earth), the best window as a soft band
  * with its length, a "now" needle and day labels.
  *
  *  size="compact"  thin bar; hovering thickens the lanes and shows day labels and a time readout
@@ -142,7 +142,7 @@ export function SkyTimeline({
           </span>
           {highlight && (
             <span>
-              <i className={s.keyBest} /> Best window
+              <i className={s.keyBest} /> Best window <b className="num">· {formatDuration(highlight.durationH)}</b>
             </span>
           )}
           <span className={s.grow} />
@@ -180,9 +180,11 @@ export function SkyTimeline({
         onKeyDown={onKey}
       >
         {best && (
-          <span className={s.best} style={{ left: `${best.a}%`, width: `${best.b - best.a}%` }}>
-            <span className={['num', s.bestLabel].join(' ')}>Best · {formatDuration(highlight!.durationH)}</span>
-          </span>
+          <span
+            className={s.best}
+            style={{ left: `${best.a}%`, width: `${best.b - best.a}%` }}
+            title={`Best window · ${formatDuration(highlight!.durationH)}`}
+          />
         )}
         <div className={s.lanes}>
           {lane(sunWindows, 'sun')}

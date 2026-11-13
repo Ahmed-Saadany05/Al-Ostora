@@ -23,6 +23,11 @@
 }
 
 /* ---------- step 1 */
+/* Fitted frame for the site picker: small top padding, so the step starts right under the header. */
+.chooseFrame {
+  width: 100%;
+  padding: var(--space-5) var(--gutter) var(--space-3);
+}
 .chooseGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;

@@ -4,7 +4,7 @@
  *   + FIRST, FIND YOUR PLACE
  *   A world of / possibilities.
  *   01 Nearside · 3 landing spots  ◐ ↗   … 05 Custom coordinates ⌖ ↗
- * Choosing a region lists its sites (lettered A, B, C … like the pins on the Moon); "Custom
+ * Choosing a region lists its sites (a light dot each, like the pins on the Moon); "Custom
  * coordinates" opens a lat/lon form. The step's footer (selection + primary button) sits at the bottom.
  * Hover/focus is reported up so the 3D Moon can turn and glow.
  */
@@ -13,7 +13,6 @@ import { formatLatLon } from '@/shared/format';
 import type { Site } from '@/shared/types';
 import { Button, Icon } from '@/shared/ui';
 import type { RegionId } from '../lib/moonFrame';
-import { siteLetter } from './pickerTypes';
 import g from './globe.module.css';
 
 /** Display order and words for each region (plain language for the public). */
@@ -144,11 +143,13 @@ export function SectorMenu({
     onBlur: () => onHoverRegion(null),
   });
   const catalogued = sites.filter((x) => x.kind !== 'custom');
-  const head = (eyebrow: string, title: string, accent: string, lead: ReactNode) => (
+  const head = (eyebrow: string | null, title: string, accent: string, lead: ReactNode) => (
     <header className={g.panelHead}>
-      <span className={g.eyebrowPlus}>
-        <Icon name="plus" size={12} /> {eyebrow}
-      </span>
+      {eyebrow && (
+        <span className={g.eyebrowPlus}>
+          <Icon name="plus" size={12} /> {eyebrow}
+        </span>
+      )}
       <h2 className={g.panelTitle}>
         <span>{title}</span>
         <em>{accent}</em>
@@ -157,8 +158,9 @@ export function SectorMenu({
     </header>
   );
 
-  const siteRow = (site: Site, i: number) => {
+  const siteRow = (site: Site) => {
     const selected = selectedIds.includes(site.id);
+    const name = site.kind === 'custom' ? 'Your pin' : site.name;
     return (
       <li key={site.id}>
         <button
@@ -170,10 +172,17 @@ export function SectorMenu({
           onFocus={() => onHoverSite(site.id)}
           onBlur={() => onHoverSite(null)}
           aria-pressed={selected}
+          title={site.name}
         >
-          <span className={g.rowLetter}>{site.kind === 'custom' ? <Icon name="pin" size={12} /> : siteLetter(i)}</span>
+          {site.kind === 'custom' ? (
+            <span className={g.rowPin} aria-hidden>
+              <Icon name="pin" size={13} />
+            </span>
+          ) : (
+            <span className={g.rowDot} aria-hidden />
+          )}
           <span className={g.rowText}>
-            <strong>{site.kind === 'custom' ? 'Your pin' : site.name}</strong>
+            <strong>{name}</strong>
             <small className="num">{formatLatLon(site.lat, site.lon)}</small>
           </span>
           <span className={g.rowEnd} aria-hidden>
@@ -204,7 +213,7 @@ export function SectorMenu({
             </span>
           )}
         </form>
-        {pins.length > 0 && <ul className={g.rows}>{pins.map(siteRow)}</ul>}
+        {pins.length > 0 && <ul className={[g.rows, g.siteRows].join(' ')}>{pins.map(siteRow)}</ul>}
       </>
     );
   } else if (active) {
@@ -213,7 +222,7 @@ export function SectorMenu({
     body = (
       <>
         {head('Your landing site', copy.name, copy.accent, copy.blurb)}
-        <ul className={g.rows} aria-label={`${copy.name} landing sites`}>
+        <ul className={[g.rows, g.siteRows].join(' ')} aria-label={`${copy.name} landing sites`}>
           {list.length === 0 && <li className={g.menuEmpty}>No catalogued sites here yet. Click the Moon to drop your own pin.</li>}
           {list.map(siteRow)}
         </ul>
@@ -223,7 +232,7 @@ export function SectorMenu({
     body = (
       <>
         {head(
-          'First, find your place',
+          null,
           'A world of',
           'possibilities.',
           <>

@@ -18,7 +18,7 @@ import { Tabs } from '@/shared/ui';
 import { MoonTrekGlobe } from './MoonTrekGlobe';
 import { createMoonLight } from './moonShading';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, siteLetter, VIEWER_LIGHT, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, VIEWER_LIGHT, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -148,7 +148,7 @@ function MarkerLayer({
   return (
     // Few sites: names always shown next to the letters (as in the design); many: on hover/selection.
     <div className={[g.anchors, sites.length <= LABELS_ALWAYS_MAX && g.alwaysLabels].filter(Boolean).join(' ')}>
-      {sites.map((site, i) => {
+      {sites.map((site) => {
         const selected = selectedIds.includes(site.id);
         return (
           <div key={site.id} ref={bind(site.id)} className={g.anchor} data-hidden="true">
@@ -159,7 +159,7 @@ function MarkerLayer({
               aria-pressed={selected}
               title={`${site.name} · ${KIND_WORD[site.kind]} · ${formatLatLon(site.lat, site.lon)}`}
             >
-              <span className={g.letter}>{siteLetter(i)}</span>
+              <span className={g.dot} />
               <span className={g.label}>{site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}</span>
             </button>
           </div>
