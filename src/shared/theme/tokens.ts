@@ -8,7 +8,7 @@ export const color = {
   surfaceRaised: '#131315',
   text: '#ede9e3',
   textMuted: '#a39f98',
-  textFaint: '#6b6b69',
+  textFaint: '#85827c',
   line: 'rgba(255,255,255,0.12)',
   lineStrong: 'rgba(255,255,255,0.32)',
   sun: '#f4c26b',
