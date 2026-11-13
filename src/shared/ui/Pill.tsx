@@ -22,6 +22,7 @@ const SOURCE_META: Record<DataSource, { label: string; icon: IconName; tone: Ton
   horizons: { label: 'JPL Horizons', icon: 'orbit', tone: 'neutral', title: 'Positions from NASA JPL Horizons' },
   lola: { label: 'NASA LOLA', icon: 'layers', tone: 'neutral', title: 'Terrain from LRO LOLA' },
   computed: { label: 'Computed', icon: 'check', tone: 'neutral', title: 'Calculated from Horizons + LOLA inputs' },
+  catalogue: { label: 'NASA site data', icon: 'pin', tone: 'neutral', title: 'Coordinates from NASA NSSDC / LRO Camera / NASA documents' },
 };
 
 /** Put next to any number so people know where it came from. */

@@ -14,6 +14,9 @@ import { useSkyView } from './skyView';
 import { shouldPlayIntro, useIntro } from './useIntro';
 import s from './HomePage.module.css';
 
+/** The live site pin on the Moon is hidden for now (team decision); set true to bring it back. */
+const SHOW_SITE_PIN = false;
+
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
 export function HomePage() {
@@ -85,7 +88,7 @@ export function HomePage() {
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
       <div ref={pins} className={s.pins}>
-        {site && pinAt && <SitePin site={site} time={now} x={pinAt.x} y={pinAt.y} />}
+        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} x={pinAt.x} y={pinAt.y} />}
       </div>
 
       <MotionToggle />
