@@ -6,5 +6,5 @@ import type { OwnerRoutes } from '@/app/routeTypes';
 import { HomePage } from './HomePage';
 
 export const homeRoutes: OwnerRoutes = [
-  { index: true, element: <HomePage />, handle: { title: 'Explore', caption: 'The journey begins' } },
+  { index: true, element: <HomePage />, handle: { title: 'Explore', caption: 'The journey begins', minimalChrome: true } },
 ];
