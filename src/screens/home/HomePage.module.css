@@ -34,6 +34,22 @@
   padding: var(--space-6) var(--gutter) var(--space-4);
 }
 
+.headline {
+  display: block;
+}
+
+/*
+ * The kit's accent was tuned for a serif italic (heavier weight, 1.08em nudge, own tracking).
+ * With one family it should read as the same line, so Home matches it to "Refaey" and only dims it a little.
+ * Home-scoped on purpose: the kit's Typography.module.css is Hagras's; the same fix belongs there too.
+ */
+.headline em {
+  font-weight: var(--weight-heading);
+  font-size: 1em;
+  letter-spacing: inherit;
+  color: var(--color-text-muted);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

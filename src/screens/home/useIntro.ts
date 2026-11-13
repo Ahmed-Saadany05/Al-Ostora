@@ -43,6 +43,8 @@ const READY_TIMEOUT_MS = 3000;
  */
 export function useIntro(play: boolean, moonReady: boolean, refs: IntroRefs) {
   const [done, setDone] = useState(!play);
+  // The pin may be reached (focus, hover, click) only once the intro has started to reveal it.
+  const [pinRevealed, setPinRevealed] = useState(!play);
   const [ready, setReady] = useState(false);
 
   // Hide everything before the first paint so there is no flash of the final state.
@@ -71,6 +73,7 @@ export function useIntro(play: boolean, moonReady: boolean, refs: IntroRefs) {
     const finish = () => {
       markSeen();
       setDone(true);
+      setPinRevealed(true);
     };
 
     const ctx = gsap.context(() => {
@@ -79,7 +82,7 @@ export function useIntro(play: boolean, moonReady: boolean, refs: IntroRefs) {
         .to(moon.current, { yPercent: 0, duration: 1.7, ease: 'power3.out' }, 0.35)
         .call(() => handle.current?.playLightSweep(1.1), [], 1.5);
       items.forEach((el, i) => tl.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 2.3 + i * 0.3));
-      tl.to(pins.current, { opacity: 1, duration: 0.4 }, 3.3).add(() => {
+      tl.add(() => setPinRevealed(true), 3.3).to(pins.current, { opacity: 1, duration: 0.4 }, 3.3).add(() => {
         const pulse = pins.current?.querySelector('[data-pulse]');
         if (pulse && !skipped) gsap.fromTo(pulse, { scale: 1, opacity: 0.9 }, { scale: 2.4, opacity: 0, duration: 0.65, ease: 'power2.out' });
       }, 3.4);
@@ -101,5 +104,5 @@ export function useIntro(play: boolean, moonReady: boolean, refs: IntroRefs) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [play, ready]);
 
-  return done;
+  return { done, pinRevealed };
 }

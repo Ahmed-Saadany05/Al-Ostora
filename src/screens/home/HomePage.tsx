@@ -22,7 +22,8 @@ export function HomePage() {
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
   // "Now" is local to Home: the shared clock may have been scrubbed in a mission step. Minute-rounded for stable cache keys.
   const [now] = useState(() => new Date(Math.round(Date.now() / 60_000) * 60_000).toISOString());
-  const sky = useSkyView(site, now);
+  // The page's only read of the sky (one useSky + one useMetrics for "now"); the pin and its card get it as a prop.
+  const view = useSkyView(site, now);
 
   const [textured, setTextured] = useState(false);
   // Set when the Moon is as ready as it will ever be: texture on, or a known failure (so the intro never waits for nothing).
@@ -35,7 +36,7 @@ export function HomePage() {
   const copy = useRef<HTMLDivElement>(null);
   const pins = useRef<HTMLDivElement>(null);
   const handle = useRef<HeroMoonHandle>(null);
-  const introDone = useIntro(play, textured || moonSettled, { stars, moon, copy, pins, handle });
+  const { done: introDone, pinRevealed } = useIntro(play, textured || moonSettled, { stars, moon, copy, pins, handle });
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
@@ -64,7 +65,7 @@ export function HomePage() {
       </div>
 
       <div ref={copy} className={s.copy}>
-        <div data-intro>
+        <div data-intro className={s.headline}>
           <DisplayHeading size="display" align="left" accent={HOME_COPY.headlineAccent}>
             {HOME_COPY.headlineLead}
           </DisplayHeading>
@@ -84,18 +85,18 @@ export function HomePage() {
       </div>
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
-      <div ref={pins} className={s.pins}>
-        {site && pinAt && <SitePin site={site} time={now} x={pinAt.x} y={pinAt.y} />}
+      <div ref={pins} className={s.pins} inert={!pinRevealed}>
+        {site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />}
       </div>
 
       <MotionToggle />
 
-      {introDone && (textured || sky.data?.sky.source === 'horizons') && (
+      {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>
           {textured && IMAGERY_CREDIT.text}
           {/* Horizons is only credited when sky.source says so; demo values are not Horizons. */}
-          {textured && sky.data?.sky.source === 'horizons' && ' · '}
-          {sky.data?.sky.source === 'horizons' && CREDITS.positions}
+          {textured && (view.status === 'ready' && view.sky.source === 'horizons') && ' · '}
+          {(view.status === 'ready' && view.sky.source === 'horizons') && CREDITS.positions}
         </p>
       )}
     </section>
