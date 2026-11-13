@@ -53,6 +53,16 @@ export const EXPLAINERS = {
     body: 'Power needs the Sun above the horizon; radio needs Earth above it. At the pole the Sun circles the whole horizon over a month, but Earth stays in roughly one direction, so a single ridge on the Earth side can block radio for days while sunlight is fine.',
     sources: ['/about#methods'],
   },
+  'lunar-day': {
+    title: 'Why is a lunar day so long?',
+    body: 'The Moon turns only once a month, so one lunar day lasts about 29.5 Earth days: roughly two weeks of sunlight, then two weeks of night at most places. Near the poles it is messier: some peaks are lit for most of the year while some crater floors never are.',
+    sources: ['https://science.nasa.gov/moon/tidal-locking/'],
+  },
+  'upright-panels': {
+    title: 'Why do polar solar panels stand upright?',
+    body: 'With the Sun skimming the horizon, its light hits a flat panel almost edge-on and delivers only a few percent of its power. Standing the panel upright faces the Sun head-on, so polar landers mount panels vertically and turn them as the Sun circles the horizon.',
+    sources: ['/about#methods'],
+  },
   'flat-horizon': {
     title: 'What does “flat horizon” mean?',
     body: 'Where we have no detailed terrain data, we treat the ground as perfectly flat, so real hills and crater rims are not included. Near the poles that can be badly wrong, because the Sun and Earth sit so close to the horizon that a small ridge decides everything.',
