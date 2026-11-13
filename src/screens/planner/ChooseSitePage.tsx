@@ -81,9 +81,9 @@ export function ChooseSitePage() {
       </>
     ) : null;
 
-  // A fitted frame (not <Page>): Step 1 fills the screen exactly, with no page scroll.
+  // No <Page>: SitePickerGlobe (layout="full") brings its own fitted frame, so Step 1 fills the screen exactly.
   return (
-    <div className={s.chooseFrame}>
+    <>
       {loading && !catalogue ? (
         <LoadingState title="Loading sites…" />
       ) : (
@@ -96,6 +96,6 @@ export function ChooseSitePage() {
           onPickCoords={addCustom}
         />
       )}
-    </div>
+    </>
   );
 }

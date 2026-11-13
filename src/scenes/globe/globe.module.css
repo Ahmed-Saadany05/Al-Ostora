@@ -2,6 +2,13 @@
 
 /* ---------------------------------------------------------------- step 1 layout */
 
+/* Fitted page frame: Step 1 starts right under the header and fills the screen with no page scroll.
+   moonHandoff measures an invisible copy of frame → layout → left, so keep that structure. */
+.frame {
+  width: 100%;
+  padding: var(--space-5) var(--gutter) var(--space-3);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
