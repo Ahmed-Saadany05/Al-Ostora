@@ -81,7 +81,7 @@ function CompareCard({ c, index, metrics, best }: { c: Candidate; index: number;
         </dl>
         <div className={s.cmpFoot}>
           {metrics && <SourceBadge source={metrics.source} />}
-          <Button variant={best ? 'primary' : 'secondary'} to={missionUrl.date(c.site.id)}>
+          <Button variant={best ? 'primary' : 'secondary'} to={missionUrl.chooseSite([c.site.id])}>
             Choose this site
           </Button>
         </div>
