@@ -1,0 +1,245 @@
+/*
+ * Refaey. Two forms only:
+ *  1. The briefing: a full-screen scene (half-body, large text, text-link choices), played once after the flight.
+ *  2. The "Refaey explains" card: a 40 px circular bust and his line, inline on data screens and inside explainers.
+ * Kit tokens only; transform and opacity are the only things that animate. No scrim, no overlay on data screens.
+ */
+
+/* Speech in the briefing: the type size follows the width: 24 px at 1280, capped at 32. */
+.talk {
+  --say: clamp(var(--text-lg), 1.875vw, var(--text-2xl));
+}
+
+.bust {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  border: var(--border-strong);
+}
+.bust img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------------------------------------------------------------- the briefing */
+.briefing {
+  /* the half-body is 596 x 560; its fingertip is ~95% across and ~45% down */
+  --art-h: 58vh;
+  --art-w: calc(var(--art-h) * 596 / 560);
+  --hand-x: calc(var(--art-w) * 0.95);
+  --hand-y: calc(100vh - var(--art-h) * 0.55);
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  background: var(--color-bg);
+  animation: fade var(--duration-slow) var(--ease-out) backwards;
+}
+.briefingArt {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--art-w);
+  height: var(--art-h);
+  pointer-events: none;
+  animation: rise var(--duration-slow) var(--ease-out) var(--duration-base) backwards;
+}
+.half {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.briefingText {
+  position: absolute;
+  left: calc(var(--hand-x) + var(--space-5));
+  /* the block is centred on his hand, so a long beat grows up and down and never runs off the bottom of the screen */
+  top: var(--hand-y);
+  transform: translateY(-50%);
+  /* about 36 characters of the speech type per line, whatever the screen: 18 em of the 24–32 px speech size */
+  width: min(calc(var(--say) * 18), calc(100vw - var(--hand-x) - var(--space-5) - var(--gutter)));
+  max-height: calc(100vh - var(--space-5));
+  animation: fade var(--duration-base) var(--ease-out) var(--duration-base) backwards;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-7));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the words */
+.talk {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.speaker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.topic {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+.lines {
+  position: relative;
+}
+.line {
+  margin: 0 0 var(--space-2);
+  font-size: var(--say);
+  line-height: 1.3;
+  text-align: start;
+  text-wrap: pretty;
+  color: var(--color-text);
+}
+/* Counts visual lines at the real width and type; never seen or heard. */
+.measure {
+  position: absolute;
+  inset: 0 0 auto 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A short fade (opacity only) when the beat or the node changes. */
+.fade {
+  animation: fade var(--duration-fast) linear;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Choices: a vertical list of large text with an arrow, left-aligned. Ghost styling, not pills. */
+.replies {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+}
+.reply {
+  height: auto;
+  min-height: 0;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-sm);
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: start;
+  font-size: clamp(var(--text-md), 1.4vw, var(--text-xl));
+  color: var(--color-text-muted);
+}
+.reply:hover,
+.reply:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+/* ---------------------------------------------------------------- the "Refaey explains" card */
+.card {
+  --bust-card: calc(var(--space-5) + var(--space-4)); /* 40 px */
+  display: grid;
+  grid-template-columns: var(--bust-card) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  font-stretch: var(--stretch-body);
+}
+.cardBody {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.cardLabel {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+.cardText {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text);
+}
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-1);
+}
+.cardAction {
+  height: auto;
+  min-height: 0;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.cardAction:hover,
+.cardAction:focus-visible {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+/* A compact card over a full-bleed 3D screen: bottom-left, below the "Nearby" drawer tab and the horizon, clear of the
+   terrain note, the timeline and the primary button. Behind every drawer (z-index), so a drawer that opens covers it. */
+.cardStage {
+  position: absolute;
+  z-index: 2;
+  left: var(--gutter);
+  bottom: calc(var(--space-6) + var(--space-2)); /* 40 px: above the terrain note */
+  width: min(360px, calc(100% - 2 * var(--gutter)));
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+.cardStage .cardBody {
+  gap: var(--space-1);
+}
+.cardStage .cardLabel {
+  display: none; /* the bust says who is speaking (and the card is named for screen readers); the room is needed for the text */
+}
+
+/* Narrower screens: the timeline drawer reaches further left, so the card rides just above it (the Launch button is clear of it). */
+@media (max-width: 1199px) {
+  .cardStage {
+    bottom: calc(var(--space-7) + var(--space-4)); /* 64 px */
+  }
+}
+
+/* Under 900 px the stage screens have no free zone (the "drag to look around" hint, the timeline and Launch fill the lower third):
+   Refaey stays out of the way there. Tablet and phone layouts of the 3D screens are out of scope. */
+@media (max-width: 899px) {
+  .cardStage {
+    display: none;
+  }
+}
+
+/* The touchdown screen has a wide row of three buttons bottom-right: on narrower screens the card rides above it. */
+@media (max-width: 1199px) {
+  .cardStageHigh {
+    bottom: calc(var(--space-9) + var(--space-3));
+  }
+}

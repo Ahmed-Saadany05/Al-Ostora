@@ -97,3 +97,5 @@
   font-size: var(--text-2xs);
   color: var(--color-text-faint);
 }
+
+/* When Refaey is on stage the promise line, Begin and About, and the pin with its Demo label, fade out (opacity only). */

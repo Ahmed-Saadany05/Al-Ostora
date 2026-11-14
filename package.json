@@ -9,9 +9,10 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run src/engine",
+    "test": "vitest run src/engine src/screens/home",
     "horizons:download": "node scripts/horizons/download.mjs",
     "horizons": "node scripts/horizons/compute.mjs",
+    "test:e2e": "playwright test",
     "terrain": "node scripts/terrain/export.mjs"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

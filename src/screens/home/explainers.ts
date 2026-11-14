@@ -56,7 +56,12 @@ export const EXPLAINERS = {
   'lunar-day': {
     title: 'Why is a lunar day so long?',
     body: 'The Moon turns only once a month, so one lunar day lasts about 29.5 Earth days: roughly two weeks of sunlight, then two weeks of night at most places. Near the poles it is messier: some peaks are lit for most of the year while some crater floors never are.',
-    sources: ['https://science.nasa.gov/moon/tidal-locking/'],
+    sources: [
+      'https://science.nasa.gov/moon/tidal-locking/',
+      'https://spacepolicyonline.com/news/india-says-good-night-to-chandrayaan-3/',
+      'https://www.deccanherald.com/science/space/no-signal-yet-from-vikram-pragyan-isro-2697635',
+    ],
+    notes: 'Example (moved here from the old /missions story): India\'s Chandrayaan-3 landed on 23 Aug 2023 at 69.37°S, 32.35°E, in the south polar region but about 600 km from the pole (say "near the south pole region", never "at the south pole"). It was built to work through one lunar daytime (about two weeks of sunlight), and after sunset it did not answer again.',
   },
   'upright-panels': {
     title: 'Why do polar solar panels stand upright?',

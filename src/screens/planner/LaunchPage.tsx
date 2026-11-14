@@ -14,6 +14,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LaunchSequence } from '@/scenes';
 import { useDayReport, usePlanLaunch, useSky } from '@/shared/data';
 import { Explain } from '@/screens/home/Explain';
+import { RefaeyMoment } from '@/screens/home/refaey';
 import { formatLatLon } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
 import { LUNAR } from '@/shared/types';
@@ -388,6 +389,8 @@ export function LaunchPage() {
       <p className={s.trajCredit}>
         {plan.assumption} · {IMAGE_CREDIT}
       </p>
+
+      <RefaeyMoment id="moment-outcome" placement="stage" />
 
       <VerifyDrawer site={site} time={landing} open={verify} onClose={() => setVerify(false)} />
     </Page>

@@ -1,11 +1,13 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { preloadStep1 } from '@/scenes';
-import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
-import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
+import { useBlocker, useNavigate } from 'react-router-dom';
+import { releaseMoonHandoff } from '@/scenes/globe/moonHandoff';
+import { missionUrl } from '@/shared/mission';
+import { RefaeyBriefing, useRefaey, type BriefingDestination } from './refaey';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
@@ -28,6 +30,9 @@ const MOON_GAP_PX = 48;
  */
 const RIM_ABOVE_POLE_PER_WIDTH = 0.0116;
 
+/** The hero copy and the pin fade out over this long before the Moon flies (no flight under reduced motion). */
+const LEAVE_MS = 250;
+
 /** Longest the first loading screen waits for Step 1's preload before letting the intro play. */
 const PRELOAD_CAP_MS = 20_000;
 
@@ -35,6 +40,8 @@ const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroM
 
 export function HomePage() {
   const navigate = useNavigate();
+  const briefed = useRefaey((st) => st.briefed);
+  const markBriefed = useRefaey((st) => st.markBriefed);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
   const site = sites?.find((x) => x.id === FEATURED_SITE_ID);
@@ -87,6 +94,50 @@ export function HomePage() {
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
 
+  // "Begin the journey": the whole hero (title, line, buttons, pin) fades out, then Pink's flight takes the Moon toward Step 1.
+  // When the flight ends it navigates to Step 1; that navigation is held here (it is the flight's completion signal) so the
+  // briefing can play first. Once per session. Refaey is never on screen together with the hero.
+  const [leaving, setLeaving] = useState(false);
+  const journey = useRef(false);
+  const blocker = useBlocker(({ nextLocation }) => journey.current && nextLocation.pathname === missionUrl.chooseSite());
+  const [briefing, setBriefing] = useState(false);
+  const decided = useRef(false); // the held navigation is dealt with once: shown the briefing, or let through
+  useEffect(() => {
+    if (blocker.state !== 'blocked' || decided.current) return;
+    decided.current = true;
+    if (briefed) blocker.proceed();
+    else {
+      // The flight's last frame is still held up as an image; the briefing covers it, so let it go.
+      releaseMoonHandoff(0);
+      setBriefing(true);
+    }
+  }, [blocker, briefed]);
+
+  const startJourney = useCallback(() => {
+    if (leaving) return;
+    setLeaving(true);
+    journey.current = true;
+    const fade = [copy.current, pins.current].flatMap((el) =>
+      el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
+    );
+    // With motion the flight starts at once (it fades the hero itself); without it, wait for the cross-fade, then change view.
+    if (motion) handle.current?.enterStep1();
+    else void Promise.all(fade).then(() => handle.current?.enterStep1());
+  }, [leaving, motion]);
+
+  const endBriefing = useCallback(
+    (to: BriefingDestination) => {
+      markBriefed();
+      journey.current = false;
+      if (to === 'missions') {
+        if (blocker.state === 'blocked') blocker.reset();
+        navigate('/missions');
+      } else if (blocker.state === 'blocked') blocker.proceed();
+      else navigate(missionUrl.chooseSite());
+    },
+    [blocker, markBriefed, navigate],
+  );
+
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
   return (
@@ -122,7 +173,7 @@ export function HomePage() {
             {HOME_COPY.headlineLead}
           </DisplayHeading>
         </div>
-        <div ref={under} className={s.under}>
+        <div ref={under} className={s.under} inert={leaving}>
           <div data-intro>
             <Lead align="center">{HOME_COPY.line}</Lead>
           </div>
@@ -131,25 +182,30 @@ export function HomePage() {
               variant="primary"
               size="md"
               icon="arrowRight"
-              onClick={() => {
-                // Same as clicking the Moon: it flies into Step 1. Without the Moon, go straight there.
-                if (handle.current) handle.current.enterStep1();
-                else navigate(missionUrl.chooseSite());
-              }}
+              onClick={startJourney}
             >
               {HOME_COPY.begin}
             </Button>
             <Button variant="ghost" to="/about">
               {HOME_COPY.about}
             </Button>
+            <Button variant="ghost" to="/missions">
+              {HOME_COPY.pastMissions}
+            </Button>
           </div>
         </div>
       </div>
 
       {/* After the copy in the DOM so Tab reaches Begin first. The pin only appears once the Moon has risen. */}
-      <div ref={pins} className={s.pins} inert={!pinRevealed}>
-        {SHOW_SITE_PIN && site && pinAt && <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />}
+      <div ref={pins} className={s.pins} inert={!pinRevealed || leaving}>
+        {SHOW_SITE_PIN && site && pinAt && (
+          <div>
+            <SitePin site={site} time={now} view={view} x={pinAt.x} y={pinAt.y} />
+          </div>
+        )}
       </div>
+
+      {briefing && <RefaeyBriefing onDone={endBriefing} />}
 
       <MotionToggle />
 
