@@ -72,3 +72,19 @@
 :root[data-motion='off'] .skeleton {
   animation-duration: 0s;
 }
+
+/* Loading animation in place of the spinner (Pink): no circle behind it; the title is read out, not shown. */
+.bareIcon {
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-2);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import { onStep1Progress, type Step1Progress } from '@/scenes';
+import { LOADER_SPRITE, SpriteAnimation } from '@/shared/ui';
 import s from './MoonLoader.module.css';
 
 const SHOW_AFTER_MS = 300;
@@ -60,11 +61,19 @@ export function MoonLoader({ ready }: { ready: boolean }) {
   return (
     <div className={[s.loader, ready && s.out].filter(Boolean).join(' ')} role="status" aria-live="polite">
       <div className={s.inner}>
-        <span className={s.label}>{ready ? 'Ready' : 'Loading the Moon'}</span>
-        <span className={s.track} aria-hidden>
+        {/* The loading animation (when a sprite sheet is set) replaces the label and the percentage; the bar stays. */}
+        {LOADER_SPRITE ? (
+          <>
+            <SpriteAnimation sheet={LOADER_SPRITE} size="96px" className={s.sprite} />
+            <span className={s.srOnly}>{ready ? 'Ready' : 'Loading the Moon'}</span>
+          </>
+        ) : (
+          <span className={s.label}>{ready ? 'Ready' : 'Loading the Moon'}</span>
+        )}
+        <span className={[s.track, LOADER_SPRITE && s.trackFull].filter(Boolean).join(' ')} aria-hidden>
           <span className={s.bar} style={{ transform: `scaleX(${progress})` }} />
         </span>
-        <span className={['num', s.pct].join(' ')}>{Math.round(progress * 100)}%</span>
+        {!LOADER_SPRITE && <span className={['num', s.pct].join(' ')}>{Math.round(progress * 100)}%</span>}
         <span className={s.source}>Imagery · NASA Moon Trek, LRO</span>
       </div>
     </div>
