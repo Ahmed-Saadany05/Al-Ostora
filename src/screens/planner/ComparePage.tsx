@@ -16,7 +16,7 @@ import { useDayReport, useHorizon, useMetrics } from '@/shared/data';
 import { Explain } from '@/screens/home/Explain';
 import { formatDuration, formatUtc } from '@/shared/format';
 import { MAX_COMPARE, missionUrl, useMission } from '@/shared/mission';
-import { LUNAR, type IsoTime, type Site, type SiteMetrics } from '@/shared/types';
+import { LUNAR, type IsoTime, type Params, type Site, type SiteMetrics } from '@/shared/types';
 import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, Page, ProgressRing, StepHeader, Tabs } from '@/shared/ui';
 import { EXAG, SiteScene } from './CompareScene3D';
 import { useLunarDay } from './useLunarDay';
@@ -184,7 +184,10 @@ function Column({
 }
 
 export function ComparePage() {
-  const params = usePlannerParams();
+  // No launch date exists yet in Step 3, so the engine judges the landing gates inside each
+  // site's best window (Sun AND Earth), not at the range start (Goda's engine option, PR #30).
+  const plannerParams = usePlannerParams();
+  const params = useMemo(() => ({ ...plannerParams, gatesAt: 'best-window' }) as Partial<Params>, [plannerParams]);
   const navigate = useNavigate();
   const { sites, siteIds, compareBy, loading } = useMission();
   const { from } = useLunarDay();
