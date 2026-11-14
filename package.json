@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run src/engine",
     "horizons:download": "node scripts/horizons/download.mjs",
-    "horizons": "node scripts/horizons/compute.mjs"
+    "horizons": "node scripts/horizons/compute.mjs",
+    "terrain": "node scripts/terrain/export.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.5",
