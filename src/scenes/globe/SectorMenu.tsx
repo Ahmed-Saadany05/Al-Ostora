@@ -166,6 +166,7 @@ export function SectorMenu({
         <button
           type="button"
           className={[g.row, selected && g.rowOn].filter(Boolean).join(' ')}
+          data-site={site.id}
           onClick={() => onChooseSite(site.id)}
           onMouseEnter={() => onHoverSite(site.id)}
           onMouseLeave={() => onHoverSite(null)}
@@ -246,7 +247,7 @@ export function SectorMenu({
             const count = catalogued.filter((x) => x.region === r).length;
             return (
               <li key={r} {...hover(r)}>
-                <button type="button" className={g.row} onClick={() => onChooseRegion(r)}>
+                <button type="button" className={g.row} data-region={r} onClick={() => onChooseRegion(r)}>
                   <span className={['num', g.rowNum].join(' ')}>{pad(i + 1)}</span>
                   <span className={g.rowText}>
                     <strong className={g.rowBig}>{REGION_COPY[r].name}</strong>
@@ -281,10 +282,10 @@ export function SectorMenu({
   }
 
   return (
-    <nav className={g.menu} aria-label="Choose your landing site">
+    <nav className={g.menu} aria-label="Choose your landing site" data-open-region={custom ? 'custom' : (active ?? '')}>
       <Stepper siteDone={selectedIds.length > 0} />
       <div className={g.menuScroll}>{body}</div>
-      {footer && <div className={g.menuFooter}>{footer}</div>}
+      {footer && <div className={g.menuFooter} data-menu-footer>{footer}</div>}
     </nav>
   );
 }

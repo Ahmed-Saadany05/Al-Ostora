@@ -88,3 +88,30 @@
     animation: none;
   }
 }
+
+/* He glides between places on Step 1 (intro → beside "South polar" → beside the site list). */
+.moving {
+  transition: top 900ms var(--ease-in-out), right 900ms var(--ease-in-out), left 900ms var(--ease-in-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .moving {
+    transition: none;
+  }
+}
+/* What he points at: a soft sun-coloured ring that breathes. */
+:global([data-refaey-pick]) {
+  position: relative;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 2px var(--color-sun), 0 0 24px var(--color-sun-soft);
+  animation: refaeyPick 1.8s var(--ease-in-out) infinite;
+}
+@keyframes refaeyPick {
+  50% {
+    box-shadow: 0 0 0 2px var(--color-sun), 0 0 6px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global([data-refaey-pick]) {
+    animation: none;
+  }
+}
