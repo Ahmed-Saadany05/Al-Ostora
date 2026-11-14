@@ -445,9 +445,11 @@ export function missionStory(landing: IsoTime, sunWindows: TimeWindow[], earthWi
   const L = Date.parse(landing);
   const end = L + LUNAR_MS;
   const dayH = LUNAR.synodicDays * 24;
-  // Window edges within 2 h of the data's start/end are where the data was CUT, not real
-  // rises/sets (a window "ending" at the last sample is just clipped), so they are skipped.
-  const EDGE = 2 * HOUR;
+  // Window edges AT the data's start/end are where the data was CUT, not real rises/sets, so
+  // they are skipped. The engine refines real edges to ~15 s, so a 1-minute margin is enough;
+  // a wider one (it was 2 h) drops real sunrises soon after touchdown (e.g. 1.5 h later →
+  // "0 days of sunlight").
+  const EDGE = 60_000;
   const real = (t: number) => t > L + EDGE && t < end - EDGE;
   const raw: Milestone[] = [];
   for (const w of sunWindows) {
