@@ -48,7 +48,6 @@ export function PlannerLayout() {
       <Outlet />
       {say && (
         <RefaeyTalk
-          key={key}
           placement={key === '/mission' ? 'top-left' : 'bottom-left'}
           style={key === '/mission' ? undefined : { position: 'fixed', bottom: 'calc(var(--statusbar-height) + var(--space-5))' }}
           content={{ key, title: say.step, lines: say.lines, replies: [{ label: 'Got it', next: 'close' }] }}

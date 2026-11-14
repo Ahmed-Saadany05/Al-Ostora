@@ -10,6 +10,7 @@ import {
   type ActorPose,
 } from "@/screens/home/refaey/RefaeyActor";
 import { RefaeyBust } from "@/screens/home/refaey/Refaey";
+import { usePresence } from "@/screens/home/refaey/presence";
 import {
   DialogueText,
   type PanelContent,
@@ -52,6 +53,8 @@ export function RefaeyTalk({
   const quip = useQuip();
   // A new beat always opens the balloon again.
   useEffect(() => setOpen(true), [content?.key]);
+  // The balloon animates in when it opens and out when it closes.
+  const { mounted, leaving, motion } = usePresence(!!content && open && entered);
 
   return (
     <div
@@ -83,9 +86,15 @@ export function RefaeyTalk({
           <RefaeyBust size="56px" />
         </button>
       )}
-      {content && open && entered && (
+      {content && mounted && (
         <div
-          className={[rs.balloon, s.balloon].join(" ")}
+          className={[
+            rs.balloon,
+            s.balloon,
+            motion && (leaving ? rs.popOut : rs.popIn),
+          ]
+            .filter(Boolean)
+            .join(" ")}
           data-side="right"
           style={{ maxWidth: balloonWidth }}
           role="dialog"

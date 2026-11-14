@@ -5,6 +5,7 @@ import { ACTOR_ASPECT, RefaeyActor, useQuip } from './RefaeyActor';
 import { REFAEY_COPY } from './copy';
 import type { Reply } from './dialogues/dialogues';
 import { collectKeepOuts, safeArea } from './keepOuts';
+import { usePresence } from './presence';
 import { BALLOON, chooseSlot, KEEP_CLEAR, type Chosen, type PlaceCtx, type Rect, type Slot } from './placement';
 import s from './refaey.module.css';
 
@@ -155,6 +156,8 @@ export function RefaeyStage({
 
   // The balloon pops (opacity + scale 0.96 → 1, ≤ 180 ms; none without motion) once his entrance is over; the drift pauses meanwhile.
   const showBalloon = !!placed && open && entered;
+  // …and fades out the same way when it closes.
+  const { mounted: balloonMounted, leaving } = usePresence(showBalloon);
   useEffect(() => {
     const el = balloon.current;
     if (!showBalloon || !el || !motion) return;
@@ -217,8 +220,8 @@ export function RefaeyStage({
         />
         {standing && <span className={s.contactShadow} aria-hidden />}
       </div>
-      {showBalloon && (
-        <div ref={balloon} className={s.balloon} data-side={side} style={pos}>
+      {balloonMounted && (
+        <div ref={balloon} className={[s.balloon, leaving && s.popOut].filter(Boolean).join(' ')} data-side={side} style={pos}>
           <div className={s.quipHost} data-quip={quip !== null}>
             <DialogueText
               className={s.balloonTalk}

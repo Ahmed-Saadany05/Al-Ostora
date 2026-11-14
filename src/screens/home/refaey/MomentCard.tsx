@@ -8,6 +8,7 @@ import type { DialogueNode, Reply } from './dialogues/dialogues';
 import { recordedTokens } from './facts/display';
 import { resolveNode, type ResolveContext } from './logic';
 import { getNode, hasExplainer } from './registry';
+import { usePresence } from './presence';
 import { useRefaey } from './store';
 
 /** What a screen knows about the sky. Leave it out and every line that needs a live number is skipped (never guessed). */
@@ -28,6 +29,7 @@ export function MomentCard({
   onAction,
   once = true,
   node,
+  appear = true,
 }: {
   id: string;
   placement: CardPlacement;
@@ -36,6 +38,8 @@ export function MomentCard({
   /** Shown once per session (moments), or every time it is mounted (the touchdown card: every landing is a new story). */
   once?: boolean;
   node?: DialogueNode;
+  /** Animate in when it first shows (false when a stand-in card was already on screen). */
+  appear?: boolean;
 }) {
   const navigate = useNavigate();
   const alreadySeen = useRefaey((st) => st.seen[id]);
@@ -64,7 +68,9 @@ export function MomentCard({
     return n ? resolveNode(n, ctx, (x) => getNode(x, backTo)) : null;
   }, [nodeId, backTo, ctx, node, id]);
 
-  if (!eligible || dismissed || !resolved) return null;
+  // Animates in on open and out when dismissed.
+  const { mounted, leaving, motion } = usePresence(!dismissed);
+  if (!eligible || !mounted || !resolved) return null;
 
   const act = (r: Reply) => () => {
     const intro = nodeId.startsWith(INTRO_ID);
@@ -93,6 +99,7 @@ export function MomentCard({
       link={resolved.link}
       badge={resolved.usesFacts ? <FactsBadge /> : undefined}
       actions={resolved.replies.map((r) => ({ label: r.label, onClick: act(r) }))}
+      pop={!motion ? undefined : leaving ? 'out' : appear ? 'in' : undefined}
     />
   );
 }

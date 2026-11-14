@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProvider, useHorizon, usePlanLaunch, useSites } from '@/shared/data';
 import { formatUtc } from '@/shared/format';
+import { useApp } from '@/shared/store/app';
 import { missionUrl, useMission } from '@/shared/mission';
 import { daysAndHours } from './facts/display';
 import { MomentCard, type MomentContext } from './MomentCard';
@@ -29,6 +30,7 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   const { data: sites } = useSites();
   const live = getProvider().id === 'live' && horizon?.source === 'lola';
   const landing = plan?.landingDate;
+  const motion = useApp((st) => st.motion);
   const [outcome, setOutcome] = useState<Outcome | 'waiting'>(live ? 'waiting' : 'demo');
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   }, [outcome, site, landing, sites]);
 
   if (!site) return null;
-  if (context === null) return <RefaeyCard id="refaey-moment-outcome" placement={placement} mood="neutral" lines={['Give me a second…']} />;
+  if (context === null) return <RefaeyCard id="refaey-moment-outcome" placement={placement} mood="neutral" lines={['Give me a second…']} pop={motion ? 'in' : undefined} />;
 
   const alt = outcome !== 'none' && outcome !== 'demo' && outcome !== 'waiting' ? outcome.alt : null;
   const onAction = (a: Reply['action']) => {
@@ -82,5 +84,5 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   };
   // Live answer → the landing story. Demo (no live numbers, no LOLA skyline) → the quiet line. Timeout or error → the neutral close.
   const id = context.horizons ? 'outcome-play' : outcome === 'demo' ? 'outcome-demo' : 'outcome-close';
-  return <MomentCard id={id} placement={placement} context={context} onAction={onAction} once={false} />;
+  return <MomentCard id={id} placement={placement} context={context} onAction={onAction} once={false} appear={!live} />;
 }

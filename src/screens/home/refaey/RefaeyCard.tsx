@@ -26,6 +26,7 @@ export function RefaeyCard({
   placement = 'card',
   badge,
   link,
+  pop,
 }: {
   title?: string;
   mood?: RefaeyMood;
@@ -38,9 +39,11 @@ export function RefaeyCard({
   badge?: ReactNode;
   /** A source card's link. */
   link?: { label: string; href: string };
+  /** Opening ('in') or closing ('out') animation, for cards that pop up (moments). */
+  pop?: 'in' | 'out';
 }) {
   return (
-    <aside id={id} className={[s.card, (placement === 'stage' || placement === 'stage-high') && s.cardStage, placement === 'stage-high' && s.cardStageHigh].filter(Boolean).join(' ')} aria-label={REFAEY_COPY.explains}>
+    <aside id={id} className={[s.card, (placement === 'stage' || placement === 'stage-high') && s.cardStage, placement === 'stage-high' && s.cardStageHigh, pop === 'in' && s.popIn, pop === 'out' && s.popOut].filter(Boolean).join(' ')} aria-label={REFAEY_COPY.explains}>
       <RefaeyBust mood={mood} size="var(--bust-card)" />
       <div className={s.cardBody}>
         <p className={s.cardLabel}>{REFAEY_COPY.explains}</p>
