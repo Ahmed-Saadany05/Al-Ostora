@@ -1,7 +1,7 @@
 /**
  * Shared by the Refaey browser checks (missions.e2e.ts, refaey.e2e.ts).
  * Modes: E2E_MODE = demo (default) | live (server started with VITE_DATA_PROVIDER=live, BASE_URL set) | blocked (live, with /api/horizons aborted).
- * Screenshots go OUTSIDE the repo: ~/Developer/Al-Ostora-shots/refaey-final/<mode>/<viewport>/<state>.png
+ * Screenshots go OUTSIDE the repo: ~/Developer/Al-Ostora-shots/refaey-story/<mode>/<viewport>/<state>.png
  */
 import { expect, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -10,7 +10,7 @@ import path from 'node:path';
 
 export const MODE = (process.env.E2E_MODE ?? 'demo') as 'demo' | 'live' | 'blocked';
 export const LIVE = MODE !== 'demo';
-export const SHOTS = path.join(homedir(), 'Developer', 'Al-Ostora-shots', 'refaey-final', MODE);
+export const SHOTS = path.join(homedir(), 'Developer', 'Al-Ostora-shots', 'refaey-story', MODE);
 export const VIEWPORTS = [
   { name: '1280x720', width: 1280, height: 720 },
   { name: '1440x900', width: 1440, height: 900 },
@@ -208,7 +208,7 @@ export async function newPage(browser: Browser, vp: { width: number; height: num
   await ctx.addInitScript(
     ([store, isBriefed]) => {
       sessionStorage.setItem('refaey-home-intro-seen', '1');
-      if (isBriefed) sessionStorage.setItem('refaey-seen', store as string);
+      if (isBriefed && !sessionStorage.getItem('refaey-seen')) sessionStorage.setItem('refaey-seen', store as string);
     },
     [BRIEFED, briefed] as const,
   );

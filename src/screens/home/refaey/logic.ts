@@ -104,7 +104,8 @@ export function resolveNode(
   for (const r of node.replies) {
     const label = fill(r.label, ctx);
     if (label === null) continue;
-    if (r.next) {
+    // 'missions-hub' is the list itself (the /missions page handles it), not a beat.
+    if (r.next && r.next !== 'missions-hub') {
       const target = lookup(r.next);
       if (!target || !isVisible(target, ctx)) continue;
     }

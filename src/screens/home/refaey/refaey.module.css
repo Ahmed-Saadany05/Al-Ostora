@@ -210,13 +210,16 @@
   position: absolute;
   z-index: 2;
   left: var(--gutter);
-  bottom: calc(var(--space-6) + var(--space-2)); /* 40 px: above the terrain note */
+  bottom: calc(var(--space-5) + var(--space-2)); /* 32 px: just above the terrain note */
   width: min(360px, calc(100% - 2 * var(--gutter)));
   padding: var(--space-3);
   gap: var(--space-2);
 }
 .cardStage .cardBody {
   gap: var(--space-1);
+}
+.cardStage .cardText {
+  line-height: 1.45;
 }
 .cardStage .cardLabel {
   display: none; /* the bust says who is speaking (and the card is named for screen readers); the room is needed for the text */

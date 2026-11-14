@@ -127,6 +127,8 @@ describe('the conversation graph', () => {
       expect(finals, m.id).toHaveLength(1);
       expect(finals[0].replies.map((r) => r.label)).toEqual(['See the sky at touchdown', 'Another story', "Plan {callsign}'s landing"]);
       expect(finals[0].replies[0].demoLabel).toBe('Open this site in the planner');
+      // and all three survive resolving ("Another story" leads to the list, which is not a beat)
+      expect(resolved(storyGraph(m), finals[0].id, ctxFor())!.replies.map((r) => r.label), `${m.id} resolved`).toEqual(['See the sky at touchdown', 'Another story', "Plan Ostora-1's landing"]);
       expect(finals[0].replies[0].action).toMatchObject({ type: 'openPlanner', siteId: m.siteId, at: m.landed });
     }
   });
