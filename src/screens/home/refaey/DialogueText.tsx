@@ -8,8 +8,8 @@ import s from './refaey.module.css';
 /** Content of one beat of talk: a resolved dialogue node, or the Ask menu (no lines, only questions). */
 export type PanelContent = Pick<ResolvedNode, 'title' | 'lines' | 'replies'> & { key: string };
 
-/** A node longer than this many visual lines is split into beats with a Next choice. Text is never truncated. */
-const MAX_VISUAL_LINES = 4;
+/** A node longer than this many visual lines is split into beats with a Next choice. Text is never truncated. (Six: the briefing's first beat has to carry both Go on and Skip.) */
+const MAX_VISUAL_LINES = 6;
 
 /**
  * Refaey's words as large text directly on the scene (no bubble, no box): a small "Refaey" label, the line, then a

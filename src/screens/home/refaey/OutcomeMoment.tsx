@@ -20,7 +20,8 @@ type Outcome = { hours: { sunHours: number; earthHours: number }; alt: Alt } | '
  * site or date. Numbers appear only on the live provider with the LOLA skyline; otherwise just the neutral closing line.
  * suggestAlternatives returns null both for "nothing better" and for "no data", so a null never becomes a claim.
  */
-export function OutcomeMoment({ placement }: { placement: CardPlacement }) {
+export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }) {
+  const placement: CardPlacement = asked === 'stage' ? 'stage-high' : asked;
   const navigate = useNavigate();
   const { site, launchDate } = useMission();
   const { data: plan } = usePlanLaunch(site, launchDate);
