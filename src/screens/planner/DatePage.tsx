@@ -517,6 +517,7 @@ export function FirstDays({
   earth,
   focus,
   onFocus,
+  showStory = true,
 }: {
   landing: IsoTime;
   sunWindows: TimeWindow[];
@@ -526,6 +527,8 @@ export function FirstDays({
   focus: Focus;
   /** Omit to make the moments read-only (no flight drawing to show them on). */
   onFocus?: (f: Focus) => void;
+  /** Show the day-by-day story under the numbers (default true). */
+  showStory?: boolean;
 }) {
   const { L, dayH, rows, runFrom, sunlitH, earthH, night, silence } = missionStory(landing, sunWindows, earthWindows, sun, earth);
   const plus = (x: { ongoing: boolean }) => (x.ongoing ? '+' : '');
@@ -602,6 +605,7 @@ export function FirstDays({
         </div>
       </div>
 
+      {showStory && (
       <ol className={s.fdStory} key={landing}>
         {rows.map((r, i) => {
           const t = story(r, i);
@@ -644,6 +648,7 @@ export function FirstDays({
           );
         })}
       </ol>
+      )}
     </div>
   );
 }
@@ -680,6 +685,8 @@ export function DatePage() {
   const [chanceHover, setChanceHover] = useState<number | null>(null);
   // A later moment picked in "Your first days" (null = touchdown).
   const [focus, setFocus] = useState<Focus>(null);
+  // "Your first days": numbers always, the day-by-day story on request (keeps Step 4 short).
+  const [showStory, setShowStory] = useState(false);
   useEffect(() => {
     if (!launch && suggested) setLaunch(suggested);
   }, [launch, suggested]);
@@ -793,42 +800,10 @@ export function DatePage() {
             )}
             {landing && (
               <p className={s.bodyLine}>
-                Lands <span className="num">{dayTime(landing)}</span> · {verdict}
-                {inBest && ' · inside the best window'}
+                Lands <span className="num">{dayTime(landing)}</span>
               </p>
             )}
           </div>
-          {chances.length > 0 && (
-            <div className={s.chances}>
-              <p className={s.chancesHead}>
-                <span className={s.label}>Best launch chances</span>
-                <span className={s.explainEnd}>
-                  <Explain id="best-window" />
-                </span>
-              </p>
-              <div className={s.chanceRow}>
-                {chances.map((c, i) => (
-                  <button
-                    key={c.launch}
-                    type="button"
-                    className={cls(s.chance, launchMs === c.launch && s.chanceOn)}
-                    onClick={() => pick(c.launch)}
-                    onMouseEnter={() => setChanceHover(midnight(c.launch))}
-                    onMouseLeave={() => setChanceHover(null)}
-                    onFocus={() => setChanceHover(midnight(c.launch))}
-                    onBlur={() => setChanceHover(null)}
-                  >
-                    <span className={s.chanceStar}>★</span>
-                    <span className="num">{dayShort(c.launch)}</span>
-                    <span>{i === 0 ? 'soonest' : i === 1 ? 'next lunar day' : 'one after'}</span>
-                    <span className={s.chanceLen}>
-                      <span className="num">{formatDuration(c.window.durationH)}</span> window
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         {launch && landing && plan ? (
           <>
@@ -856,7 +831,6 @@ export function DatePage() {
                 <span className="num">{dayTime(landing)}</span>
               </span>
             </div>
-            <p className={s.trajCredit}>{IMAGE_CREDIT}</p>
           </>
         ) : (
           <LoadingState compact title="Planning the flight…" />
@@ -889,19 +863,38 @@ export function DatePage() {
               <LoadingState compact />
             )}
             <div className={s.dialSide}>
-              <p className={s.bodyLine}>Each slice of the ring is one launch day. It shows what you would land into:</p>
-              <div className={s.dialLegend}>
+              <div className={s.dialLegend} title="Each slice is one launch day: what you would land into. Click or drag around the ring, or use the arrow keys.">
                 <span>
-                  <i className={cls(s.dialSw, s.dialSwSun)} /> Outer ring: sunlight at landing
+                  <i className={cls(s.dialSw, s.dialSwSun)} /> Outer: sunlight
                 </span>
                 <span>
-                  <i className={cls(s.dialSw, s.dialSwEarth)} /> Inner ring: radio at landing
+                  <i className={cls(s.dialSw, s.dialSwEarth)} /> Inner: radio
                 </span>
                 <span>
-                  <i className={s.dialBestSw} /> ★ Best launch day (glows, the knob snaps to it)
+                  <i className={s.dialBestSw} /> Best day
                 </span>
               </div>
-              <p className={s.bodyLine}>Click or drag around the ring, or use the arrow keys.</p>
+              {chances.length > 0 && (
+                <div className={s.calTime}>
+                  <span className={s.label}>Good days</span>
+                  {chances.map((c) => (
+                    <button
+                      key={c.launch}
+                      type="button"
+                      className={cls(s.slipBtn, launchMs === c.launch && s.chanceOn)}
+                      title={`${formatDuration(c.window.durationH)} landing window`}
+                      onClick={() => pick(c.launch)}
+                      onMouseEnter={() => setChanceHover(midnight(c.launch))}
+                      onMouseLeave={() => setChanceHover(null)}
+                      onFocus={() => setChanceHover(midnight(c.launch))}
+                      onBlur={() => setChanceHover(null)}
+                    >
+                      ★ <span className="num">{dayShort(c.launch)}</span>
+                    </button>
+                  ))}
+                  <Explain id="best-window" />
+                </div>
+              )}
               <div className={s.calTime}>
                 <button type="button" className={s.stepBtn} aria-label="Previous 30 days" disabled={turn === 0} onClick={() => setTurn((t) => Math.max(0, t - 1))}>
                   ‹
@@ -944,7 +937,6 @@ export function DatePage() {
               )}
             </div>
           )}
-          {plan && <p className={s.bodyLine}>{plan.assumption}</p>}
         </section>
 
         {/* Verdict at touchdown */}
@@ -990,7 +982,6 @@ export function DatePage() {
         <div className={s.timelineHead}>
           <div>
             <p className={s.label}>Your first days on the Moon</p>
-            <p className={s.bodyLine}>What happens after you land, in order. Click a moment to see it on the flight drawing above.</p>
 
           </div>
         </div>
@@ -1003,9 +994,15 @@ export function DatePage() {
             earth={earth}
             focus={focus}
             onFocus={setFocus}
+            showStory={showStory}
           />
         ) : (
           <LoadingState compact />
+        )}
+        {afterReport && landing && sky && (
+          <Button variant="ghost" icon={null} leadingIcon={showStory ? 'close' : 'clock'} onClick={() => setShowStory((v) => !v)}>
+            {showStory ? 'Hide day by day' : 'Show day by day'}
+          </Button>
         )}
         <div className={s.timelineFoot}>
           <Button variant="secondary" leadingIcon="compare" icon={null} to={missionUrl.compare([site.id], 'dates')}>
@@ -1019,6 +1016,10 @@ export function DatePage() {
           )}
         </div>
       </section>
+      <p className={s.trajCredit}>
+        {plan ? `${plan.assumption} · ` : ''}
+        {IMAGE_CREDIT}
+      </p>
     </Page>
   );
 }

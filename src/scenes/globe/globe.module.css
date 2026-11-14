@@ -376,8 +376,11 @@
   min-height: 46px;
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-sm, 4px);
-  border-color: transparent;
-  background: rgba(255, 255, 255, 0.16);
+  /* Solid like every primary button: the old 16 % white fill kept the primary's near-black
+     text, which was unreadable (dark on dark) until hover. */
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-text-inverse);
   white-space: normal;
   text-align: left;
   font-size: var(--text-sm);
@@ -386,7 +389,8 @@
 }
 .menuFooter > a:hover,
 .menuFooter > button:hover {
-  background: var(--color-text);
+  background: var(--color-text-muted);
+  border-color: var(--color-text-muted);
   color: var(--color-text-inverse);
 }
 .menuFooter > a > span,
