@@ -168,6 +168,22 @@
   overflow: auto;
   transform: translateX(calc(100% + 120px));
 }
+/* Aser: while peeking (hover / focus, not pinned) the small tab fades away and the cards take its
+   place at the edge, so the same numbers aren't shown twice. The tab stays in the layout (only
+   invisible), so the pointer never "leaves" and the panel doesn't flicker. Pinned keeps the tab, so
+   it can be clicked to unpin. */
+.right .tab {
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+}
+.right.open:not(.pinned) .tab {
+  opacity: 0;
+}
+.right.open:not(.pinned) .panel {
+  right: 0;
+}
 
 /* Left edge: mirror of the right. */
 .left {

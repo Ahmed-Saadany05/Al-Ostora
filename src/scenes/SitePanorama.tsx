@@ -4,18 +4,20 @@
  * Full: the 3D "stand on the Moon" view (moonview/MoonView3D, loaded lazily): terrain, Sun and Earth
  * at their az/el from `sky`, their dotted sky paths over the lunar day (from useDayReport), labels.
  * Compact (Compare cards), or no WebGL / a 3D failure: the 2D horizon strip (SitePanoramaStrip).
- * All numbers come from the shared data hooks. Terrain (Aser): the real LOLA skyline when the site has one
- * (horizonTerrain), otherwise the placeholder; both with procedural realism (withRealism).
+ * All numbers come from the shared data hooks. Terrain: the site's real NASA grid
+ * (src/data/terrain, Hagras) when exported, otherwise the placeholder; the far skyline is a ring
+ * built from the site's horizon profile so the view always agrees with the cards.
  */
-import { Component, lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
-import { nextTransition, useDayReport } from '@/shared/data';
+import { Component, lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { loadRealTerrain } from '@/data/terrain';
+import { nextTransition, useDayReport, useHorizon } from '@/shared/data';
 import { formatDuration, hoursBetween } from '@/shared/format';
 import { useTime } from '@/shared/store/time';
 import { LUNAR, type SkyState } from '@/shared/types';
 import type { SitePanoramaProps } from './contracts';
 import { SitePanoramaStrip } from './SitePanoramaStrip';
 import { interpolateSky } from './moonview/skyMath';
-import { horizonTerrain, placeholderTerrain, seedFrom, withRealism } from './moonview/terrain';
+import { placeholderTerrain, seedFrom, type TerrainSource } from './moonview/terrain';
 
 const MoonView3D = lazy(() => import('./moonview/MoonView3D'));
 
@@ -57,15 +59,20 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
   const rangeStart = useTime((s) => s.rangeStart);
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
   const { data: report } = useDayReport(compact || !webgl ? undefined : site, rangeStart, LUNAR.synodicDays);
-  // Real skyline when this site has a LOLA horizon (live data, 15 polar sites); else the placeholder.
-  // Realism detail on top; on the real skyline it only carves beyond the flat area, so it stays exact.
-  const realHorizon = props.horizon?.terrain === 'lola' ? props.horizon : undefined;
-  const terrain = useMemo(() => {
-    const seed = seedFrom(site.id);
-    if (!realHorizon) return withRealism(placeholderTerrain(seed), seed);
-    const ring = horizonTerrain(realHorizon);
-    return withRealism(ring, seed, ring.rockRadius);
-  }, [realHorizon, site.id]);
+  // Real NASA terrain (LOLA / SLDEM2015) when the site has an exported grid; placeholder until then.
+  const placeholder = useMemo(() => placeholderTerrain(seedFrom(site.id)), [site.id]);
+  const [real, setReal] = useState<{ id: string; terrain: TerrainSource } | null>(null);
+  useEffect(() => {
+    if (compact || !webgl) return;
+    let alive = true;
+    loadRealTerrain(site.id, site.lat, site.lon).then((t) => alive && setReal(t ? { id: site.id, terrain: t } : null));
+    return () => {
+      alive = false;
+    };
+  }, [site.id, site.lat, site.lon, compact, webgl]);
+  const terrain = real?.id === site.id ? real.terrain : placeholder;
+  // The far skyline (beyond the 6 km patch) comes from the site's horizon profile.
+  const { data: horizon } = useHorizon(compact || !webgl ? undefined : site);
   // The sky at exactly `time`, blended from the samples: no lag while scrubbing or in a timelapse.
   const live = useMemo(() => interpolateSky(report?.samples, time) ?? sky, [report, time, sky]);
 
@@ -79,6 +86,7 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
           site={{ lat: site.lat, lon: site.lon, name: site.kind === 'custom' ? 'your pin' : site.name }}
           samples={report?.samples}
           terrain={terrain}
+          horizon={!terrain.placeholder && horizon?.source !== 'demo' ? horizon : undefined}
           mode={mode}
           dense={dense}
           sunLabel={{ next: live ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}

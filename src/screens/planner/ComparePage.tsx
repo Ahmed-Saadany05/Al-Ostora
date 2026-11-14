@@ -215,36 +215,20 @@ export function ComparePage() {
   }));
   const dates = compareBy === 'dates';
 
+  // Goda's review #2: the must-pass gates ("Sun AND Earth at landing") need a landing moment, and
+  // Compare has no launch date yet. gatesAt 'best-window' (Goda's engine, decided for Step 3) judges
+  // them just inside each candidate's own best window: "how good is this site if you land at its best
+  // moment?". With no best window there is no moment with both, so the engine scores 0 ("No landing
+  // window") and the card says why. Not in the shared Params type yet; the data layer passes it through.
+  const scoreParams = useMemo(() => ({ ...params, gatesAt: 'best-window' as const }), [params]);
+
   // Fixed number of hook calls (one per slot, up to 5) — rules of hooks.
-  const q0 = useMetrics(candidates[0]?.site, candidates[0]?.from ?? from, candidates[0]?.to ?? from, params);
-  const m0 = q0.data;
-  const q1 = useMetrics(candidates[1]?.site, candidates[1]?.from ?? from, candidates[1]?.to ?? from, params);
-  const m1 = q1.data;
-  const q2 = useMetrics(candidates[2]?.site, candidates[2]?.from ?? from, candidates[2]?.to ?? from, params);
-  const m2 = q2.data;
-  const q3 = useMetrics(candidates[3]?.site, candidates[3]?.from ?? from, candidates[3]?.to ?? from, params);
-  const m3 = q3.data;
-  const q4 = useMetrics(candidates[4]?.site, candidates[4]?.from ?? from, candidates[4]?.to ?? from, params);
-  const m4 = q4.data;
-  // Goda's review #2: the live engine judges "Sun AND Earth at landing" at a landing moment. Without
-  // one it uses the range start, so a good site could score 0 by bad luck at that instant. So each
-  // candidate is scored a second time with landingTime inside ITS best window (Hagras's Params field):
-  // the fair question is "how good is this site if you land at its best moment?". A site with no
-  // best window has no moment with both the Sun and Earth, so its 0 stands (and the card says why).
-  const landAt = (m?: SiteMetrics) =>
-    m?.bestWindow ? new Date(Date.parse(m.bestWindow.start) + Math.min(3_600_000, (m.bestWindow.durationH * 3_600_000) / 2)).toISOString() : undefined;
-  const at0 = landAt(m0);
-  const at1 = landAt(m1);
-  const at2 = landAt(m2);
-  const at3 = landAt(m3);
-  const at4 = landAt(m4);
-  const s0 = useMetrics(at0 ? candidates[0]?.site : undefined, candidates[0]?.from ?? from, candidates[0]?.to ?? from, { ...params, landingTime: at0 });
-  const s1 = useMetrics(at1 ? candidates[1]?.site : undefined, candidates[1]?.from ?? from, candidates[1]?.to ?? from, { ...params, landingTime: at1 });
-  const s2 = useMetrics(at2 ? candidates[2]?.site : undefined, candidates[2]?.from ?? from, candidates[2]?.to ?? from, { ...params, landingTime: at2 });
-  const s3 = useMetrics(at3 ? candidates[3]?.site : undefined, candidates[3]?.from ?? from, candidates[3]?.to ?? from, { ...params, landingTime: at3 });
-  const s4 = useMetrics(at4 ? candidates[4]?.site : undefined, candidates[4]?.from ?? from, candidates[4]?.to ?? from, { ...params, landingTime: at4 });
-  // Use the landing-time result once it's in; until then (or with no best window) the first one.
-  const metrics = [s0.data ?? m0, s1.data ?? m1, s2.data ?? m2, s3.data ?? m3, s4.data ?? m4];
+  const q0 = useMetrics(candidates[0]?.site, candidates[0]?.from ?? from, candidates[0]?.to ?? from, scoreParams);
+  const q1 = useMetrics(candidates[1]?.site, candidates[1]?.from ?? from, candidates[1]?.to ?? from, scoreParams);
+  const q2 = useMetrics(candidates[2]?.site, candidates[2]?.from ?? from, candidates[2]?.to ?? from, scoreParams);
+  const q3 = useMetrics(candidates[3]?.site, candidates[3]?.from ?? from, candidates[3]?.to ?? from, scoreParams);
+  const q4 = useMetrics(candidates[4]?.site, candidates[4]?.from ?? from, candidates[4]?.to ?? from, scoreParams);
+  const metrics = [q0.data, q1.data, q2.data, q3.data, q4.data];
 
   const rows = candidates.map((c, i) => ({ c, m: metrics[i] }));
   const scored = rows.filter((r) => r.m);
@@ -338,7 +322,7 @@ export function ComparePage() {
           }
         />
 
-        <DataError errors={[q0.error, q1.error, q2.error, q3.error, q4.error, s0.error, s1.error, s2.error, s3.error, s4.error]} />
+        <DataError errors={[q0.error, q1.error, q2.error, q3.error, q4.error]} />
 
         {/* Best match summary: one line (the winner's column also glows and carries ★). */}
         {best && scored.length > 1 && (

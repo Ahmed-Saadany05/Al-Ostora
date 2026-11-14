@@ -19,9 +19,10 @@ import { formatDeg } from '@/shared/format';
 import { DEFAULT_SUN, MoonTrekGlobe } from '../globe/MoonTrekGlobe';
 import { enuAxes, MOON_RADIUS_M, type Vec3 } from '../lib/moonFrame';
 import { color } from '@/shared/theme/tokens';
-import type { SkyState } from '@/shared/types';
+import type { HorizonProfile, SkyState } from '@/shared/types';
 import { azElToLocal, skyPathSegments, type Vec3Tuple } from './skyMath';
 import { type TerrainSource } from './terrain';
+import { detailSeed, NEAR_HALF, NEAR_HOLE, rockField, surfaceDetail, type SurfaceDetail } from './nearDetail';
 import v from './moonview.module.css';
 
 /** Sky objects are built on this sphere (metres) inside a dome scaled by SKY_SCALE (≈ 3,200 km). */
@@ -49,6 +50,8 @@ export interface MoonView3DProps {
   /** Time-ordered sky samples over the lunar day (DayReport.samples) for the dotted paths. */
   samples?: SkyState[];
   terrain: TerrainSource;
+  /** Real horizon profile: draws the distant skyline beyond the terrain patch (stand mode). */
+  horizon?: HorizonProfile;
   mode: 'stand' | 'above';
   sunLabel?: BodyLabel;
   earthLabel?: BodyLabel;
@@ -104,68 +107,291 @@ function placeholderEarthTexture() {
   return t;
 }
 
+/**
+ * COSMETIC surface detail (Hagras): small craters, pebbles and grain as a BUMP texture, tiled every
+ * DETAIL_TILE_M metres. It only changes shading — never heights, the skyline, or any number — so the
+ * 10–20 m NASA terrain reads like real regolith up close. Seeded, so it looks the same every time.
+ */
+const DETAIL_TILE_M = 160;
+function regolithDetail() {
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,128)';
+  g.fillRect(0, 0, size, size);
+  let s = 90210;
+  const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  // Fine grain.
+  const img = g.getImageData(0, 0, size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (rnd() - 0.5) * 34;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+  }
+  g.putImageData(img, 0, 0);
+  // Craters (dark bowl + bright raised rim), many small, few large; drawn wrapped so tiles join.
+  const crater = (x: number, y: number, r: number) => {
+    for (const dx of [-size, 0, size])
+      for (const dy of [-size, 0, size]) {
+        const cx = x + dx;
+        const cy = y + dy;
+        if (cx + r * 1.4 < 0 || cy + r * 1.4 < 0 || cx - r * 1.4 > size || cy - r * 1.4 > size) continue;
+        const bowl = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+        bowl.addColorStop(0, 'rgba(40,40,40,0.55)');
+        bowl.addColorStop(0.85, 'rgba(90,90,90,0.25)');
+        bowl.addColorStop(1, 'rgba(128,128,128,0)');
+        g.fillStyle = bowl;
+        g.beginPath();
+        g.arc(cx, cy, r, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(205,205,205,0.45)';
+        g.lineWidth = Math.max(1, r * 0.18);
+        g.beginPath();
+        g.arc(cx, cy, r * 1.02, 0, Math.PI * 2);
+        g.stroke();
+      }
+  };
+  for (let i = 0; i < 260; i++) crater(rnd() * size, rnd() * size, 1.5 + rnd() ** 3 * 9);
+  for (let i = 0; i < 26; i++) crater(rnd() * size, rnd() * size, 10 + rnd() ** 2 * 34);
+  // Pebbles: tiny bright specks.
+  g.fillStyle = 'rgba(220,220,220,0.6)';
+  for (let i = 0; i < 900; i++) g.fillRect(rnd() * size, rnd() * size, 1 + rnd() * 1.5, 1 + rnd() * 1.5);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+
 // ---------------------------------------------------------------- scene parts
 
+const SEGMENTS = 512;
+
 /**
- * Ground mesh. Pink: a round patch whose outer rim fades out, so from above it melts into the real
- * Moon Trek globe below. Realism pass (Aser): a POLAR grid — rings packed tightly near the observer,
- * spreading out with distance — so small craters and rocks show close by while far ridges stay cheap;
- * vertex colours carry the regolith brightness (terrain.albedoAt) plus Pink's fade in alpha.
+ * TERRAIN SHADOWS (Hagras): instead of a shadow map (unreliable over a 12 km patch with a 1–5° Sun:
+ * straight cut-offs, camera-dependent), every fragment walks across the real height field toward
+ * the Sun. The highest terrain angle found, compared with the Sun's elevation and its 0.53° disc,
+ * gives the fraction of the disc visible from that spot — the same rule the horizon files and the
+ * cards use. Only the Sun's light is attenuated (matched by direction); earthshine and bounce are not.
+ * Shadows from terrain BEYOND the patch are handled by the light's global visibleFraction.
  */
-function Terrain({ terrain }: { terrain: TerrainSource }) {
-  const geometry = useMemo(() => {
-    const RINGS = 190;
-    const SEGS = 512;
-    const r0 = 1.5;
-    const R = terrain.radius;
-    const shade = (x: number, z: number) => terrain.albedoAt?.(x, z) ?? 0.55;
-    const pos: number[] = [0, terrain.heightAt(0, 0), 0];
-    const a0 = shade(0, 0);
-    const col: number[] = [a0, a0 * 0.985, a0 * 0.96, 1];
-    for (let k = 0; k < RINGS; k++) {
-      const r = r0 * Math.pow(R / r0, k / (RINGS - 1));
-      const fade = 1 - THREE.MathUtils.smoothstep(r / R, 0.82, 0.99);
-      for (let s = 0; s < SEGS; s++) {
-        const a = (s / SEGS) * Math.PI * 2;
-        const x = Math.sin(a) * r;
-        const z = -Math.cos(a) * r;
-        pos.push(x, terrain.heightAt(x, z), z);
-        const al = shade(x, z);
-        col.push(al, al * 0.985, al * 0.96, fade); // slightly warm grey, like regolith
-      }
+const SHADOW_GLSL = /* glsl */ `
+uniform sampler2D uHeight;
+uniform float uRadius;
+uniform float uTexN;
+uniform vec3 uSunWorld;
+uniform vec3 uSunView;
+varying vec3 vTerrainPos;
+float terrainHeight(vec2 xz) {
+  vec2 uv = (xz + uRadius) / (2.0 * uRadius);
+  uv = (uv * (uTexN - 1.0) + 0.5) / uTexN;
+  return texture2D(uHeight, uv).r;
+}
+float sunShadow(vec3 lightDirView) {
+  if (dot(lightDirView, uSunView) < 0.9999) return 1.0; // not the Sun
+  vec3 s = normalize(uSunWorld);
+  float horiz = length(s.xz);
+  if (horiz < 1e-4) return 1.0;
+  vec2 dir = s.xz / horiz;
+  float el = atan(s.y, horiz);
+  float worst = -1.0; // highest (terrain angle − Sun elevation), radians
+  float t = 20.0;
+  for (int i = 0; i < 110; i++) {
+    vec2 p = vTerrainPos.xz + dir * t;
+    if (abs(p.x) > uRadius || abs(p.y) > uRadius) break;
+    // Tested from 2 m above the ground (a lander's panels), like the horizon files and the cards:
+    // big terrain shadows are unchanged, and the view never contradicts "sunlit" on the cards.
+    float a = atan(terrainHeight(p) - vTerrainPos.y - 2.0, t);
+    worst = max(worst, a - el);
+    t = t * 1.045 + 6.0;
+  }
+  // Sun disc radius 0.265° = 0.004625 rad: visible fraction of the disc (linearised).
+  return clamp(0.5 - 0.5 * worst / 0.004625, 0.0, 1.0);
+}
+`;
+
+type ShadowUniforms = Record<'uHeight' | 'uRadius' | 'uTexN' | 'uSunWorld' | 'uSunView', THREE.IUniform>;
+
+/**
+ * A regolith material with Hagras's ray-marched terrain shadows (factored out by Aser so the near
+ * detail patch and the rocks share them). `hole`: hide this surface inside |x|,|z| < hole (the coarse
+ * mesh under the detailed patch). `instanced`: for InstancedMesh (rocks).
+ */
+function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms: ShadowUniforms, opts: { key: string; hole?: number; instanced?: boolean }) {
+  const m = new THREE.MeshStandardMaterial(params);
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms, { uHole: { value: opts.hole ?? 0 } });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainPos;')
+      .replace(
+        '#include <project_vertex>',
+        `#include <project_vertex>\nvTerrainPos = (modelMatrix * ${opts.instanced ? 'instanceMatrix * ' : ''}vec4(transformed, 1.0)).xyz;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\nuniform float uHole;\n${SHADOW_GLSL}`)
+      .replace(
+        '#include <clipping_planes_fragment>',
+        '#include <clipping_planes_fragment>\n\tif (uHole > 0.0 && max(abs(vTerrainPos.x), abs(vTerrainPos.z)) < uHole) discard;',
+      )
+      .replace(
+        '#include <lights_fragment_begin>',
+        THREE.ShaderChunk.lights_fragment_begin.replace(
+          /RE_Direct\( directLight, geometryPosition/g,
+          'directLight.color *= sunShadow( directLight.direction );\n\t\tRE_Direct( directLight, geometryPosition',
+        ),
+      );
+  };
+  m.customProgramCacheKey = () => `terrain-raymarch-shadow-v2-${opts.key}`;
+  return m;
+}
+
+function Terrain({ terrain, sky, seed }: { terrain: TerrainSource; sky?: SkyState; seed: number }) {
+  // Aser: detail finer than the NASA grid, only near the observer (nearDetail.ts).
+  const surface = useMemo(() => surfaceDetail(seed, !terrain.placeholder), [seed, terrain.placeholder]);
+  const { geometry, heightTex } = useMemo(() => {
+    const size = terrain.radius * 2;
+    // 512 cells: ~23 m apart over the 12 km real-terrain patch (data is 20 m).
+    const g = new THREE.PlaneGeometry(size, size, SEGMENTS, SEGMENTS);
+    g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position;
+    // Round patch whose outer rim fades out, so from above it melts into the globe below.
+    const rgba = new Float32Array(p.count * 4);
+    // Same heights as the mesh, for the shadow ray-march (row 0 = north edge, like the mesh).
+    const halves = new Uint16Array(p.count);
+    for (let i = 0; i < p.count; i++) {
+      const h = terrain.heightAt(p.getX(i), p.getZ(i));
+      p.setY(i, h);
+      halves[i] = THREE.DataUtils.toHalfFloat(h);
+      const d = Math.hypot(p.getX(i), p.getZ(i)) / terrain.radius;
+      const a = surface.albedoAt(p.getX(i), p.getZ(i), false);
+      rgba.set([a, a, a, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
     }
-    const idx: number[] = [];
-    for (let s = 0; s < SEGS; s++) idx.push(0, 1 + ((s + 1) % SEGS), 1 + s);
-    for (let k = 0; k < RINGS - 1; k++)
-      for (let s = 0; s < SEGS; s++) {
-        const i0 = 1 + k * SEGS + s;
-        const i1 = 1 + k * SEGS + ((s + 1) % SEGS);
-        idx.push(i0, i1, i0 + SEGS, i1, i1 + SEGS, i0 + SEGS);
-      }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
-    g.setIndex(idx);
+    g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
+    g.computeVertexNormals();
+    const tex = new THREE.DataTexture(halves, SEGMENTS + 1, SEGMENTS + 1, THREE.RedFormat, THREE.HalfFloatType);
+    tex.magFilter = tex.minFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
+    return { geometry: g, heightTex: tex };
+  }, [terrain, surface]);
+
+  // Aser: the detailed patch around the observer, a point every 1 m. Real ground + small craters,
+  // bumps and brightness patches; near its edge it blends into the coarse mesh's own (interpolated)
+  // heights so there is no step where they meet.
+  const near = useMemo(() => {
+    const cell = (terrain.radius * 2) / SEGMENTS;
+    const coarseAt = (x: number, z: number) => {
+      const fx = (x + terrain.radius) / cell;
+      const fz = (z + terrain.radius) / cell;
+      const ix = Math.floor(fx);
+      const iz = Math.floor(fz);
+      const tx = fx - ix;
+      const tz = fz - iz;
+      const at = (i: number, j: number) => terrain.heightAt(i * cell - terrain.radius, j * cell - terrain.radius);
+      const top = at(ix, iz) * (1 - tx) + at(ix + 1, iz) * tx;
+      const bot = at(ix, iz + 1) * (1 - tx) + at(ix + 1, iz + 1) * tx;
+      return top * (1 - tz) + bot * tz;
+    };
+    const n = NEAR_HALF * 2;
+    const g = new THREE.PlaneGeometry(n, n, n, n);
+    g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position;
+    const rgba = new Float32Array(p.count * 4);
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i);
+      const z = p.getZ(i);
+      const edge = THREE.MathUtils.smoothstep(Math.max(Math.abs(x), Math.abs(z)), NEAR_HOLE - 35, NEAR_HOLE);
+      const fine = terrain.heightAt(x, z) + surface.heightAt(x, z);
+      p.setY(i, edge > 0 ? fine * (1 - edge) + coarseAt(x, z) * edge : fine);
+      const a = surface.albedoAt(x, z, true);
+      rgba.set([a, a, a, 1], i * 4);
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
     g.computeVertexNormals();
     return g;
+  }, [terrain, surface]);
+  useEffect(() => () => near.dispose(), [near]);
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      heightTex.dispose();
+    },
+    [geometry, heightTex],
+  );
+
+  const detail = useMemo(() => {
+    const t = regolithDetail();
+    const reps = (terrain.radius * 2) / DETAIL_TILE_M;
+    t.repeat.set(reps, reps);
+    return t;
   }, [terrain]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => detail.dispose(), [detail]);
+
+  const uniforms = useMemo(
+    () => ({
+      uHeight: { value: heightTex },
+      uRadius: { value: terrain.radius },
+      uTexN: { value: SEGMENTS + 1 },
+      uSunWorld: { value: new THREE.Vector3(1, 0.05, 0) },
+      uSunView: { value: new THREE.Vector3(1, 0, 0) },
+    }),
+    [heightTex, terrain.radius],
+  );
+
+  // The same bump texture on the patch, offset so its tiles line up with the coarse mesh's.
+  const nearDetailTex = useMemo(() => {
+    const t = detail.clone();
+    t.repeat.set((NEAR_HALF * 2) / DETAIL_TILE_M, (NEAR_HALF * 2) / DETAIL_TILE_M);
+    const off = ((terrain.radius - NEAR_HALF) / DETAIL_TILE_M) % 1;
+    t.offset.set(off, off);
+    t.needsUpdate = true;
+    return t;
+  }, [detail, terrain.radius]);
+  useEffect(() => () => nearDetailTex.dispose(), [nearDetailTex]);
+
+  const { material, nearMaterial } = useMemo(() => {
+    // Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only.
+    const base = { color: new THREE.Color(0.55, 0.54, 0.52), roughness: 1, metalness: 0, vertexColors: true, bumpScale: 2.2 };
+    return {
+      // The coarse mesh, hidden under the detailed patch.
+      material: shadowedMaterial({ ...base, transparent: true, bumpMap: detail }, uniforms, { key: 'coarse', hole: NEAR_HOLE }),
+      // Drawn in front where the two overlap (the last metres of the patch), so no flicker.
+      nearMaterial: shadowedMaterial({ ...base, bumpMap: nearDetailTex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, uniforms, { key: 'near' }),
+    };
+  }, [detail, nearDetailTex, uniforms]);
+  useEffect(
+    () => () => {
+      material.dispose();
+      nearMaterial.dispose();
+    },
+    [material, nearMaterial],
+  );
+
+  // Keep the Sun direction current (world for the march, view for matching the light).
+  const sunWorld = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const d = sky ? azElToLocal(sky.sun.azDeg, sky.sun.elDeg) : ([1, 0.05, 0] as Vec3Tuple);
+    sunWorld.set(d[0], d[1], d[2]).normalize();
+    uniforms.uSunWorld.value.copy(sunWorld);
+    uniforms.uSunView.value.copy(sunWorld).transformDirection(camera.matrixWorldInverse);
+  });
+
   return (
-    <mesh geometry={geometry} receiveShadow castShadow>
-      {/* Regolith: fully rough, no gloss (airless); brightness per vertex; rim fades into the globe. */}
-      <meshStandardMaterial roughness={1} metalness={0} vertexColors transparent />
-    </mesh>
+    <>
+      <mesh geometry={geometry} material={material} />
+      <mesh geometry={near} material={nearMaterial} />
+      <Rocks terrain={terrain} surface={surface} seed={seed} uniforms={uniforms} />
+    </>
   );
 }
 
 /**
- * Rocks and boulders near the observer (realism pass, Aser). Procedural (no models): squashed,
- * jittered icosahedra, many small and few large. Kept under ~1.1 m tall — below the 1.8 m eye — and
- * only inside terrain.rockRadius, so they can never hide the Sun or Earth or change a real skyline.
+ * Rocks and boulders near the observer (Aser). Procedural (no models): squashed, jittered
+ * icosahedra, many small and few large, all under 1.1 m (below the 1.8 m eye), so they can never hide
+ * the Sun or Earth. They sit on the detailed ground and get the same terrain shadows.
  */
-function Rocks({ terrain, seed = 7 }: { terrain: TerrainSource; seed?: number }) {
-  const { geometry, matrices, count } = useMemo(() => {
-    let s = seed * 9301 + 49297;
+function Rocks({ terrain, surface, seed, uniforms }: { terrain: TerrainSource; surface: SurfaceDetail; seed: number; uniforms: ShadowUniforms }) {
+  const rocks = useMemo(() => rockField(seed), [seed]);
+  const geometry = useMemo(() => {
+    let s = seed * 31 + 7;
     const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
     const geo = new THREE.IcosahedronGeometry(1, 1);
     const p = geo.attributes.position;
@@ -174,36 +400,75 @@ function Rocks({ terrain, seed = 7 }: { terrain: TerrainSource; seed?: number })
       p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.7, p.getZ(i) * f);
     }
     geo.computeVertexNormals();
-    const maxR = Math.min(terrain.rockRadius ?? 600, 600);
-    const n = 1100;
+    return geo;
+  }, [seed]);
+  const material = useMemo(
+    () => shadowedMaterial({ color: new THREE.Color(0.47, 0.46, 0.44), roughness: 1, metalness: 0, flatShading: true }, uniforms, { key: 'rocks', instanced: true }),
+    [uniforms],
+  );
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();
-    const out: THREE.Matrix4[] = [];
-    for (let i = 0; i < n; i++) {
-      const d = 6 + Math.pow(rnd(), 1.6) * (maxR - 6); // more rocks close by
-      const a = rnd() * Math.PI * 2;
-      const x = Math.sin(a) * d;
-      const z = -Math.cos(a) * d;
-      const size = Math.min(1.1, 0.06 * Math.pow(1 - rnd() * 0.999, -1 / 1.8)); // power law
-      e.set(rnd() * 0.6, rnd() * Math.PI * 2, rnd() * 0.6);
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    rocks.forEach((r, i) => {
+      e.set(r.rot[0], r.rot[1], r.rot[2]);
       q.setFromEuler(e);
-      m.compose(new THREE.Vector3(x, terrain.heightAt(x, z) + size * 0.25, z), q, new THREE.Vector3(size, size * (0.6 + rnd() * 0.5), size * (0.8 + rnd() * 0.4)));
-      out.push(m.clone());
+      pos.set(r.x, terrain.heightAt(r.x, r.z) + surface.heightAt(r.x, r.z) + r.size * 0.25, r.z);
+      scl.set(r.size, r.size * r.squash[0], r.size * r.squash[1]);
+      mesh.setMatrixAt(i, m.compose(pos, q, scl));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [rocks, terrain, surface]);
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      material.dispose();
+    },
+    [geometry, material],
+  );
+  return <instancedMesh ref={ref} args={[geometry, material, rocks.length]} />;
+}
+
+/**
+ * Distant skyline beyond the terrain patch (Hagras): a ring just outside the patch whose top edge
+ * sits at the horizon profile's elevation for every azimuth (720 values, real LOLA / SLDEM terrain
+ * out to 310 km). The visible skyline is then the higher of the near mesh and this ring, exactly
+ * the horizon the cards use, so the view never shows the Sun while a card says "hidden".
+ */
+function HorizonRing({ horizon, terrain }: { horizon: HorizonProfile; terrain: TerrainSource }) {
+  const geometry = useMemo(() => {
+    const eye = terrain.heightAt(0, 0) + EYE_HEIGHT;
+    const d = terrain.radius * 1.04;
+    const n = horizon.elevationsDeg.length;
+    const pos = new Float32Array((n + 1) * 2 * 3);
+    for (let i = 0; i <= n; i++) {
+      const az = (i % n) * horizon.azStepDeg;
+      const [x, , z] = azElToLocal(az, 0, d);
+      const top = eye + d * Math.tan((horizon.elevationsDeg[i % n] * Math.PI) / 180);
+      const bottom = Math.min(top, eye) - 600; // well below the ground and the globe at that distance
+      pos.set([x, bottom, z, x, top, z], i * 6);
     }
-    return { geometry: geo, matrices: out, count: n };
-  }, [terrain, seed]);
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    matrices.forEach((mm, i) => ref.current!.setMatrixAt(i, mm));
-    ref.current.instanceMatrix.needsUpdate = true;
-  }, [matrices]);
+    const idx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * 2;
+      idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }, [horizon, terrain]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <instancedMesh ref={ref} args={[geometry, undefined, count]} castShadow receiveShadow>
-      <meshStandardMaterial color={new THREE.Color(0.47, 0.46, 0.44)} roughness={1} metalness={0} flatShading />
-    </instancedMesh>
+    <mesh geometry={geometry}>
+      <meshStandardMaterial color={new THREE.Color(0.4, 0.39, 0.38)} roughness={1} metalness={0} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -243,7 +508,9 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
     };
   }, [scene, target]);
   const dir = sky ? azElToLocal(sky.sun.azDeg, sky.sun.elDeg, radius * 1.5) : ([1, 0.05, 0] as Vec3Tuple);
-  const up = sky ? sky.sun.elDeg > -0.3 : false;
+  // Lit only as much as the Sun's disc clears the REAL skyline (same rule as the cards).
+  const lit = sky ? (sky.sun.visibleFraction ?? (sky.sunVisible ? 1 : 0)) : 0;
+  const up = lit > 0;
   const earth = sky ? azElToLocal(sky.earth.azDeg, sky.earth.elDeg) : ([0, 0.1, -1] as Vec3Tuple);
   return (
     <>
@@ -251,23 +518,25 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         ref={sun}
         position={dir}
         target={target}
-        intensity={up ? 3.2 : 0}
-        castShadow
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
+        // Exposure: bright for the pole's grazing light, toned down as the Sun climbs (no blow-out).
+        intensity={up ? (3.2 * lit) / (1 + 3 * Math.sin((Math.max(0, sky?.sun.elDeg ?? 0) * Math.PI) / 180)) : 0}
+        castShadow={false}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
         shadow-camera-left={-radius}
         shadow-camera-right={radius}
         shadow-camera-top={radius}
         shadow-camera-bottom={-radius}
         shadow-camera-near={1}
         shadow-camera-far={radius * 4}
-        shadow-bias={-0.0003}
-        shadow-normalBias={0.6}
+        shadow-bias={-0.0004}
       />
       {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black. */}
       <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 : 0.05} color={color.earth} />
-      {/* Almost no fill: no air to scatter light, so shade is close to black (realism pass). */}
-      <ambientLight intensity={0.025} />
+      {/* Bounce light: sunlit regolith lights the shadows a little (no air, so still very dark).
+          Comes from the side opposite the Sun, low; scales with how much Sun there is. */}
+      <directionalLight position={[-dir[0], radius * 0.4, -dir[2]]} intensity={0.22 * lit} color={new THREE.Color(0.85, 0.82, 0.78)} />
+      <ambientLight intensity={0.07 + 0.06 * lit} />
     </>
   );
 }
@@ -342,7 +611,7 @@ function localToMoon(d: Vec3Tuple, lat: number, lon: number): Vec3 {
 
 /** The real Moon (Moon Trek imagery, true radius) laid under the site: site at the origin, its
  *  local up = +Y, east = +X, north = −Z. MoonTrekGlobe is 1 unit = 1 radius, so scale it back to metres. */
-function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: SkyState }) {
+function GlobeUnderSite({ lat, lon, sky, topY = 0 }: { lat: number; lon: number; sky?: SkyState; topY?: number }) {
   const quaternion = useMemo(() => {
     const { east, north, up } = enuAxes(lat, lon);
     // Moon-fixed → local rows (east, up, −north), after undoing the globe's own Z-up → Y-up turn.
@@ -352,7 +621,9 @@ function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: Sky
   }, [lat, lon]);
   const sun = useMemo(() => (sky ? localToMoon(azElToLocal(sky.sun.azDeg, sky.sun.elDeg), lat, lon) : DEFAULT_SUN), [sky, lat, lon]);
   return (
-    <group position={[0, -MOON_RADIUS_M, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
+    // Its top sits at `topY`: just below the lowest real ground, so the smooth sphere never covers the
+    // terrain (sites on summits and rims have ground far below them).
+    <group position={[0, -MOON_RADIUS_M + topY, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
       <MoonTrekGlobe sun={sun} />
     </group>
   );
@@ -427,7 +698,7 @@ function LabelProjector({ anchors, els }: { anchors: Anchor[]; els: MutableRefOb
 
 // ---------------------------------------------------------------- component
 
-export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
+export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
   // Open looking toward the Sun (or Earth if the Sun is down), slightly above the horizon.
   const initialYaw = sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
   const look = useRef<Look>({ yaw: initialYaw, pitch: (4 * Math.PI) / 180 });
@@ -465,6 +736,18 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
     else els.current.delete(id);
   };
   const siteY = useMemo(() => terrain.heightAt(0, 0), [terrain]);
+  // Lowest ground in the patch (coarse scan), so the globe can sit just below it.
+  const globeTop = useMemo(() => {
+    let min = Infinity;
+    const R = terrain.radius;
+    for (let i = 0; i <= 96; i++)
+      for (let j = 0; j <= 96; j++) {
+        const x = -R + (2 * R * i) / 96;
+        const z = -R + (2 * R * j) / 96;
+        if (x * x + z * z <= R * R) min = Math.min(min, terrain.heightAt(x, z));
+      }
+    return Math.min(0, min) - 40;
+  }, [terrain]);
   const anchors = useMemo(() => {
     const a: Anchor[] = [];
     if (sky) {
@@ -503,9 +786,9 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
           <SkyPaths samples={samples} />
         </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
-        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} />}
-        <Terrain terrain={terrain} />
-        <Rocks terrain={terrain} />
+        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} topY={globeTop} />}
+        <Terrain terrain={terrain} sky={sky} seed={detailSeed(site?.lat, site?.lon)} />
+        {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />
       </Canvas>
@@ -551,7 +834,8 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
           <span aria-hidden>↔</span> Drag to look around
         </span>
       )}
-      {terrain.placeholder && <span className={v.terrainNote}>{terrain.label}</span>}
+      {/* Always say what the ground is: "Placeholder terrain" or "Real terrain · NASA LOLA 10 m". */}
+      <span className={v.terrainNote}>{terrain.label}</span>
     </div>
   );
 }

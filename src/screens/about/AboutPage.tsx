@@ -22,6 +22,7 @@ const SOURCES = [
 const CREDITS = [
   'Moon imagery: NASA Moon Trek / LRO WAC (NASA/GSFC/Arizona State University)',
   'Terrain: LRO LOLA (NASA/GSFC)',
+  '3-D terrain outside the poles: SLDEM2015, LRO LOLA + SELENE/Kaguya Terrain Camera (NASA/GSFC, JAXA)',
 ];
 
 interface Ref {
@@ -44,6 +45,8 @@ const REFERENCES: { group: string; refs: Ref[] }[] = [
     refs: [
       { text: 'Barker et al. 2023, PSJ 4:183 — NASA PGDA product 90 (LOLA south pole)', url: 'https://pgda.gsfc.nasa.gov/products/90', use: 'Terrain, slope (100 m baseline) and shadowed regions' },
       { text: 'Mazarico et al. 2011, Icarus 211:1066–1081 — NASA PGDA product 69', url: 'https://pgda.gsfc.nasa.gov/products/69', use: 'Long-term sunlight and Earth-visibility reference values' },
+      { text: 'NASA PGDA product 81 — LOLA 5 m south-pole mosaic (Barker et al. 2021)', url: 'https://pgda.gsfc.nasa.gov/products/81', use: 'Terrain within 3 km of the polar sites' },
+      { text: 'Barker et al. 2016 — SLDEM2015 (LOLA + SELENE/Kaguya), NASA PGDA product 54', url: 'https://pgda.gsfc.nasa.gov/products/54', use: '3-D terrain for sites between 60°S and 60°N' },
       { text: 'Barker et al. 2021, Planet. Space Sci. 203:105119', url: 'https://ntrs.nasa.gov/api/citations/20205009660/downloads/Mike%20Barker_%20Paper_%20Improved%20Lola.pdf', use: 'Horizon method (terrain detail near and far)' },
       { text: 'Gläser et al. 2018, Planet. Space Sci. 162:170–178', url: 'https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf', use: 'Sunlight values for validation' },
     ],

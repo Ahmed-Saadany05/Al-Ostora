@@ -25,6 +25,12 @@ export interface EngineParams extends Params {
   transitId?: string;
   /** Landing time given directly (e.g. past missions). Used only when `launchTime` is absent. */
   landingTime?: IsoTime;
+  /**
+   * When neither launchTime nor landingTime is given: 'best-window' judges the gates as if you
+   * land at the start of the range's best window (Sun AND Earth). Decided for Compare (Step 3),
+   * where no launch date exists yet. Default: the range start.
+   */
+  gatesAt?: 'best-window';
 }
 
 export type EclipseState = 'none' | 'partial' | 'total';
@@ -59,7 +65,7 @@ export interface EngineMetrics extends SiteMetrics {
     earthAtLanding: boolean;
     landingTime: IsoTime;
     /** How landingTime was found. 'range-start' = no launch/landing given; the UI should say so. */
-    basis: 'launch+transit' | 'landing-time' | 'range-start';
+    basis: 'launch+transit' | 'landing-time' | 'best-window' | 'range-start';
   };
   /** Things not modelled, for the UI's fine print. */
   notModelled: string[];

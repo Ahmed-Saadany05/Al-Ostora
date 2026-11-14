@@ -257,36 +257,49 @@ export function LaunchPage() {
   const sun = sky?.sunVisible ?? false;
   const earth = sky?.earthVisible ?? false;
   const farside = site.region === 'farside';
-  const verdict = !sky ? 'Reading the sky…' : sun && earth ? 'Good to land' : sun ? 'Power, but no radio' : earth ? 'Lands in the dark' : 'Dark and out of contact';
+  // Said from the surface: the lander has already touched down.
+  const verdict = !sky
+    ? 'Reading the sky…'
+    : sun && earth
+      ? 'Landed successfully'
+      : sun
+        ? 'Landed, but no signal home'
+        : earth
+          ? 'Landed, but too dark outside'
+          : 'Landed in the dark, no signal home';
   const story = sky && afterReport ? missionStory(landing, afterReport.sunWindows, afterReport.earthWindows, sun, earth) : undefined;
   const sliver = sun && sky ? sky.sun.visibleFraction < 0.1 : false;
 
-  // Messages from the lander. It can only transmit while Earth is in sight.
+  // Messages from the lander, written from the surface (it has already landed). It can only
+  // transmit while Earth is in sight; otherwise a message waits on board. Every fact (Sun, Earth,
+  // durations) comes from the same sky / missionStory() data as the rest of the page.
   const L = Date.parse(landing);
   const feed: FeedItem[] = [];
-  feed.push({ kind: 'msg', at: Date.parse(plan.launchDate), sent: true, text: `Launched. See you in ${plan.transitDays} days, Moon.` });
   if (sky && story) {
+    const dark = story.runFrom(0, 'sun');
+    const quiet = story.runFrom(0, 'earth');
     const arrive = [
-      `Touchdown at ${site.name}.`,
+      `Landed successfully at ${site.name}. All systems OK.`,
       sun
         ? sliver
-          ? `The Sun is only just over the ridge, my panels catch about ${Math.max(1, Math.round(sky.sun.visibleFraction * 100))}% of it.`
-          : 'Sun is up, panels charging.'
-        : "It's dark here, the Sun is behind the ridge. Running on battery.",
-      earth ? 'I can see Earth. Hello, mission control!' : farside ? 'No Earth in this sky: I am on the far side.' : "Earth is below the horizon, I'll call when it rises.",
+          ? `The Sun is only just peeking over the ridge: my panels catch about ${Math.max(1, Math.round(sky.sun.visibleFraction * 100))}% of it.`
+          : 'Sunny outside. Panels open and charging.'
+        : `It's too dark outside: the Sun is behind the ridge. Running on battery${dark.ongoing ? '.' : ` until sunrise in ${human(dark.h)}.`}`,
+      earth
+        ? 'I can see Earth in my sky. Hello, mission control!'
+        : farside
+          ? "I can't see Earth from here: I'm on the far side. Saving this on board."
+          : `Earth is hidden below the horizon. Saving this on board${quiet.ongoing ? '.' : ` and calling home when it rises in ${human(quiet.h)}.`}`,
     ].join(' ');
     feed.push({ kind: 'msg', at: L, sent: earth, text: arrive });
-    if (!earth) {
-      const r = story.runFrom(0, 'earth');
-      feed.push({ kind: 'lost', h: r.h, ongoing: r.ongoing });
-    }
+    if (!earth) feed.push({ kind: 'lost', h: quiet.h, ongoing: quiet.ongoing });
     let stored = earth ? 0 : 1;
     story.rows.forEach((r, i) => {
       if (r.kind === 'touchdown') return;
       if (r.kind === 'earthset') {
         const run = story.runFrom(i, 'earth');
-        const back = run.ongoing ? 'Not back before the end of this lunar day.' : `Talk again in ${human(run.h)}.`;
-        feed.push({ kind: 'msg', at: r.at, sent: true, text: `Earth is sinking behind the hills. ${back}` });
+        const back = run.ongoing ? "It won't be back before this lunar day ends." : `Talk again in ${human(run.h)}.`;
+        feed.push({ kind: 'msg', at: r.at, sent: true, text: `Earth is sinking behind the hills, going quiet. ${back}` });
         feed.push({ kind: 'lost', h: run.h, ongoing: run.ongoing });
       }
       if (r.kind === 'earthrise') {
@@ -295,17 +308,22 @@ export function LaunchPage() {
           kind: 'msg',
           at: r.at,
           sent: true,
-          text: `I can see Earth again.${stored ? ` Sending ${stored} stored message${stored === 1 ? '' : 's'}.` : ''}${!r.sun ? ' Still night here.' : ' All good.'}`,
+          text: `Earth is back in my sky!${stored ? ` Sending ${stored} saved message${stored === 1 ? '' : 's'}.` : ''}${!r.sun ? ' Still dark outside.' : ' Everything is fine here.'}`,
         });
         stored = 0;
       }
       if (r.kind === 'sunset') {
         const run = story.runFrom(i, 'sun');
-        feed.push({ kind: 'msg', at: r.at, sent: r.earth, text: `Sunset. Switching to battery for a night of ${human(run.h)}${run.ongoing ? ' or more' : ''}.` });
+        feed.push({
+          kind: 'msg',
+          at: r.at,
+          sent: r.earth,
+          text: `The Sun just set and it's getting cold and dark outside. Switching to battery for a night of ${human(run.h)}${run.ongoing ? ' or more' : ''}.`,
+        });
         if (!r.earth) stored++;
       }
       if (r.kind === 'sunrise') {
-        feed.push({ kind: 'msg', at: r.at, sent: r.earth, text: 'Morning! The Sun is back and the panels are charging.' });
+        feed.push({ kind: 'msg', at: r.at, sent: r.earth, text: 'Good morning! Sunlight is back on my panels, charging again.' });
         if (!r.earth) stored++;
       }
     });

@@ -37,7 +37,8 @@ Tests: `npm test` (vitest; validation against recorded JPL Horizons output).
   - Must-pass gates: Sun AND Earth at landing. If either fails, match = 0 and the breakdown gives the reason.
   - Landing (decided): the player picks a **launch date**. Pass `launchTime` (+ optional `transitId`, default IM-1) and the gates are judged at launch + transit.
     - `landingTime` can be given directly instead, e.g. for past missions.
-    - With neither, the gates use `from`, and `gates.basis = 'range-start'` so the UI can say so.
+    - `gatesAt: 'best-window'` (decided for Compare, Step 3, which has no launch date yet): the gates are judged just inside the range's best window (Sun AND Earth). A site scores 0 only if no such moment exists ("No landing window").
+    - With none of these, the gates use `from`, and `gates.basis = 'range-start'` so the UI can say so.
 - **Energy**:
   - Wh per m² of panel per day: 1360.8 W/m² × (1 AU/r)² × 30.7 % × visibleFraction × cos(incidence)
   - default panel `vertical-rotating`
