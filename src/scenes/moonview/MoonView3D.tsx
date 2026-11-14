@@ -177,6 +177,286 @@ function regolithDetail() {
   return t;
 }
 
+/**
+ * COSMETIC brightness variation (Pink): soft darker and lighter patches, mottling and a few faint
+ * bright ejecta streaks, as a colour MAP (multiplies the regolith grey; mean ≈ 0.88). Tiled every
+ * ALBEDO_TILE_M (410 m) — not a multiple of the 160 m bump tile — so the two never line up into a grid.
+ * Changes shading only, never heights or numbers. Seeded, seamless.
+ */
+const ALBEDO_TILE_M = 410;
+/** The fine bump layer is full within this square distance (m) of the observer and gone by the second. */
+const NEAR_FINE_IN = 150;
+const NEAR_FINE_OUT = 225;
+function regolithAlbedo() {
+  const N = 1024;
+  let s = 4242;
+  const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  const v = new Float32Array(N * N);
+  // Seamless value noise, a few octaves (broad patches → fine mottling).
+  for (const [cells, amp] of [
+    [4, 0.5],
+    [9, 0.28],
+    [23, 0.14],
+    [61, 0.08],
+    [160, 0.05],
+  ] as const) {
+    const g = Array.from({ length: cells * cells }, rnd);
+    const at = (i: number, j: number) => g[(((j % cells) + cells) % cells) * cells + (((i % cells) + cells) % cells)];
+    for (let y = 0; y < N; y++) {
+      const fy = (y / N) * cells;
+      const j = Math.floor(fy);
+      const ty = fy - j;
+      const sy = ty * ty * (3 - 2 * ty);
+      for (let x = 0; x < N; x++) {
+        const fx = (x / N) * cells;
+        const i = Math.floor(fx);
+        const tx = fx - i;
+        const sx = tx * tx * (3 - 2 * tx);
+        const a = at(i, j) + (at(i + 1, j) - at(i, j)) * sx;
+        const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * sx;
+        v[y * N + x] += (a + (b - a) * sy - 0.5) * amp;
+      }
+    }
+  }
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) {
+    const g = Math.round(226 + v[i] * 150); // ≈ 150…255: clear light/dark patches
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = Math.max(130, Math.min(255, g));
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  // Faint bright ejecta streaks from a few young craters (drawn wrapped so tiles join).
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 4; k++) {
+    const cx = rnd() * N;
+    const cy = rnd() * N;
+    for (let r = 0; r < 14; r++) {
+      const ang = rnd() * Math.PI * 2;
+      const len = 60 + rnd() * 220;
+      for (const dx of [-N, 0, N])
+        for (const dy of [-N, 0, N]) {
+          const grad = ctx.createLinearGradient(cx + dx, cy + dy, cx + dx + Math.cos(ang) * len, cy + dy + Math.sin(ang) * len);
+          grad.addColorStop(0, 'rgba(18,18,18,1)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 2 + rnd() * 5;
+          ctx.beginPath();
+          ctx.moveTo(cx + dx, cy + dy);
+          ctx.lineTo(cx + dx + Math.cos(ang) * len, cy + dy + Math.sin(ang) * len);
+          ctx.stroke();
+        }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+
+/**
+ * Ground right at your feet (Pink): a small seamless tile of grain, pebbles and tiny pits (512 px,
+ * mean grey 128). The patch textures are ~25 cm a pixel, which blurs within a few metres of the
+ * eye; this tile is laid at two small scales in the shader and faded out with distance.
+ */
+function microDetail() {
+  const N = 512;
+  let s = 9091;
+  const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) {
+    const g = 128 + (rnd() - 0.5) * 70;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = g;
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  // Draw a shape at (x, y) and its wrapped copies, so the tile joins seamlessly.
+  const wrapped = (x: number, y: number, r: number, draw: (x: number, y: number) => void) => {
+    for (const dx of [-N, 0, N])
+      for (const dy of [-N, 0, N]) if (x + dx > -r && x + dx < N + r && y + dy > -r && y + dy < N + r) draw(x + dx, y + dy);
+  };
+  // Soft clumps, then pebbles (light top, dark shadow side), then tiny pits.
+  for (let i = 0; i < 260; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 8 + rnd() * 30;
+    const shade = rnd() < 0.5 ? '255,255,255' : '0,0,0';
+    wrapped(x, y, r, (px, py) => {
+      const gr = ctx.createRadialGradient(px, py, 0, px, py, r);
+      gr.addColorStop(0, `rgba(${shade},0.14)`);
+      gr.addColorStop(1, `rgba(${shade},0)`);
+      ctx.fillStyle = gr;
+      ctx.fillRect(px - r, py - r, r * 2, r * 2);
+    });
+  }
+  // An irregular stone outline (not a coin): a jittered polygon.
+  const stone = (px: number, py: number, r: number, jag: number[]) => {
+    ctx.beginPath();
+    jag.forEach((j, k) => {
+      const a = (k / jag.length) * Math.PI * 2;
+      ctx[k ? 'lineTo' : 'moveTo'](px + Math.cos(a) * r * j, py + Math.sin(a) * r * j * 0.8);
+    });
+    ctx.closePath();
+    ctx.fill();
+  };
+  for (let i = 0; i < 1000; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 1.4 + rnd() ** 2.5 * 9;
+    const jag = Array.from({ length: 7 }, () => 0.6 + rnd() * 0.6);
+    const light = 150 + rnd() * 80;
+    wrapped(x, y, r * 2, (px, py) => {
+      ctx.fillStyle = 'rgba(20,20,20,0.45)';
+      stone(px + r * 0.4, py + r * 0.4, r, jag);
+      ctx.fillStyle = `rgba(${light},${light},${light},0.75)`;
+      stone(px, py, r, jag);
+    });
+  }
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const r = 3 + rnd() ** 2 * 14;
+    wrapped(x, y, r * 1.2, (px, py) => {
+      const gr = ctx.createRadialGradient(px, py, 0, px, py, r);
+      gr.addColorStop(0, 'rgba(20,20,20,0.35)');
+      gr.addColorStop(0.8, 'rgba(60,60,60,0.1)');
+      gr.addColorStop(1, 'rgba(60,60,60,0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(px - r, py - r, r * 2, r * 2);
+      ctx.strokeStyle = 'rgba(235,235,235,0.22)';
+      ctx.lineWidth = Math.max(1, r * 0.18);
+      ctx.beginPath();
+      ctx.arc(px, py, r * 1.02, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+/** The micro tile's two sizes on the ground (m) and where each has faded out (m from the eye). */
+const MICRO_GLSL = `
+uniform sampler2D uMicro;
+float microShade() {
+  float d = distance(vTerrainPos, cameraPosition);
+  float a = texture2D(uMicro, vTerrainPos.xz / 2.6).r;
+  float b = texture2D(uMicro, vTerrainPos.xz / 11.0 + 0.37).r;
+  float fa = 1.0 - smoothstep(4.0, 28.0, d);
+  float fb = 1.0 - smoothstep(20.0, 110.0, d);
+  return (1.0 + (a - 0.5) * 1.0 * fa) * (1.0 + (b - 0.5) * 0.7 * fb);
+}
+`;
+
+/**
+ * Fine bump for the detailed patch around the observer (Pink): the same 160 m crater pattern as
+ * the outer ground (drawn at exactly the offset the outer mesh uses, so the two match), plus fine
+ * grain, pebbles and craterlets at ~25 cm per pixel. The fine layer fades out toward the patch
+ * edge (like nearDetail's own fade), so the join with the outer ground stays invisible.
+ */
+function nearBump(
+  macro: HTMLCanvasElement,
+  radius: number,
+  fadeIn: number,
+  fadeOut: number,
+  /** Metres per tile of `macro` on the outer mesh (to align with it). */
+  tileM = DETAIL_TILE_M,
+  /** 'bump': relief detail. 'albedo': the same detail as visible brightness (gentler, never too dark). */
+  mode: 'bump' | 'albedo' = 'bump',
+) {
+  const k2 = mode === 'albedo' ? 0.55 : 1; // detail strength
+  const N = 2048;
+  const span = NEAR_HALF * 2; // metres across the patch
+  const rep = span / tileM; // macro tiles across the patch
+  const off = ((radius - NEAR_HALF) / tileM) % 1; // as the outer mesh's tiling
+  const W = N / rep; // one macro tile in canvas px
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  // Macro pattern: canvas x ↔ u, canvas y ↔ 1 − v (textures are flipped on upload).
+  const pattern = ctx.createPattern(macro, 'repeat')!;
+  const k = W / macro.width;
+  pattern.setTransform(new DOMMatrix([k, 0, 0, k, -off * W, (((rep + off) % 1) * W) % W]));
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, N, N);
+  // Fine layer, faded by distance from the centre (square distance, like the patch's own detail).
+  const img = ctx.getImageData(0, 0, N, N);
+  let s = 777;
+  const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  const fade = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const m = Math.abs(((i + 0.5) / N - 0.5) * span);
+    fade[i] = m <= fadeIn ? 1 : m >= fadeOut ? 0 : 1 - (m - fadeIn) / (fadeOut - fadeIn);
+  }
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const f = Math.min(fade[x], fade[y]);
+      if (f <= 0) continue;
+      const i = (y * N + x) * 4;
+      const d = (rnd() - 0.5) * 44 * f * k2; // grain
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.max(0, Math.min(255, img.data[i] + d));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  // Soft blotches 1.5–10 m across: texture that still reads at 10–100 m, where the grain blurs out.
+  for (let i = 0; i < 3200; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const f = Math.min(fade[Math.floor(x)] ?? 0, fade[Math.floor(y)] ?? 0);
+    if (f <= 0) continue;
+    const r = 6 + rnd() ** 2 * 34;
+    const shade = rnd() < 0.5 ? '255,255,255' : '0,0,0';
+    const blot = ctx.createRadialGradient(x, y, 0, x, y, r);
+    blot.addColorStop(0, `rgba(${shade},${0.16 * f * k2})`);
+    blot.addColorStop(1, `rgba(${shade},0)`);
+    ctx.fillStyle = blot;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Pebbles and craterlets, only where the fine layer is on.
+  const inside = (x: number, y: number) => Math.min(fade[Math.floor(x)] ?? 0, fade[Math.floor(y)] ?? 0);
+  for (let i = 0; i < 16000; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const f = inside(x, y);
+    if (f <= 0) continue;
+    const r = 0.6 + rnd() ** 2 * 2.2;
+    ctx.fillStyle = rnd() < 0.6 ? `rgba(235,235,235,${0.75 * f * k2})` : `rgba(30,30,30,${0.65 * f * k2})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 2600; i++) {
+    const x = rnd() * N;
+    const y = rnd() * N;
+    const f = inside(x, y);
+    if (f <= 0) continue;
+    const r = 2 + rnd() ** 3 * 16;
+    const bowl = ctx.createRadialGradient(x, y, 0, x, y, r);
+    bowl.addColorStop(0, `rgba(35,35,35,${0.7 * f * k2})`);
+    bowl.addColorStop(0.85, `rgba(95,95,95,${0.2 * f})`);
+    bowl.addColorStop(1, 'rgba(128,128,128,0)');
+    ctx.fillStyle = bowl;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(220,220,220,${0.6 * f * k2})`;
+    ctx.lineWidth = Math.max(0.8, r * 0.16);
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.03, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 8;
+  return t;
+}
+
 // ---------------------------------------------------------------- scene parts
 
 const SEGMENTS = 512;
@@ -231,10 +511,10 @@ type ShadowUniforms = Record<'uHeight' | 'uRadius' | 'uTexN' | 'uSunWorld' | 'uS
  * detail patch and the rocks share them). `hole`: hide this surface inside |x|,|z| < hole (the coarse
  * mesh under the detailed patch). `instanced`: for InstancedMesh (rocks).
  */
-function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms: ShadowUniforms, opts: { key: string; hole?: number; instanced?: boolean }) {
+function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms: ShadowUniforms, opts: { key: string; hole?: number; instanced?: boolean; micro?: THREE.Texture }) {
   const m = new THREE.MeshStandardMaterial(params);
   m.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, uniforms, { uHole: { value: opts.hole ?? 0 } });
+    Object.assign(shader.uniforms, uniforms, { uHole: { value: opts.hole ?? 0 }, uMicro: { value: opts.micro ?? null } });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainPos;')
       .replace(
@@ -242,7 +522,8 @@ function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms
         `#include <project_vertex>\nvTerrainPos = (modelMatrix * ${opts.instanced ? 'instanceMatrix * ' : ''}vec4(transformed, 1.0)).xyz;`,
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\nuniform float uHole;\n${SHADOW_GLSL}`)
+      .replace('#include <common>', `#include <common>\nuniform float uHole;\n${SHADOW_GLSL}${opts.micro ? MICRO_GLSL : ''}`)
+      .replace('#include <map_fragment>', opts.micro ? '#include <map_fragment>\n\tdiffuseColor.rgb *= microShade();' : '#include <map_fragment>')
       .replace(
         '#include <clipping_planes_fragment>',
         '#include <clipping_planes_fragment>\n\tif (uHole > 0.0 && max(abs(vTerrainPos.x), abs(vTerrainPos.z)) < uHole) discard;',
@@ -351,27 +632,52 @@ function Terrain({ terrain, sky, seed, clearings }: { terrain: TerrainSource; sk
     [heightTex, terrain.radius],
   );
 
-  // The same bump texture on the patch, offset so its tiles line up with the coarse mesh's.
-  const nearDetailTex = useMemo(() => {
-    const t = detail.clone();
-    t.repeat.set((NEAR_HALF * 2) / DETAIL_TILE_M, (NEAR_HALF * 2) / DETAIL_TILE_M);
-    const off = ((terrain.radius - NEAR_HALF) / DETAIL_TILE_M) % 1;
-    t.offset.set(off, off);
-    t.needsUpdate = true;
-    return t;
-  }, [detail, terrain.radius]);
+  // The patch's bump (Pink): the same crater pattern, aligned with the coarse mesh's tiles, plus a
+  // fine layer of grain, pebbles and craterlets near the observer (faded out before the patch edge).
+  const nearDetailTex = useMemo(
+    () => nearBump(detail.image as HTMLCanvasElement, terrain.radius, NEAR_FINE_IN, NEAR_FINE_OUT),
+    [detail, terrain.radius],
+  );
   useEffect(() => () => nearDetailTex.dispose(), [nearDetailTex]);
+
+  // Brightness variation (Pink), on both meshes with matching tiles.
+  const albedo = useMemo(() => {
+    const t = regolithAlbedo();
+    const reps = (terrain.radius * 2) / ALBEDO_TILE_M;
+    t.repeat.set(reps, reps);
+    return t;
+  }, [terrain.radius]);
+  // Near the observer the same brightness pattern carries visible speckles, pebbles and blotches
+  // (colour reads at any distance; fine bump only shades where it changes between screen pixels).
+  const nearAlbedo = useMemo(
+    () => nearBump(albedo.image as HTMLCanvasElement, terrain.radius, NEAR_FINE_IN, NEAR_FINE_OUT, ALBEDO_TILE_M, 'albedo'),
+    [albedo, terrain.radius],
+  );
+  useEffect(
+    () => () => {
+      albedo.dispose();
+      nearAlbedo.dispose();
+    },
+    [albedo, nearAlbedo],
+  );
+
+  const micro = useMemo(microDetail, []);
+  useEffect(() => () => micro.dispose(), [micro]);
 
   const { material, nearMaterial } = useMemo(() => {
     // Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only.
     const base = { color: new THREE.Color(0.55, 0.54, 0.52), roughness: 1, metalness: 0, vertexColors: true, bumpScale: 2.2 };
     return {
       // The coarse mesh, hidden under the detailed patch.
-      material: shadowedMaterial({ ...base, transparent: true, bumpMap: detail }, uniforms, { key: 'coarse', hole: NEAR_HOLE }),
+      material: shadowedMaterial({ ...base, transparent: true, bumpMap: detail, map: albedo }, uniforms, { key: 'coarse', hole: NEAR_HOLE }),
       // Drawn in front where the two overlap (the last metres of the patch), so no flicker.
-      nearMaterial: shadowedMaterial({ ...base, bumpMap: nearDetailTex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, uniforms, { key: 'near' }),
+      nearMaterial: shadowedMaterial(
+        { ...base, bumpMap: nearDetailTex, map: nearAlbedo, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 },
+        uniforms,
+        { key: 'near', micro },
+      ),
     };
-  }, [detail, nearDetailTex, uniforms]);
+  }, [detail, nearDetailTex, albedo, nearAlbedo, micro, uniforms]);
   useEffect(
     () => () => {
       material.dispose();
