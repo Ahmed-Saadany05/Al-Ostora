@@ -1,0 +1,21 @@
+{
+  "idle": {
+    "frameW": 196,
+    "frameH": 433,
+    "count": 8,
+    "anchorX": 91
+  },
+  "walk": {
+    "frameW": 255,
+    "frameH": 403,
+    "count": 12,
+    "anchorX": 134
+  },
+  "hop": {
+    "frameW": 288,
+    "frameH": 451,
+    "count": 12,
+    "anchorX": 129
+  },
+  "displayHeight": 440
+}

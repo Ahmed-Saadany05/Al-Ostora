@@ -7,7 +7,6 @@
 .label {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 .hint {
@@ -470,7 +469,7 @@
 .bigNum {
   font-size: var(--text-3xl);
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
 }
 .bodyFoot {
   display: grid;
@@ -854,7 +853,6 @@
   color: var(--color-text-inverse);
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
 }
 .cmpView {
   flex: 1;
@@ -1051,7 +1049,6 @@
   font-weight: var(--weight-medium);
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 

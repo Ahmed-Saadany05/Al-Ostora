@@ -41,30 +41,32 @@ export function AppShell() {
         Skip to content
       </a>
 
-      <header className={s.header}>
-        <NavLink to="/" className={s.brand} aria-label="Refaey on the Moon — home">
-          <span className={s.logo}>
-            <Icon name="orbit" size={30} />
-          </span>
-          <span className={s.wordmark}>
-            <span className={s.name}>refaey</span>
-            <span className={s.tagline}>On the Moon</span>
-          </span>
-        </NavLink>
-
-        <nav className={s.nav} aria-label="Main">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => [s.navLink, isActive && s.active].filter(Boolean).join(' ')}>
-              {n.label}
-            </NavLink>
-          ))}
-          <NavLink to="/about" className={({ isActive }) => [s.navLink, isActive && s.active].filter(Boolean).join(' ')}>
-            The project <Icon name="arrowUpRight" size={13} />
+      {!minimalChrome && (
+        <header className={s.header}>
+          <NavLink to="/" className={s.brand} aria-label="Refaey on the Moon — home">
+            <span className={s.logo}>
+              <Icon name="orbit" size={30} />
+            </span>
+            <span className={s.wordmark}>
+              <span className={s.name}>Refaey</span>
+              <span className={s.tagline}>On the Moon</span>
+            </span>
           </NavLink>
-        </nav>
 
-        <div className={s.headerEnd} />
-      </header>
+          <nav className={s.nav} aria-label="Main">
+            {NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => [s.navLink, isActive && s.active].filter(Boolean).join(' ')}>
+                {n.label}
+              </NavLink>
+            ))}
+            <NavLink to="/about" className={({ isActive }) => [s.navLink, isActive && s.active].filter(Boolean).join(' ')}>
+              The project <Icon name="arrowUpRight" size={13} />
+            </NavLink>
+          </nav>
+
+          <div className={s.headerEnd} />
+        </header>
+      )}
 
       <main id="main" className={s.main}>
         <Outlet />

@@ -40,7 +40,7 @@ interface IntroRefs {
 const READY_TIMEOUT_MS = 20_000;
 
 /**
- * About 4 s: stars fade in → Moon rises → light sweep → headline → line → button → pin pulses once.
+ * About 4.7 s: stars fade in → Moon rises → light sweep → headline → line → button → pin pulses once.
  * Plays once per session, ends early on any click or key, and is skipped entirely when `play` is false.
  * The seen flag is written on completion/skip (not on start), so React StrictMode's double effect still plays it.
  */
@@ -83,13 +83,13 @@ export function useIntro(play: boolean, moonReady: boolean, refs: IntroRefs) {
       const tl = gsap.timeline({ onComplete: finish });
       tl.to(stars.current, { opacity: 1, duration: 0.8, ease: 'none' }, 0)
         .to(moon.current, { yPercent: 0, duration: 1.7, ease: 'power3.out' }, 0.35)
-        .call(() => handle.current?.playLightSweep(1.1), [], 1.5);
-      items.forEach((el, i) => tl.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 2.3 + i * 0.3));
-      tl.add(() => setPinRevealed(true), 3.3).to(pins.current, { opacity: 1, duration: 0.4 }, 3.3).add(() => {
+        .call(() => handle.current?.playLightSweep(2.6), [], 1.1);
+      items.forEach((el, i) => tl.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 2.9 + i * 0.3));
+      tl.add(() => setPinRevealed(true), 3.9).to(pins.current, { opacity: 1, duration: 0.4 }, 3.9).add(() => {
         const pulse = pins.current?.querySelector('[data-pulse]');
         if (pulse && !skipped) gsap.fromTo(pulse, { scale: 1, opacity: 0.9 }, { scale: 2.4, opacity: 0, duration: 0.65, ease: 'power2.out' });
-      }, 3.4);
-      tl.to({}, { duration: 0.65 }, 3.4); // keep the timeline open until the pulse has played (≈ 4.05 s)
+      }, 4.0);
+      tl.to({}, { duration: 0.65 }, 4.0); // keep the timeline open until the pulse has played (≈ 4.05 s)
 
       const skip = () => {
         skipped = true;

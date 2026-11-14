@@ -6,6 +6,7 @@
 import { useId, useState } from 'react';
 import { Icon } from '@/shared/ui';
 import { EXPLAINERS, type ExplainerId } from './explainers';
+import { RefaeyCard } from './refaey/RefaeyCard';
 import s from './Explain.module.css';
 
 export function Explain({ id }: { id: ExplainerId }) {
@@ -19,8 +20,8 @@ export function Explain({ id }: { id: ExplainerId }) {
         {e.title}
       </button>
       {open && (
-        <span id={panel} role="note" className={s.panel}>
-          {e.body}
+        <span id={panel} className={s.panel}>
+          <RefaeyCard title={e.title} lines={[e.body]} />
         </span>
       )}
     </span>

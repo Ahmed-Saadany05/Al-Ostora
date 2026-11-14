@@ -1,0 +1,49 @@
+/* Refaey's figure with his balloon to the right of his helmet. */
+.talk {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+.talk > * {
+  pointer-events: auto;
+}
+.bottom_left {
+  position: absolute;
+  z-index: 4;
+  left: var(--gutter);
+  bottom: var(--space-4);
+  align-items: flex-end;
+}
+.top_left {
+  position: fixed;
+  z-index: var(--z-chrome);
+  left: var(--gutter);
+  top: calc(var(--header-height) + 96px);
+}
+.inline {
+  position: relative;
+}
+.figure {
+  flex: none;
+}
+/* The balloon sits beside his helmet: lifted to about two thirds of his height when he stands at the bottom. */
+.balloon {
+  position: relative;
+  width: max-content;
+  min-width: 240px;
+  box-shadow: var(--shadow-panel);
+}
+.bottom_left .balloon {
+  margin-bottom: calc(var(--fig-h, 30vh) * 0.15);
+}
+@media (max-width: 760px) {
+  .talk {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bottom_left .balloon {
+    margin-bottom: 0;
+    order: -1;
+  }
+}

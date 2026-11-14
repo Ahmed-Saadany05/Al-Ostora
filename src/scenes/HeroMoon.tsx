@@ -75,8 +75,8 @@ const SWEEP_TO = Math.PI * 2 + 0.1;
 /** Full exposure of the airless shading (see globe/moonShading). */
 const EXPOSURE = 1.25;
 /** Intro, before the light sweep: a dim, evenly lit Moon so you can see it rise into frame. */
-const RISE_EXPOSURE = 0.35;
-const RISE_FLOOR = 0.3;
+const RISE_EXPOSURE = 0.12;
+const RISE_FLOOR = 0.07;
 /** If no imagery has arrived by then, report a failure so the intro never waits for nothing. */
 const IMAGERY_TIMEOUT_MS = 12_000;
 /** The flight into Step 1. */
@@ -277,7 +277,8 @@ function Scene({
     const az = SWEEP_FROM + (SWEEP_TO - SWEEP_FROM) * sp;
     light.uSun.value.set(Math.cos(az), LIGHT_HEIGHT, Math.sin(az)).normalize();
     // Before the sweep the Moon is dim but visible (as if in earthshine), so the intro's rise reads.
-    const lit = Math.min(1, sp * 3);
+    // Ramps up over the first two thirds of the sweep, so the light is seen travelling across the craters.
+    const lit = Math.min(1, sp * 1.5);
     light.uExposure.value = EXPOSURE * (RISE_EXPOSURE + (1 - RISE_EXPOSURE) * lit);
     light.uNightFloor.value = RISE_FLOOR + (0.035 - RISE_FLOOR) * lit;
 
