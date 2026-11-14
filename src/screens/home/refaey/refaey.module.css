@@ -230,6 +230,11 @@
   .cardStage {
     bottom: calc(var(--space-7) + var(--space-4)); /* 64 px */
   }
+  /* the compass letters ride the horizon just above the card's zone: one size down keeps the card clear of them */
+  .cardStage .cardText,
+  .cardStage .cardAction {
+    font-size: var(--text-xs);
+  }
 }
 
 /* Under 900 px the stage screens have no free zone (the "drag to look around" hint, the timeline and Launch fill the lower third):
