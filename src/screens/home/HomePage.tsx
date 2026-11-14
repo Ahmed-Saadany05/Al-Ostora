@@ -129,9 +129,9 @@ export function HomePage() {
     (to: BriefingDestination) => {
       markBriefed();
       journey.current = false;
-      if (to === 'missions') {
+      if (to === 'missions' || to === 'about') {
         if (blocker.state === 'blocked') blocker.reset();
-        navigate('/missions');
+        navigate(to === 'missions' ? '/missions' : '/about');
       } else if (blocker.state === 'blocked') blocker.proceed();
       else navigate(missionUrl.chooseSite());
     },

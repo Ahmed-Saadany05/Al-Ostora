@@ -5,6 +5,8 @@ import { useMission } from '@/shared/mission';
 import { useTime } from '@/shared/store/time';
 import { LUNAR } from '@/shared/types';
 import type { CardPlacement } from './RefaeyCard';
+import { useSearchParams } from 'react-router-dom';
+import { standNode } from './dialogues/dialogues';
 import { MomentCard, type MomentContext } from './MomentCard';
 
 /**
@@ -13,6 +15,10 @@ import { MomentCard, type MomentContext } from './MomentCard';
  */
 export function StandMoment({ placement }: { placement: CardPlacement }) {
   const { site } = useMission();
+  const [params] = useSearchParams();
+  // From Compare dates the link carries a moment in the plan's window (?at=…). "See the sky at touchdown" on /missions carries a past one.
+  const at = Date.parse(params.get('at') ?? '');
+  const fromCompare = Number.isFinite(at) && at >= Date.now() - 2 * 86_400_000;
   const time = useTime((s) => s.time);
   const from = useTime((s) => s.rangeStart);
   const { data: sky } = useSky(site, time);
@@ -36,5 +42,10 @@ export function StandMoment({ placement }: { placement: CardPlacement }) {
     };
   }, [sky, report, time]);
 
-  return <MomentCard id="moment-stand" placement={placement} context={context} />;
+  const live = context.horizons;
+  const node = useMemo(
+    () => standNode({ fromCompare, lola: !!context.flags.horizonLola, live, sunUp: !!sky?.sunVisible, earthUp: !!sky?.earthVisible }),
+    [fromCompare, context.flags.horizonLola, live, sky?.sunVisible, sky?.earthVisible],
+  );
+  return <MomentCard id="moment-stand" placement={placement} context={context} node={node} />;
 }

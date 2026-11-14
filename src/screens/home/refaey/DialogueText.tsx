@@ -3,10 +3,11 @@ import { Button } from '@/shared/ui';
 import { REFAEY_COPY } from './copy';
 import type { Reply } from './dialogues/dialogues';
 import { packBeats, type ResolvedNode } from './logic';
+import { SourceLink } from './SourceLink';
 import s from './refaey.module.css';
 
 /** Content of one beat of talk: a resolved dialogue node, or the Ask menu (no lines, only questions). */
-export type PanelContent = Pick<ResolvedNode, 'title' | 'lines' | 'replies'> & { key: string };
+export type PanelContent = Pick<ResolvedNode, 'title' | 'lines' | 'replies' | 'link'> & { key: string };
 
 /** A node longer than this many visual lines is split into beats with a Next choice. Text is never truncated. (Six: the briefing's first beat has to carry both Go on and Skip.) */
 const MAX_VISUAL_LINES = 6;
@@ -21,11 +22,14 @@ export function DialogueText({
   onReply,
   onCollapse,
   className,
+  skip,
 }: {
   content: PanelContent;
   onReply: (reply: Reply) => void;
   onCollapse: () => void;
   className?: string;
+  /** An extra way out that is not one of the (at most three) replies: the briefing's "Skip". */
+  skip?: { label: string; onClick: () => void };
 }) {
   const root = useRef<HTMLElement>(null);
   const lines = useRef<HTMLDivElement>(null);
@@ -103,7 +107,13 @@ export function DialogueText({
         </div>
       </div>
       <div key={`${content.key}:${beat}:r`} className={[s.replies, s.fade].join(' ')}>
+        {lastBeat && content.link && <SourceLink link={content.link} />}
         {lastBeat ? content.replies.map((r) => choice(r.label, () => onReply(r))) : choice(REFAEY_COPY.next, () => setBeat((b) => b + 1))}
+        {skip && (
+          <Button variant="ghost" size="md" icon={null} className={[s.reply, s.skip].join(' ')} onClick={skip.onClick}>
+            {skip.label}
+          </Button>
+        )}
       </div>
     </section>
   );

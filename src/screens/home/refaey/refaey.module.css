@@ -243,3 +243,22 @@
     bottom: calc(var(--space-9) + var(--space-3));
   }
 }
+
+/* "How do you know?": the link on a source card, and the briefing's Skip. */
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+.sourceLink:hover {
+  color: var(--color-text-muted);
+}
+.skip {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}

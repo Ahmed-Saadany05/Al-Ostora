@@ -3,33 +3,37 @@
  * A list of three past-mission cards; choosing one replaces the list (same area, no modal) with that story told as a
  * scripted conversation with Refaey. The open story lives in the URL (?story=id), so reload and Back/Forward work.
  */
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getProvider, useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
-import { Button, Card, DisplayHeading, Lead } from '@/shared/ui';
+import { Button, Card, DisplayHeading, Icon, Lead } from '@/shared/ui';
 import { ART, RefaeyBust } from '../refaey';
 import { FactsBadge } from '../refaey/FactsBadge';
 import { athenaVerdict, recordedTokens } from '../refaey/facts/display';
 import { REFAEY_COPY } from '../refaey/copy';
-import { MISSIONS, type Mission, type Reply } from '../refaey/dialogues/dialogues';
+import { advance, isSideNode } from '../refaey/conversation';
+import { HUB, MISSIONS, type Mission, type Reply } from '../refaey/dialogues/dialogues';
+import { SourceLink } from '../refaey/SourceLink';
+import { useRefaey } from '../refaey/store';
 import { adaptReplies, resolveNode, type ResolveContext, type ResolvedNode } from '../refaey/logic';
 import { getNode, hasExplainer } from '../refaey/registry';
 import { MISSIONS_COPY } from './copy';
 import s from './MissionsPage.module.css';
 import r from '../refaey/refaey.module.css';
 
-/** Stories read no live values. They read the recorded Horizons facts (history), which fill on every provider. */
-const CONTEXT: ResolveContext = {
+/** Stories read no live values. They read the recorded Horizons facts (history), which fill on every provider, and the story's callsign. */
+const baseContext = (callsign: string): ResolveContext => ({
   horizons: false,
   values: {},
   flags: { athenaSunlit: athenaVerdict() === 'sunlit', athenaHidden: athenaVerdict() === 'hidden' },
   facts: recordedTokens(),
+  story: { callsign },
   terminalLabel: REFAEY_COPY.ok,
   hasExplainer,
-};
-const HUB = 'missions-hub';
+});
+const HUB_ID = 'missions-hub';
 const FADE_MS = 240;
 
 const yearOf = (iso: string) => iso.slice(0, 4);
@@ -41,6 +45,11 @@ export function MissionsPage() {
   const [params, setParams] = useSearchParams();
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
+  const callsign = useRefaey((st) => st.callsign);
+  const lessons = useRefaey((st) => st.lessons);
+  const learn = useRefaey((st) => st.learn);
+  const context = useMemo(() => baseContext(callsign), [callsign]);
+  const say = (text: string) => text.replaceAll('{callsign}', callsign);
   const mission = MISSIONS.find((m) => m.id === params.get('story')) ?? null;
 
   // The beats of the open conversation. Reset by construction whenever another story opens.
@@ -101,28 +110,32 @@ export function MissionsPage() {
 
   const resolve = (id: string, backTo?: string): ResolvedNode | null => {
     const node = getNode(id, backTo);
-    return node ? resolveNode(node, CONTEXT, (n) => getNode(n, backTo)) : null;
+    return node ? resolveNode(node, context, (n) => getNode(n, backTo)) : null;
   };
   const currentId = ids[ids.length - 1];
   const previousId = ids[ids.length - 2];
   const current = mission && currentId ? resolve(currentId, previousId) : null;
   const earlier = ids.slice(0, -1).map((id, i) => resolve(id, ids[i - 1])).filter((n): n is ResolvedNode => n !== null);
 
+  // Finishing a story puts its lesson in the notebook.
+  const finished = current?.learns && mission ? mission.lessonKey : null;
+  useEffect(() => {
+    if (finished) learn(finished);
+  }, [finished, learn]);
+
   const onReply = (rep: Reply) => {
     if (!mission) return;
-    if (rep.next === HUB) return closeStory();
-    if (rep.next) {
-      const next = rep.next;
-      return setTrail({ missionId: mission.id, ids: next === previousId ? ids.slice(0, -1) : [...ids, next] });
-    }
-    const a = rep.action;
-    if (a?.type === 'openExplainer') return setTrail({ missionId: mission.id, ids: [...ids, `explain:${a.id}`] });
+    if (rep.next === HUB_ID) return closeStory();
+    const step = advance(ids, rep);
+    if (step.ids !== ids) return setTrail({ missionId: mission.id, ids: step.ids });
+    const a = step.action;
     if (a?.type === 'openPlanner') return siteExists(a.siteId) ? navigate(missionUrl.stand(a.siteId, a.at)) : undefined;
     // "OK" on an explainer goes back to the story beat it was opened from.
-    if (a?.type === 'collapse' && currentId?.startsWith('explain:')) return setTrail({ missionId: mission.id, ids: ids.slice(0, -1) });
+    if (a?.type === 'collapse' && isSideNode(currentId)) return setTrail({ missionId: mission.id, ids: ids.slice(0, -1) });
     if (a?.type === 'navigate') return navigate(a.to === '/mission' ? missionUrl.chooseSite() : a.to);
   };
 
+  const allLearned = MISSIONS.every((m) => lessons[m.lessonKey]);
   const replies = current ? adaptReplies(current.replies, siteExists, getProvider().id === 'live') : [];
 
   return (
@@ -137,10 +150,10 @@ export function MissionsPage() {
     >
       <header className={[s.head, mission && s.headStory].filter(Boolean).join(' ')}>
         <DisplayHeading size="lg" align="left">
-          {MISSIONS_COPY.title}
+          {HUB.title}
         </DisplayHeading>
         {/* The "pick one" line is for the list; an open story needs the room for the conversation. */}
-        {!mission && <Lead align="left">{MISSIONS_COPY.line}</Lead>}
+        {!mission && <Lead align="left">{say(HUB.subtitle)}</Lead>}
       </header>
 
       <div ref={area} className={s.area}>
@@ -148,6 +161,15 @@ export function MissionsPage() {
           <div className={[s.grid, s.list].join(' ')}>
             <div className={s.figure} aria-hidden>
               <RefaeyBust mood="neutral" size="var(--fig-bust)" />
+            </div>
+            <div className={s.listBody}>
+            <div className={s.idle}>
+              <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
+              {allLearned && (
+                <Button variant="primary" size="md" to={missionUrl.chooseSite()}>
+                  {say(HUB.plan)}
+                </Button>
+              )}
             </div>
             <ul className={s.cards}>
               {MISSIONS.map((m) => (
@@ -162,10 +184,16 @@ export function MissionsPage() {
                       {MISSIONS_COPY.lessons[m.lesson]}
                     </span>
                     <span className={s.cardLine}>{m.outcome}</span>
+                    {lessons[m.lessonKey] && (
+                      <span className={s.learned}>
+                        <Icon name="check" size={14} /> {HUB.learned}
+                      </span>
+                    )}
                   </Card>
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         ) : (
           <div className={[s.grid, s.story].join(' ')}>
@@ -203,6 +231,7 @@ export function MissionsPage() {
                       {l}
                     </p>
                   ))}
+                  {current?.link && <SourceLink link={current.link} />}
                   {current?.usesFacts && (
                     <div className={s.source}>
                       <FactsBadge />

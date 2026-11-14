@@ -13,7 +13,7 @@ const WAIT_MS = 15_000;
 
 type Engine = typeof import('@/engine');
 type Alt = Awaited<ReturnType<Engine['suggestAlternatives']>>;
-type Outcome = { hours: { sunHours: number; earthHours: number }; alt: Alt } | 'none';
+type Outcome = { hours: { sunHours: number; earthHours: number }; alt: Alt } | 'none' | 'demo';
 
 /**
  * The touchdown card: what the first lunar day looks like at the landing, and, only if the engine finds one, a better
@@ -29,11 +29,11 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   const { data: sites } = useSites();
   const live = getProvider().id === 'live' && horizon?.source === 'lola';
   const landing = plan?.landingDate;
-  const [outcome, setOutcome] = useState<Outcome | 'waiting'>(live ? 'waiting' : 'none');
+  const [outcome, setOutcome] = useState<Outcome | 'waiting'>(live ? 'waiting' : 'demo');
 
   useEffect(() => {
     if (!live || !site || !landing) {
-      setOutcome('none');
+      setOutcome('demo');
       return;
     }
     let cancelled = false;
@@ -53,7 +53,7 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
 
   const context: MomentContext | null = useMemo(() => {
     if (outcome === 'waiting') return null;
-    if (outcome === 'none' || !site || !landing) return { horizons: false, values: {}, flags: {} };
+    if (outcome === 'none' || outcome === 'demo' || !site || !landing) return { horizons: false, values: {}, flags: {} };
     const { hours, alt } = outcome;
     const altName = alt?.kind === 'site' ? sites?.find((s) => s.id === alt.siteId)?.name : undefined;
     return {
@@ -74,11 +74,13 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   if (!site) return null;
   if (context === null) return <RefaeyCard id="refaey-moment-outcome" placement={placement} mood="neutral" lines={['Give me a second…']} />;
 
-  const alt = outcome !== 'none' && outcome !== 'waiting' ? outcome.alt : null;
+  const alt = outcome !== 'none' && outcome !== 'demo' && outcome !== 'waiting' ? outcome.alt : null;
   const onAction = (a: Reply['action']) => {
     if (a?.type !== 'compareAlternative' || !alt) return false;
     navigate(alt.kind === 'site' && alt.siteId ? missionUrl.compare([site.id, alt.siteId], 'sites') : missionUrl.compare([site.id], 'dates'));
     return true;
   };
-  return <MomentCard id={context.horizons ? 'outcome-play' : 'outcome-close'} placement={placement} context={context} onAction={onAction} once={false} />;
+  // Live answer → the landing story. Demo (no live numbers, no LOLA skyline) → the quiet line. Timeout or error → the neutral close.
+  const id = context.horizons ? 'outcome-play' : outcome === 'demo' ? 'outcome-demo' : 'outcome-close';
+  return <MomentCard id={id} placement={placement} context={context} onAction={onAction} once={false} />;
 }
