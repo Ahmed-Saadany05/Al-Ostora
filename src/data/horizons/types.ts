@@ -23,6 +23,8 @@ export interface HorizonsRow {
   elDeg: number; // above the flat (airless) horizon
   angularDiameterDeg: number;
   distanceKm: number;
+  /** Earth only: illuminated fraction of the disk as seen from the site, percent (Horizons quantity 10). */
+  illuminationPct?: number;
 }
 
 export interface HorizonsResponse {

@@ -1,0 +1,274 @@
+/* Launch → arrival orbit view — owner: Pink. Tokens only. */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  overflow: hidden;
+  /* Transparent: the app's starfield shows behind the orbit, as in the reference. */
+  background: transparent;
+  isolation: isolate;
+}
+.view {
+  position: absolute;
+  inset: 0;
+}
+.stage canvas {
+  display: block;
+}
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  visibility: hidden;
+}
+.name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ghostName {
+  top: 0;
+  bottom: auto;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--color-text-faint);
+}
+
+/* The rocket: a pulsing white dot. */
+.rocket {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--color-text);
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+}
+.rocket::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--color-text);
+  animation: pulse 1.3s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* "Your rocket": a small glass note beside the dot that fades out slowly. */
+.toast {
+  position: absolute;
+  left: 14px;
+  top: -30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  animation: toast 5.5s ease-in both;
+}
+.toast::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  bottom: -8px;
+  width: 14px;
+  border-top: 1px solid var(--color-line-strong);
+  transform: rotate(-40deg);
+}
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.skip {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- reference layout */
+
+/* Left column: eyebrow, headline, one line. */
+.intro {
+  position: absolute;
+  top: var(--space-7, 56px);
+  left: calc(var(--gutter) + var(--space-6));
+  display: grid;
+  gap: var(--space-4);
+  max-width: 420px;
+  pointer-events: none;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+/* Top-right caption between hairlines. */
+.system {
+  position: absolute;
+  top: var(--space-7, 56px);
+  right: calc(var(--gutter) + var(--space-6));
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.systemTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.systemTitle::before,
+.systemTitle::after {
+  content: '';
+  width: 22px;
+  border-top: var(--border-strong);
+}
+.systemNote {
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+
+/* Bottom centre: three glass cards. */
+.cards {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-3);
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 200px;
+  padding: var(--space-4) var(--space-5);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(10, 10, 11, 0.72);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text-muted);
+}
+.card span {
+  display: grid;
+  gap: 3px;
+}
+.card strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+.card small {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+.cardNow {
+  min-width: 260px;
+  border-color: var(--color-line-strong);
+}
+
+/* End: the prompt under the Moon. */
+.tap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, 10px);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: tapIn 0.6s var(--ease-out) both;
+  transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+}
+.tap:hover {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.tapDot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tapDot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: pulse 1.3s var(--ease-out) infinite;
+}
+@keyframes tapIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 18px);
+  }
+}

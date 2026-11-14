@@ -1,5 +1,6 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { preloadStep1 } from '@/scenes';
 import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
@@ -8,6 +9,7 @@ import { Button, DisplayHeading, Lead } from '@/shared/ui';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
+import { MoonLoader } from './MoonLoader';
 import { MotionToggle } from './MotionToggle';
 import { SitePin } from './SitePin';
 import { StarLayers } from './StarLayers';
@@ -17,6 +19,9 @@ import s from './HomePage.module.css';
 
 /** The live site pin on the Moon is hidden for now (team decision); set true to bring it back. */
 const SHOW_SITE_PIN = false;
+
+/** Longest the first loading screen waits for Step 1's preload before letting the intro play. */
+const PRELOAD_CAP_MS = 20_000;
 
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
@@ -42,7 +47,20 @@ export function HomePage() {
   const copy = useRef<HTMLDivElement>(null);
   const pins = useRef<HTMLDivElement>(null);
   const handle = useRef<HeroMoonHandle>(null);
-  const { done: introDone, pinRevealed } = useIntro(play, textured || moonSettled, { stars, moon, copy, pins, handle });
+  // Step 1's code and opening imagery load during the first loading screen too, so the flight into it
+  // lands on a ready Moon (also on a cold deployed visit). Capped so a slow network never traps the page.
+  const [step1Ready, setStep1Ready] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const cap = window.setTimeout(() => live && setStep1Ready(true), PRELOAD_CAP_MS);
+    void preloadStep1().then(() => live && setStep1Ready(true));
+    return () => {
+      live = false;
+      window.clearTimeout(cap);
+    };
+  }, []);
+  const allReady = (textured || moonSettled) && step1Ready;
+  const { done: introDone, pinRevealed } = useIntro(play, allReady, { stars, moon, copy, pins, handle });
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
@@ -105,6 +123,9 @@ export function HomePage() {
       </div>
 
       <MotionToggle />
+
+      {/* First visit: black loading screen until the Moon imagery is in, then the intro plays. */}
+      <MoonLoader ready={allReady} />
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>

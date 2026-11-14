@@ -40,10 +40,17 @@ const paths = {
     </>
   ),
   moon: <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />,
+  // Planet with a ring: the ring's far half passes BEHIND the (opaque) planet, the near half in front.
+  // The planet is filled with --icon-fill (the surface it sits on; page black by default).
   orbit: (
     <>
-      <circle cx="12" cy="12" r="5.5" />
-      <ellipse cx="12" cy="12" rx="10" ry="3.8" transform="rotate(-35 12 12)" />
+      <g transform="rotate(-35 12 12)">
+        <path d="M2 12A10 3.8 0 0 1 22 12" />
+      </g>
+      <circle cx="12" cy="12" r="5.5" style={{ fill: 'var(--icon-fill, var(--color-bg))' }} />
+      <g transform="rotate(-35 12 12)">
+        <path d="M2 12A10 3.8 0 0 0 22 12" />
+      </g>
       <circle cx="18.2" cy="6.6" r="1.4" fill="currentColor" stroke="none" />
     </>
   ),
