@@ -48,7 +48,7 @@ export function AppShell() {
               <Icon name="orbit" size={30} />
             </span>
             <span className={s.wordmark}>
-              <span className={s.name}>refaey</span>
+              <span className={s.name}>Refaey</span>
               <span className={s.tagline}>On the Moon</span>
             </span>
           </NavLink>

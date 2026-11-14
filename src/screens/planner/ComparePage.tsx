@@ -17,7 +17,7 @@ import { Explain } from '@/screens/home/Explain';
 import { formatDuration, formatUtc } from '@/shared/format';
 import { MAX_COMPARE, missionUrl, useMission } from '@/shared/mission';
 import { LUNAR, type IsoTime, type Site, type SiteMetrics } from '@/shared/types';
-import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, Page, ProgressRing, StepHeader, Tabs } from '@/shared/ui';
+import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, Page, ProgressRing, StepHeader } from '@/shared/ui';
 import { EXAG, SiteScene } from './CompareScene3D';
 import { useLunarDay } from './useLunarDay';
 import { SettingsButton, usePlannerParams } from './SettingsDrawer';
@@ -85,6 +85,7 @@ function Column({
   isBest,
   t,
   pickTo,
+  pickLabel,
   still,
   delay,
   why,
@@ -97,6 +98,8 @@ function Column({
   isBest: boolean;
   t: number;
   pickTo: string;
+  /** "View site" (sites → that site's Moon view) or "Choose" (dates → back to the launch-date step). */
+  pickLabel: string;
   still: boolean;
   delay: number;
   /** For the winner: why it is the best match, in plain words. */
@@ -178,7 +181,7 @@ function Column({
       </dl>
 
       <Button variant={isBest ? 'primary' : 'secondary'} to={pickTo}>
-        Choose
+        {pickLabel}
       </Button>
     </li>
   );
@@ -292,7 +295,10 @@ export function ComparePage() {
     if (won.has('gap')) why.push(m.longestCommsGapH > 0 ? `the shortest silence (${dur(m.longestCommsGapH)})` : 'no silence at all');
   }
   // Dates: tell Step 4 which lunar day was chosen (?lunar=…), so it plans a launch inside it.
-  const pickTo = (c: Candidate) => (dates ? `${missionUrl.date(c.site.id)}&lunar=${encodeURIComponent(c.from)}` : missionUrl.date(c.site.id));
+  // Sites: open that site's Moon view; ?others lets it come back here ("View other sites").
+  const pickTo = (c: Candidate) =>
+    dates ? `${missionUrl.date(c.site.id)}&lunar=${encodeURIComponent(c.from)}` : missionUrl.stand(c.site.id, undefined, { others: siteIds.join(',') });
+  const pickLabel = dates ? 'Choose' : 'View site';
   const timeLabel = dates ? `Day ${Math.round(t * LUNAR.synodicDays)} of each lunar day` : formatUtc(new Date(Date.parse(from) + t * DAY_MS).toISOString());
   const showAdd = !dates && candidates.length < MAX_COMPARE;
   const nCols = ordered.length + (showAdd ? 1 : 0);
@@ -308,16 +314,6 @@ export function ComparePage() {
           aside={
             <span className={s.headAside}>
               <SettingsButton />
-              <Tabs
-                label="Compare by"
-                variant="pill"
-                value={compareBy}
-                onChange={(by) => navigate(missionUrl.compare(siteIds, by), { replace: true })}
-                items={[
-                  { id: 'sites', label: 'Sites' },
-                  { id: 'dates', label: 'Dates' },
-                ]}
-              />
             </span>
           }
         />
@@ -400,6 +396,7 @@ export function ComparePage() {
               isBest={!!best && r.c.key === best.c.key && scored.length > 1}
               t={t}
               pickTo={pickTo(r.c)}
+              pickLabel={pickLabel}
               still={still}
               delay={i * 90}
               onRemove={!dates && candidates.length > 1 ? () => setSites(siteIds.filter((id) => id !== r.c.site.id)) : undefined}

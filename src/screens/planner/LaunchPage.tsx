@@ -11,7 +11,8 @@
  * No score on this page.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { LaunchSequence } from '@/scenes';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { LaunchSequence, MissionGlobe, preloadMissionGlobe } from '@/scenes';
 import { useDayReport, usePlanLaunch, useSky } from '@/shared/data';
 import { Explain } from '@/screens/home/Explain';
 import { RefaeyMoment } from '@/screens/home/refaey';
@@ -233,9 +234,21 @@ export function LaunchPage() {
   const { data: sky, error: eSky } = useSky(on, landing ?? '', params);
   const { data: afterReport, error: eAfter } = useDayReport(on, landing ?? '', LUNAR.synodicDays, params);
 
-  const [landed, setLanded] = useState(false);
+  // Flow (Pink): the orbit ends with "Tap the Moon to land" → the Moon view at touchdown, which has
+  // "Summarize trip" → back here with ?summary=1, straight to the Mission summary (no orbit replay).
+  const navigate = useNavigate();
+  const [sp] = useSearchParams();
+  const [landed, setLanded] = useState(() => sp.get('summary') === '1');
+  // Start loading the summary's real Moon (code + imagery) now, while the orbit plays, so the
+  // summary opens without stutter or pop-in.
+  useEffect(() => {
+    if (site) void preloadMissionGlobe(site.lat, site.lon);
+  }, [site]);
   const [verify, setVerify] = useState(false);
-  const onDone = useCallback(() => setLanded(true), []);
+  const onDone = useCallback(() => {
+    if (site && launchDate && landing) navigate(missionUrl.stand(site.id, landing, { landed: launchDate }));
+    else setLanded(true);
+  }, [site, launchDate, landing, navigate]);
 
   if (loading || (site && launchDate && !plan)) return <LoadingState title="Fuelling the rocket…" />;
   if (!site || !launchDate || !plan || !landing)
@@ -354,7 +367,16 @@ export function LaunchPage() {
             {site.region === 'farside' ? <Explain id="farside" /> : site.region.endsWith('pole') ? <Explain id="low-sun" /> : <Explain id="libration" />}
           </span>
         </div>
-        <SummaryMoon sunlit={sun} contact={earth} lat={site.lat} lon={site.lon} site={site.name} />
+        {/* The real Moon, spinnable (Pink); Aser's picture stays as its stand-in until it is ready. */}
+        <MissionGlobe
+          className={s.sumMoon}
+          lat={site.lat}
+          lon={site.lon}
+          siteName={site.name}
+          sunlit={sun}
+          contact={earth}
+          fallback={<SummaryMoon sunlit={sun} contact={earth} lat={site.lat} lon={site.lon} site={site.name} />}
+        />
       </section>
 
       {/* 2. The four numbers that matter, for the first lunar day (29½ days) */}
