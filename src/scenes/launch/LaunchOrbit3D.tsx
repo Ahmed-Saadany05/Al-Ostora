@@ -1,7 +1,7 @@
 /**
  * LAUNCH → ARRIVAL — Earth–Moon orbit view (owner: Pink). Loaded lazily by LaunchSequence.
  *
- * Earth (NASA Blue Marble) at the centre and the real Moon (NASA Moon Trek imagery, near side toward
+ * Earth (three.js example texture, MIT; source not stated) at the centre and the real Moon (NASA Moon Trek imagery, near side toward
  * Earth, lit from the Sun's actual direction) on its orbit: a fine white dotted loop whose dots drift
  * the way the Moon travels. A faint "ghost" Moon marks where it will be when the rocket arrives; the
  * rocket is a pulsing white dot on a dashed, non-animated trajectory. A timelapse runs launch →
@@ -63,7 +63,7 @@ interface Hud {
   tap: HTMLElement | null;
 }
 
-/** Earth: NASA Blue Marble, axial tilt, slow spin, a thin atmosphere rim. */
+/** Earth: three.js example texture (MIT; original source not stated), axial tilt, slow spin, a thin atmosphere rim. */
 function Earth() {
   const map = useLoader(THREE.TextureLoader, '/earth/earth_atmos_2048.jpg');
   useMemo(() => {

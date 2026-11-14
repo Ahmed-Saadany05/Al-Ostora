@@ -23,6 +23,8 @@ const CREDITS = [
   'Moon imagery: NASA Moon Trek / LRO WAC (NASA/GSFC/Arizona State University)',
   'Terrain: LRO LOLA (NASA/GSFC)',
   '3-D terrain outside the poles: SLDEM2015, LRO LOLA + SELENE/Kaguya Terrain Camera (NASA/GSFC, JAXA)',
+  'Earth photo (launch date, summary): NASA Apollo 17 "Blue Marble" (AS17-148-22727)',
+  '3-D Earth texture (launch orbit, summary globe): three.js example textures (MIT licence); original source not stated',
 ];
 
 interface Ref {
@@ -85,7 +87,11 @@ const AI_USE: { who: string; tool: string; uses: string }[] = [
     uses: 'Claude Code: writing and debugging code (data pipeline, NASA terrain, 3D scenes, UI). Manus AI: generating the 3D hardware models.',
   },
   // { who: 'Aser (screens)', tool: '…', uses: '…' },
-  // { who: 'Pink (3D scenes)', tool: '…', uses: '…' },
+  {
+    who: 'Pink (3D scenes, page flow)',
+    tool: 'Claude Code (Claude Opus)',
+    uses: 'Building the 3D scenes (the Moon Trek globe and site picker, the Home to site-selection flight, the stand-on-site Moon view, the launch orbit and the summary Moon), the page flow changes, and bug fixes.',
+  },
   // { who: 'Hady (Home, explainers, Refaey)', tool: '…', uses: '…' },
 ];
 
