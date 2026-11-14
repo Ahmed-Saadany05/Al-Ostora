@@ -1,5 +1,5 @@
 import { EXPLAINERS } from '../explainers';
-import { ASK, INTRO, MISSIONS, MISSIONS_HUB, MOMENTS, OUTCOME, type DialogueNode, type Reply } from './dialogues/dialogues';
+import { INTRO, MISSIONS, MISSIONS_HUB, MOMENTS, OUTCOME, type DialogueNode, type Reply } from './dialogues/dialogues';
 import { REFAEY_COPY } from './copy';
 
 export type RuntimeNode = DialogueNode & { title?: string };
@@ -26,6 +26,3 @@ export function getNode(id: string, backTo?: string): RuntimeNode | undefined {
   if (id.startsWith(EXPLAIN_PREFIX)) return explainerNode(id.slice(EXPLAIN_PREFIX.length), backTo);
   return NODES[id];
 }
-
-export type AskScreen = keyof typeof ASK;
-export const askReplies = (screen: AskScreen): Reply[] => ASK[screen] ?? [];

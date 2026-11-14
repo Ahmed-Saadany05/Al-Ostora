@@ -124,12 +124,8 @@
   justify-items: start;
   gap: var(--space-1);
 }
-.note {
-  margin: var(--space-2) 0 0;
-  max-width: 44ch;
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: var(--color-text-muted);
+.source {
+  margin-top: var(--space-1);
 }
 
 /* ---------------------------------------------------------------- list */

@@ -5,5 +5,5 @@ export const MISSIONS_COPY = {
   all: 'All stories',
   lesson: 'Lesson',
   earlier: 'Earlier in this story',
-  lessons: { power: 'Power', comms: 'Comms', timing: 'Timing' },
+  lessons: { power: 'Power', comms: 'Earth in view', timing: 'Timing' },
 } as const;

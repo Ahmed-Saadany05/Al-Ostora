@@ -48,7 +48,7 @@ export interface ResolvedNode {
   usesFacts: boolean;
 }
 
-const TOKEN = /\{([A-Za-z]+)\}/g;
+const TOKEN = /\{([A-Za-z0-9]+)\}/g;
 
 /** The text with its tokens filled, or null when it must be skipped. */
 export function fill(text: string, ctx: Pick<ResolveContext, 'horizons' | 'values'> & { facts?: Partial<Record<string, string>> }): string | null {
@@ -124,13 +124,17 @@ export function packBeats(lineCounts: number[], maxLines: number): number[][] {
 }
 
 /**
- * "See it yourself" must never link to a site that is not in the catalogue. If the site is missing, the reply becomes
- * the panels explainer instead (same position, no note).
+ * Adapts the hand-off replies of a story to what is true right now.
+ *  - "See the sky at touchdown" opens the site AT the landing moment, on the live provider only. On the demo provider the
+ *    reply uses its `demoLabel` and carries no `at`: nothing may claim to show the landing day with placeholder numbers.
+ *  - If the site is not in the catalogue the reply becomes the panels explainer (same position); we never link to a missing site.
  */
-export function adaptReplies(replies: Reply[], siteExists: (siteId: string) => boolean): Reply[] {
-  return replies.map((r) =>
-    r.action?.type === 'openPlanner' && !siteExists(r.action.siteId)
-      ? { label: 'How panels catch a low Sun', action: { type: 'openExplainer', id: 'upright-panels' } }
-      : r,
-  );
+export function adaptReplies(replies: Reply[], siteExists: (siteId: string) => boolean, live: boolean): Reply[] {
+  return replies.map((r) => {
+    if (r.action?.type !== 'openPlanner') return r;
+    if (!siteExists(r.action.siteId)) return { label: 'How panels catch a low Sun', action: { type: 'openExplainer', id: 'upright-panels' } };
+    if (live) return r;
+    const { at: _at, ...action } = r.action;
+    return { ...r, label: r.demoLabel ?? r.label, action };
+  });
 }

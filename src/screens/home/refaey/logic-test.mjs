@@ -1,7 +1,7 @@
 // Run: node --test src/screens/home/refaey/   (files named *-test.mjs, so vitest does not pick them up)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fill, resolveNode, packBeats, isVisible } from './logic.ts';
+import { fill, resolveNode, packBeats, isVisible, adaptReplies } from './logic.ts';
 
 const base = { horizons: true, values: {}, flags: {}, terminalLabel: 'OK', hasExplainer: () => true };
 const node = (o) => ({ id: 'n', lines: ['a'], replies: [], ...o });
@@ -55,4 +55,36 @@ test('beats: whole lines are grouped to at most 4 visual lines; nothing is trunc
 });
 test('isVisible follows the same rules', () => {
   assert.equal(isVisible(node({ lines: ['{sunsetIn}'] }), { ...base, horizons: false }), false);
+});
+
+// ---- recorded facts (history) fill on every provider; live tokens still need Horizons
+test('a recorded fact fills on the demo provider; a live token on the same line still skips it', () => {
+  const facts = { a11Sun: '10.7°' };
+  assert.equal(fill('Sun {a11Sun}.', { horizons: false, values: {}, facts }), 'Sun 10.7°.');
+  assert.equal(fill('Sun {a11Sun}, sets in {sunsetIn}.', { horizons: false, values: { sunsetIn: '3d' }, facts }), null);
+  assert.equal(fill('Sun {a11Sun}, sets in {sunsetIn}.', { horizons: true, values: { sunsetIn: '3d' }, facts }), 'Sun 10.7°, sets in 3d.');
+  assert.equal(fill('Sets in {sunsetIn}.', { horizons: false, values: { sunsetIn: '3d' }, facts }), null);
+});
+test('usesFacts tells the page when to show the recorded label', () => {
+  const ctx = { ...base, horizons: false, facts: { a11Sun: '10.7°' } };
+  assert.equal(resolveNode(node({ lines: ['Sun {a11Sun}.'] }), ctx, () => undefined).usesFacts, true);
+  assert.equal(resolveNode(node({ lines: ['No numbers.'] }), ctx, () => undefined).usesFacts, false);
+});
+
+// ---- "See the sky at touchdown" is only true on the live provider
+const see = { label: 'See the sky at touchdown', demoLabel: 'Open this site in the planner', action: { type: 'openPlanner', siteId: 'x', at: '1969-07-20T20:17:40Z' } };
+test('live: the reply passes the touchdown moment', () => {
+  const [r] = adaptReplies([see], () => true, true);
+  assert.equal(r.label, 'See the sky at touchdown');
+  assert.equal(r.action.at, '1969-07-20T20:17:40Z');
+});
+test('demo: the reply uses its demo label and carries no `at`', () => {
+  const [r] = adaptReplies([see], () => true, false);
+  assert.equal(r.label, 'Open this site in the planner');
+  assert.equal('at' in r.action, false);
+});
+test('a site missing from the catalogue becomes the panels explainer, never a link', () => {
+  const [r] = adaptReplies([see], () => false, true);
+  assert.equal(r.label, 'How panels catch a low Sun');
+  assert.deepEqual(r.action, { type: 'openExplainer', id: 'upright-panels' });
 });

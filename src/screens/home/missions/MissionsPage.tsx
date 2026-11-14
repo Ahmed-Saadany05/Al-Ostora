@@ -5,11 +5,13 @@
  */
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useSites } from '@/shared/data';
+import { getProvider, useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, Card, DisplayHeading, Lead } from '@/shared/ui';
 import { ART, RefaeyBust } from '../refaey';
+import { FactsBadge } from '../refaey/FactsBadge';
+import { athenaVerdict, recordedTokens } from '../refaey/facts/display';
 import { REFAEY_COPY } from '../refaey/copy';
 import { MISSIONS, type Mission, type Reply } from '../refaey/dialogues/dialogues';
 import { adaptReplies, resolveNode, type ResolveContext, type ResolvedNode } from '../refaey/logic';
@@ -18,8 +20,15 @@ import { MISSIONS_COPY } from './copy';
 import s from './MissionsPage.module.css';
 import r from '../refaey/refaey.module.css';
 
-/** Stories use no data tokens and no conditions. */
-const CONTEXT: ResolveContext = { horizons: false, values: {}, flags: {}, terminalLabel: REFAEY_COPY.ok, hasExplainer };
+/** Stories read no live values. They read the recorded Horizons facts (history), which fill on every provider. */
+const CONTEXT: ResolveContext = {
+  horizons: false,
+  values: {},
+  flags: { athenaSunlit: athenaVerdict() === 'sunlit', athenaHidden: athenaVerdict() === 'hidden' },
+  facts: recordedTokens(),
+  terminalLabel: REFAEY_COPY.ok,
+  hasExplainer,
+};
 const HUB = 'missions-hub';
 const FADE_MS = 240;
 
@@ -108,11 +117,13 @@ export function MissionsPage() {
     }
     const a = rep.action;
     if (a?.type === 'openExplainer') return setTrail({ missionId: mission.id, ids: [...ids, `explain:${a.id}`] });
-    if (a?.type === 'openPlanner') return siteExists(a.siteId) ? navigate(missionUrl.stand(a.siteId)) : undefined;
+    if (a?.type === 'openPlanner') return siteExists(a.siteId) ? navigate(missionUrl.stand(a.siteId, a.at)) : undefined;
+    // "OK" on an explainer goes back to the story beat it was opened from.
+    if (a?.type === 'collapse' && currentId?.startsWith('explain:')) return setTrail({ missionId: mission.id, ids: ids.slice(0, -1) });
     if (a?.type === 'navigate') return navigate(a.to === '/mission' ? missionUrl.chooseSite() : a.to);
   };
 
-  const replies = current ? adaptReplies(current.replies, siteExists) : [];
+  const replies = current ? adaptReplies(current.replies, siteExists, getProvider().id === 'live') : [];
 
   return (
     <div
@@ -192,11 +203,15 @@ export function MissionsPage() {
                       {l}
                     </p>
                   ))}
+                  {current?.usesFacts && (
+                    <div className={s.source}>
+                      <FactsBadge />
+                    </div>
+                  )}
                 </div>
                 <div className={s.replies}>
                   {replies.map((rep) => (
                     <div key={rep.label} className={s.replyRow}>
-                      {rep.note && <p className={s.note}>{rep.note}</p>}
                       <Button variant="ghost" size="md" icon="arrowRight" className={r.reply} onClick={() => onReply(rep)}>
                         {rep.label}
                       </Button>

@@ -61,7 +61,7 @@ export const EXPLAINERS = {
       'https://spacepolicyonline.com/news/india-says-good-night-to-chandrayaan-3/',
       'https://www.deccanherald.com/science/space/no-signal-yet-from-vikram-pragyan-isro-2697635',
     ],
-    notes: 'Example (moved here from the old /missions story): India\'s Chandrayaan-3 landed on 23 Aug 2023 at 69.37°S, 32.35°E, in the south polar region but about 600 km from the pole (say "near the south pole region", never "at the south pole"). It was built to work for one lunar day of sunlight, and after sunset it did not answer again.',
+    notes: 'Example (moved here from the old /missions story): India\'s Chandrayaan-3 landed on 23 Aug 2023 at 69.37°S, 32.35°E, in the south polar region but about 600 km from the pole (say "near the south pole region", never "at the south pole"). It was built to work through one lunar daytime (about two weeks of sunlight), and after sunset it did not answer again.',
   },
   'upright-panels': {
     title: 'Why do polar solar panels stand upright?',
