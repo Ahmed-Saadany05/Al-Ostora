@@ -123,7 +123,7 @@ export function RefaeyStage({
       timer = window.setTimeout(() => alive && place(), 120);
     };
     // the first placement waits for the fonts (text widths are final), so it is not made twice (and never flips)
-    if (document.fonts) void document.fonts.ready.then(() => alive && requestAnimationFrame(() => alive && place()));
+    if (document.fonts && window.innerWidth >= minWidth) void document.fonts.ready.then(() => alive && requestAnimationFrame(() => alive && place()));
     else place();
     window.addEventListener('resize', later);
     return () => {

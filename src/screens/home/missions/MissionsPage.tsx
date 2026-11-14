@@ -115,10 +115,10 @@ export function MissionsPage() {
   const closeStory = useCallback(() => swap(() => setParams({})), [swap, setParams]);
 
   // Focus: the new beat after every reply; the card you came from when you return to the list.
-  const last = useRef({ story: '', beats: 0 });
+  const last = useRef({ story: '', beats: 0, plain: false });
   useLayoutEffect(() => {
-    const now = { story: mission?.id ?? '', beats: ids.length };
-    if (mission && (last.current.story !== now.story || last.current.beats !== now.beats)) beat.current?.focus({ preventScroll: true });
+    const now = { story: mission?.id ?? '', beats: ids.length, plain };
+    if (mission && plain && (last.current.story !== now.story || last.current.beats !== now.beats || !last.current.plain)) beat.current?.focus({ preventScroll: true });
     if (!mission && last.current.story) {
       document.querySelector<HTMLElement>(`[data-story="${last.current.story}"] button`)?.focus({ preventScroll: true });
     }
@@ -218,7 +218,7 @@ export function MissionsPage() {
         footer={mission && current?.usesFacts ? <FactsBadge /> : undefined}
         onReply={mission ? onReply : () => undefined}
         entrance="none"
-        reserveH={mission ? undefined : 120}
+        reserveH={mission ? undefined : allLearned ? 200 : 120}
         onPlaced={(ok, slot) =>
           setPlaced((p) => (p.view === view && p.ok === ok && p.pose === (slot?.pose ?? null) ? p : { view, ok, pose: slot?.pose ?? null }))
         }

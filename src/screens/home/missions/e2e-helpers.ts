@@ -48,7 +48,13 @@ export async function audit(page: Page): Promise<Failure[]> {
       if (!area) return r;
       return new DOMRect(Math.max(r.left, area.left), Math.max(r.top, area.top), Math.max(0, Math.min(r.right, area.right) - Math.max(r.left, area.left)), Math.max(0, Math.min(r.bottom, area.bottom) - Math.max(r.top, area.top)));
     };
-    const add = (group: string, els: Element[]) => els.filter(visible).forEach((el, i) => boxes.push({ group, label: `${group}${els.length > 1 ? i : ''}: ${(el.textContent ?? '').trim().slice(0, 24)}`, el, r: shown(el) }));
+    // a heading's block spans the whole column; what must stay clear is where its words are
+    const words = (el: Element) => {
+      const g = document.createRange();
+      g.selectNodeContents(el);
+      return g.getBoundingClientRect();
+    };
+    const add = (group: string, els: Element[]) => els.filter(visible).forEach((el, i) => boxes.push({ group, label: `${group}${els.length > 1 ? i : ''}: ${(el.textContent ?? '').trim().slice(0, 24)}`, el, r: group === 'title' ? words(el) : shown(el) }));
     add('figure', cls('actor'));
     add('balloon', cls('balloon'));
     add('title', [...document.querySelectorAll('h1')]);
