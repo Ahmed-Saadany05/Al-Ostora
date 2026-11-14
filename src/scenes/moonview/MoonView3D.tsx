@@ -562,16 +562,17 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
       />
       {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black.
           Stronger at night (Pink): with the Sun down it is the main light, so the ground stays readable. */}
-      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 + 0.55 * night : 0.05} color={color.earth} />
+      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 + 0.38 * night : 0.05} color={color.earth} />
       {/* Bounce light: sunlit regolith lights the shadows a little (no air, so still very dark).
           Comes from the side opposite the Sun, low; scales with how much Sun there is. */}
       <directionalLight position={[-dir[0], radius * 0.4, -dir[2]]} intensity={0.22 * lit} color={new THREE.Color(0.85, 0.82, 0.78)} />
       {/* Night lift (Pink): when the Sun is down the view never goes pitch black. A soft low fill
           (from Earth's side when it is up, otherwise from a fixed direction) keeps the relief visible,
-          and a cool sky/ground fill keeps the shadows grey. All fade out as the Sun comes up. */}
-      <directionalLight position={nightFill} intensity={(sky?.earthVisible ? 0.18 : 0.45) * night} color={new THREE.Color(0.78, 0.82, 0.9)} />
-      <hemisphereLight color={0xc8ccd6} groundColor={0x2a2826} intensity={0.32 * night} />
-      <ambientLight intensity={0.07 + 0.06 * lit + 0.12 * night} />
+          and a cool sky/ground fill keeps the shadows grey. Dim and blue-tinted, so night still looks
+          like night rather than day. All fade out as the Sun comes up. */}
+      <directionalLight position={nightFill} intensity={(sky?.earthVisible ? 0.12 : 0.3) * night} color={new THREE.Color(0.66, 0.74, 0.92)} />
+      <hemisphereLight color={0x9fb0cc} groundColor={0x1c1d22} intensity={0.22 * night} />
+      <ambientLight intensity={0.07 + 0.06 * lit + 0.06 * night} />
     </>
   );
 }
