@@ -391,3 +391,41 @@
 [data-stage='on'] [data-refaey-fallback] {
   display: none;
 }
+
+/* Visible "AI-generated" labels on Refaey's art (Space Apps: AI images need a visible watermark). */
+.bustWrap {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  line-height: 0;
+}
+.aiBadge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: var(--color-bg, #0b0b0c);
+  border: 1px solid var(--color-line-strong, rgba(255, 255, 255, 0.3));
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.aiTag {
+  /* Above his head: under his feet it collided with scene captions. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 2px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+  pointer-events: none;
+}
