@@ -62,3 +62,29 @@
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+/* The page positions it (Step 1: beside the menu). */
+.free {
+  z-index: var(--z-chrome);
+}
+/* A narrow column: balloon under him (the tail points up at him). */
+.stacked {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.stacked .balloon {
+  margin: 0;
+}
+/* He floats on the right of something, the balloon on his left. */
+.reverse {
+  flex-direction: row-reverse;
+}
+.stacked .balloon::before {
+  top: calc(var(--space-3) / -2 - 1px) !important;
+  bottom: auto !important;
+  left: 48px !important;
+  margin-left: 0 !important;
+  border: var(--border) !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+}

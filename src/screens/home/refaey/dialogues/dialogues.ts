@@ -81,11 +81,10 @@ export const INTRO: DialogueNode[] = [
   {
     id: 'b7',
     mood: 'smile',
-    lines: ['Want to see how real missions picked their place and time, or help me plan mine straight away?'],
+    lines: ['See how real missions picked their place and time, or help me plan mine. Your call: the two big buttons.'],
     replies: [
-      { label: 'Explore past missions', action: { type: 'navigate', to: '/missions' } },
-      { label: 'Plan a future mission', action: { type: 'navigate', to: '/mission' } },
       { label: "What's real here?", next: 'b7r' },
+      { label: 'Why is the Sun so low?', action: { type: 'openExplainer', id: 'low-sun' } },
     ],
   },
   {
