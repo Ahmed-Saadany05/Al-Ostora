@@ -5,6 +5,7 @@
  */
 import { useCallback, useState } from 'react';
 import { LaunchSequence, SitePanorama } from '@/scenes';
+import { RefaeyMoment } from '@/screens/home/refaey';
 import { usePlanLaunch, useSky } from '@/shared/data';
 import { formatDeg, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
@@ -77,6 +78,8 @@ export function LaunchPage() {
           </Button>
         </div>
       </div>
+      <RefaeyMoment id="moment-outcome" placement="stage" />
+
       <VerifyDrawer site={site} time={plan.landingDate} open={verify} onClose={() => setVerify(false)} />
     </section>
   );
