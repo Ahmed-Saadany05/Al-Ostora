@@ -537,6 +537,10 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
   const lit = sky ? (sky.sun.visibleFraction ?? (sky.sunVisible ? 1 : 0)) : 0;
   const up = lit > 0;
   const earth = sky ? azElToLocal(sky.earth.azDeg, sky.earth.elDeg) : ([0, 0.1, -1] as Vec3Tuple);
+  // How dark it is: 1 with the Sun fully hidden, 0 in full sunlight.
+  const night = 1 - lit;
+  // Night fill: low over the ground from Earth's azimuth (or a fixed one when Earth is down).
+  const nightFill = azElToLocal(sky?.earthVisible ? sky.earth.azDeg : 210, 30, 100);
   return (
     <>
       <directionalLight
@@ -556,12 +560,18 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         shadow-camera-far={radius * 4}
         shadow-bias={-0.0004}
       />
-      {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black. */}
-      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 : 0.05} color={color.earth} />
+      {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black.
+          Stronger at night (Pink): with the Sun down it is the main light, so the ground stays readable. */}
+      <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 + 0.55 * night : 0.05} color={color.earth} />
       {/* Bounce light: sunlit regolith lights the shadows a little (no air, so still very dark).
           Comes from the side opposite the Sun, low; scales with how much Sun there is. */}
       <directionalLight position={[-dir[0], radius * 0.4, -dir[2]]} intensity={0.22 * lit} color={new THREE.Color(0.85, 0.82, 0.78)} />
-      <ambientLight intensity={0.07 + 0.06 * lit} />
+      {/* Night lift (Pink): when the Sun is down the view never goes pitch black. A soft low fill
+          (from Earth's side when it is up, otherwise from a fixed direction) keeps the relief visible,
+          and a cool sky/ground fill keeps the shadows grey. All fade out as the Sun comes up. */}
+      <directionalLight position={nightFill} intensity={(sky?.earthVisible ? 0.18 : 0.45) * night} color={new THREE.Color(0.78, 0.82, 0.9)} />
+      <hemisphereLight color={0xc8ccd6} groundColor={0x2a2826} intensity={0.32 * night} />
+      <ambientLight intensity={0.07 + 0.06 * lit + 0.12 * night} />
     </>
   );
 }
