@@ -26,7 +26,13 @@ export interface SpriteSheet {
  * pill). null: no sheet yet, the loaders keep their text and spinner. Set it to switch them all over,
  * e.g. { src: '/sprites/loader.png', cols: 8, rows: 4, frames: 30, fps: 18 }.
  */
-export const LOADER_SPRITE: SpriteSheet | null = null;
+export const LOADER_SPRITE: SpriteSheet | null = {
+  src: '/sprites/rocket-loader.png',
+  cols: 6,
+  rows: 4,
+  frames: 24,
+  fps: 18,
+};
 
 export function SpriteAnimation({ sheet, size, className }: { sheet: SpriteSheet; /** Frame height (any CSS length). */ size: string; className?: string }) {
   const motion = useApp((st) => st.motion);
