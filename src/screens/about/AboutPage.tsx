@@ -75,9 +75,9 @@ const REFERENCES: { group: string; refs: Ref[] }[] = [
  */
 const AI_USE: { who: string; tool: string; uses: string }[] = [
   {
-    who: 'Goda (science engine, quality)',
+    who: 'Goda (science engine, screens, quality)',
     tool: 'Claude (Anthropic), via Claude Code',
-    uses: 'Finding and cross-checking sources; writing the science engine and its tests to the team\'s specification; checking the engine against JPL Horizons and NASA\'s long-term sunlight maps; code reviews; drafting this page, the video script and team messages.',
+    uses: 'Finding and cross-checking sources; writing the science engine and its tests to the team\'s specification; checking the engine against JPL Horizons and NASA\'s long-term sunlight maps; fixing and simplifying screens (site choice, launch date, mission summary); code reviews; drafting this page, the video script and team messages.',
   },
   // { who: 'Hagras (data, shared code)', tool: '…', uses: '…' },
   // { who: 'Aser (screens)', tool: '…', uses: '…' },
