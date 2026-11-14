@@ -27,8 +27,8 @@ for (const vp of VIEWPORTS) {
     await page.waitForSelector('li[data-story]');
     await check(page, vp.name, 'list', errors);
     await expect(page.locator('li[data-story] button')).toHaveCount(3);
-    await expect(page.getByText(/Refaey is fiction; the missions and numbers are real\./)).toBeVisible();
-    await expect(page.getByText(/I've studied these three a hundred times/)).toBeVisible();
+    await expect(page.getByText(/Refaey is fiction; the missions and numbers are real\./).first()).toBeVisible();
+    await expect(page.getByText(/I've studied these three a hundred times/).first()).toBeVisible();
     if (MODE === 'live') await expect(page.locator('footer')).toContainText('Live NASA data');
 
     for (const story of STORIES) {
@@ -37,22 +37,22 @@ for (const vp of VIEWPORTS) {
         if (await page.getByRole('button', { name: /All stories/ }).count()) await page.getByRole('button', { name: /All stories/ }).click();
         await page.waitForSelector('li[data-story]');
         await openStory(page, story.id, beat.clicks);
-        expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-live')), `focus on the new beat (${beat.id})`).toBe('polite');
+        expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]') || document.activeElement?.getAttribute('aria-live') === 'polite'), `focus on the new beat (${beat.id})`).toBe(true);
         await check(page, vp.name, `${story.id}-${beat.id}`, errors);
         // beats that use a recorded fact carry the "JPL Horizons · recorded" label (on every provider); the others do not
         const usesFacts = beat.node.lines.some((l) => FACT_TOKEN.test(l));
-        const badge = page.getByText(/^JPL Horizons · recorded /);
+        const badge = page.getByText(/^JPL Horizons · recorded /).first();
         if (usesFacts) await expect(badge, `${story.id} ${beat.id}`).toBeVisible();
         else await expect(badge, `${story.id} ${beat.id}`).toHaveCount(0);
         // every beat has 2–3 replies, except a final beat's three and a marked transition's one
-        const replies = await page.locator('[class*="_replyRow_"] button').count();
+        const replies = await page.locator('[class*="_replyRow_"] button, [role="dialog"] [data-reply]').count();
         expect(replies, `${beat.id} replies`).toBeGreaterThanOrEqual(beat.node.transition ? 1 : 2);
         expect(replies).toBeLessThanOrEqual(3);
         if (beat.node.learns) {
           await expect(page.getByRole('button', { name: SEE(LIVE) })).toBeVisible();
           if (!LIVE) await expect(page.getByRole('button', { name: 'See the sky at touchdown' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: "Plan Ostora-1's landing" })).toBeVisible();
-          await expect(page.getByText(/as it is today/i)).toHaveCount(0);
+          await expect(page.getByText(/as it is today/i).first()).toHaveCount(0);
         }
       }
     }
@@ -67,15 +67,15 @@ for (const vp of VIEWPORTS) {
     // A guess beat: each answer gets its own reaction, then they rejoin.
     await page.locator('li[data-story="change-4"] button').click();
     await click(page, 'Never');
-    await expect(page.getByText(/^Correct, and slightly creepy\./)).toBeVisible();
+    await expect(page.getByText(/^Correct, and slightly creepy\./).first()).toBeVisible();
     await click(page, 'So how did it phone home?');
-    await expect(page.getByText(/China launched a relay first/)).toBeVisible();
+    await expect(page.getByText(/China launched a relay first/).first()).toBeVisible();
     await page.getByRole('button', { name: 'All stories' }).click();
     await page.locator('li[data-story="change-4"] button').click();
     await click(page, 'Once a month');
-    await expect(page.getByText(/^Sadly, never\./)).toBeVisible();
+    await expect(page.getByText(/^Sadly, never\./).first()).toBeVisible();
     await click(page, 'So how did it phone home?');
-    await expect(page.getByText(/China launched a relay first/)).toBeVisible();
+    await expect(page.getByText(/China launched a relay first/).first()).toBeVisible();
 
     // "How do you know?": a source card with a link that opens in a new tab, and Back to the same beat
     await page.goto('/missions?story=apollo');
@@ -83,7 +83,7 @@ for (const vp of VIEWPORTS) {
     await click(page, 'How low?');
     const beatText = await page.locator('[aria-live="polite"]').innerText();
     await click(page, 'How do you know?');
-    await expect(page.getByText('NASA SP-4029: Apollo 11 summary')).toBeVisible();
+    await expect(page.getByText('NASA SP-4029: Apollo 11 summary').first()).toBeVisible();
     const link = page.getByRole('link', { name: /Open the source/ });
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', /noopener/);
@@ -114,7 +114,7 @@ for (const vp of VIEWPORTS) {
       await click(page, 'Another story');
       await expect(page.locator(`li[data-story="${id}"]`)).toContainText('Lesson learned');
     }
-    await expect(page.getByText(/^Three lessons in the notebook\. Ostora-1 is ready for a site\. Are you\?/)).toBeVisible();
+    await expect(page.getByText(/^Three lessons in the notebook\. Ostora-1 is ready for a site\. Are you\?/).first()).toBeVisible();
     await expect(page.getByRole('link', { name: "Plan Ostora-1's landing" })).toBeVisible();
     await check(page, vp.name, 'list-all-learned', errors);
     await page.reload();
@@ -126,8 +126,20 @@ for (const vp of VIEWPORTS) {
     await page.waitForSelector('[aria-live="polite"]');
     await page.reload();
     await page.waitForSelector('[aria-live="polite"]');
-    await page.keyboard.press('Escape');
-    await settle(page);
+    if (await page.locator('[data-refaey-stage]').count()) {
+      // Refaey is placed in the screen: Esc closes the balloon (he stays); clicking him opens it again at the same beat.
+      const beatNow = await page.locator('[role="dialog"] [aria-live="polite"]').innerText();
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+      await page.getByRole('button', { name: /Refaey: open/ }).click();
+      await expect(page.locator('[role="dialog"]')).toHaveCount(1);
+      expect(await page.locator('[role="dialog"] [aria-live="polite"]').innerText(), 'reopens at the same beat').toBe(beatNow);
+      await page.getByRole('button', { name: /All stories/ }).click();
+      await settle(page);
+    } else {
+      await page.keyboard.press('Escape');
+      await settle(page);
+    }
     expect(await page.evaluate(() => document.activeElement?.closest('[data-story]')?.getAttribute('data-story')), 'Esc: focus on the card').toBe('apollo');
     await page.goBack();
     await page.waitForSelector('[aria-live="polite"]');

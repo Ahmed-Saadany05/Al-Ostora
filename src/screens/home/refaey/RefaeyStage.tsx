@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useApp } from '@/shared/store/app';
 import { DialogueText, type PanelContent } from './DialogueText';
 import { ACTOR_ASPECT, RefaeyActor, useQuip } from './RefaeyActor';
@@ -29,6 +29,7 @@ export function RefaeyStage({
   entrance = 'drift',
   minWidth = 900,
   reserveH = BALLOON.h,
+  footer,
 }: {
   slots: Slot[];
   /** The element whose contents are checked for keep-outs. */
@@ -45,6 +46,7 @@ export function RefaeyStage({
   minWidth?: number;
   /** Worst-case balloon height for this screen's content (a one-line idle remark needs far less than a story beat with three replies). */
   reserveH?: number;
+  footer?: ReactNode;
 }) {
   const motion = useApp((st) => st.motion);
   const root = useRef<HTMLDivElement>(null);
@@ -73,10 +75,22 @@ export function RefaeyStage({
     sc.dataset.stage = 'on';
     void sc.offsetHeight;
     const raw = safeArea(chrome);
-    const safe = { x: KEEP_CLEAR, y: raw.y + (chrome ? KEEP_CLEAR : 0), w: raw.w - 2 * KEEP_CLEAR, h: raw.h - (chrome ? 2 * KEEP_CLEAR : 0) - (chrome ? 0 : 0) };
+    const safe = {
+      x: KEEP_CLEAR,
+      y: raw.y + (chrome ? KEEP_CLEAR : 0),
+      w: raw.w - 2 * KEEP_CLEAR,
+      h: raw.h - (chrome ? 2 * KEEP_CLEAR : 0) - (chrome ? 0 : 0),
+    };
     const ctx: PlaceCtx = {
       viewport: { w: window.innerWidth, h: window.innerHeight },
-      safe: chrome ? safe : { x: KEEP_CLEAR, y: KEEP_CLEAR, w: raw.w - 2 * KEEP_CLEAR, h: raw.h - 2 * KEEP_CLEAR },
+      safe: chrome
+        ? safe
+        : {
+            x: KEEP_CLEAR,
+            y: KEEP_CLEAR,
+            w: raw.w - 2 * KEEP_CLEAR,
+            h: raw.h - 2 * KEEP_CLEAR,
+          },
       anchor: (name) => {
         const el = sc.querySelector(`[data-refaey-anchor="${name}"]`);
         if (!el) return null;
@@ -85,8 +99,16 @@ export function RefaeyStage({
       },
     };
     const keepOuts = collectKeepOuts(sc, root.current);
-    const chosen = chooseSlot(slotsRef.current, ctx, keepOuts, ACTOR_ASPECT, { ...BALLOON, h: reserveH });
-    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__refaeyPlace = { safe: ctx.safe, keepOuts, chosen: chosen?.slot.id ?? null };
+    const chosen = chooseSlot(slotsRef.current, ctx, keepOuts, ACTOR_ASPECT, {
+      ...BALLOON,
+      h: reserveH,
+    });
+    if (import.meta.env.DEV)
+      (window as unknown as Record<string, unknown>).__refaeyPlace = {
+        safe: ctx.safe,
+        keepOuts,
+        chosen: chosen?.slot.id ?? null,
+      };
     sc.dataset.stage = chosen ? 'on' : 'off';
     setPlaced(chosen);
     onPlacedRef.current(!!chosen, chosen?.slot ?? null);
@@ -100,8 +122,9 @@ export function RefaeyStage({
       window.clearTimeout(timer);
       timer = window.setTimeout(() => alive && place(), 120);
     };
-    void document.fonts?.ready.then(() => alive && requestAnimationFrame(() => alive && place()));
-    place();
+    // the first placement waits for the fonts (text widths are final), so it is not made twice (and never flips)
+    if (document.fonts) void document.fonts.ready.then(() => alive && requestAnimationFrame(() => alive && place()));
+    else place();
     window.addEventListener('resize', later);
     return () => {
       alive = false;
@@ -110,13 +133,39 @@ export function RefaeyStage({
     };
   }, [place]);
 
+  // Esc closes the balloon from anywhere on the page (the dialog also handles it when focus is inside it); focus then goes to him.
+  const escape = useRef(onEscape);
+  escape.current = onEscape;
+  const wasOpen = useRef(true);
+  useEffect(() => {
+    if (!placed || !open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      if (escape.current) escape.current();
+      else setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [placed, open]);
+  useEffect(() => {
+    if (wasOpen.current && !open) root.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
   // The balloon pops (opacity + scale 0.96 → 1, ≤ 180 ms; none without motion) once his entrance is over; the drift pauses meanwhile.
   const showBalloon = !!placed && open && entered;
   useEffect(() => {
     const el = balloon.current;
     if (!showBalloon || !el || !motion) return;
     setPopping(true);
-    const a = el.animate([{ opacity: 0, transform: 'scale(0.96)' }, { opacity: 1, transform: 'scale(1)' }], { duration: POP_MS, easing: 'ease-out' });
+    const a = el.animate(
+      [
+        { opacity: 0, transform: 'scale(0.96)' },
+        { opacity: 1, transform: 'scale(1)' },
+      ],
+      { duration: POP_MS, easing: 'ease-out' },
+    );
     const done = () => setPopping(false);
     a.finished.then(done, done);
     return () => a.cancel();
@@ -127,7 +176,12 @@ export function RefaeyStage({
   const standing = slot.pose === 'stand';
   const grow = side === 'above' ? { bottom: window.innerHeight - (figure.y - 20) } : { top: figure.y };
   const bx = side === 'right' ? reserve.x : side === 'left' ? window.innerWidth - (reserve.x + reserve.w) : reserve.x;
-  const pos: React.CSSProperties = { ...(side === 'left' ? { right: bx } : { left: bx }), ...grow, width: reserve.w, '--tail-y': `${Math.round(height * 0.1)}px` } as unknown as React.CSSProperties;
+  const pos: React.CSSProperties = {
+    ...(side === 'left' ? { right: bx } : { left: bx }),
+    ...grow,
+    width: reserve.w,
+    '--tail-y': `${Math.round(height * 0.1)}px`,
+  } as unknown as React.CSSProperties;
   const rect = (r: Rect) => [r.x, r.y, r.w, r.h].map(Math.round).join(',');
 
   return (
@@ -142,7 +196,15 @@ export function RefaeyStage({
       data-fig={rect(figure)}
       data-balloon-box={rect(reserve)}
     >
-      <div className={s.stageFigure} style={{ left: figure.x, top: figure.y, width: figure.w, height: figure.h }}>
+      <div
+        className={s.stageFigure}
+        style={{
+          left: figure.x,
+          top: figure.y,
+          width: figure.w,
+          height: figure.h,
+        }}
+      >
         <RefaeyActor
           height={`${figure.h}px`}
           pose={slot.pose}
@@ -165,6 +227,7 @@ export function RefaeyStage({
               onReply={onReply}
               onCollapse={onEscape ?? (() => setOpen(false))}
               skip={skip}
+              footer={footer}
             />
             {quip && (
               <p className={s.quipLine} role="status">

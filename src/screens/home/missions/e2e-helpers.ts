@@ -50,6 +50,7 @@ export async function audit(page: Page): Promise<Failure[]> {
     };
     const add = (group: string, els: Element[]) => els.filter(visible).forEach((el, i) => boxes.push({ group, label: `${group}${els.length > 1 ? i : ''}: ${(el.textContent ?? '').trim().slice(0, 24)}`, el, r: shown(el) }));
     add('figure', cls('actor'));
+    add('balloon', cls('balloon'));
     add('title', [...document.querySelectorAll('h1')]);
     add('lead', cls('lead'));
     add('cards', [...document.querySelectorAll('li[data-story] button')]);
@@ -61,7 +62,7 @@ export async function audit(page: Page): Promise<Failure[]> {
     add('footer', [...document.querySelectorAll('footer')]);
     const fixed = [...document.querySelectorAll<HTMLElement>('body *')].filter((el) => {
       if (!visible(el) || getComputedStyle(el).position !== 'fixed') return false;
-      if (el.closest('footer, [class*="_header_"]')) return false;
+      if (el.closest('footer, [class*="_header_"], [data-refaey-stage]')) return false;
       return /\S/.test(el.textContent ?? '') || el.matches('button, a, input, select');
     });
     add('fixed', fixed);

@@ -32,7 +32,10 @@ import r from '../refaey/refaey.module.css';
 const baseContext = (callsign: string): ResolveContext => ({
   horizons: false,
   values: {},
-  flags: { athenaSunlit: athenaVerdict() === 'sunlit', athenaHidden: athenaVerdict() === 'hidden' },
+  flags: {
+    athenaSunlit: athenaVerdict() === 'sunlit',
+    athenaHidden: athenaVerdict() === 'hidden',
+  },
   facts: recordedTokens(),
   story: { callsign },
   terminalLabel: REFAEY_COPY.ok,
@@ -60,17 +63,19 @@ export function MissionsPage() {
 
   // The beats of the open conversation. Reset by construction whenever another story opens.
   const [trailState, setTrail] = useState<Trail>({ missionId: '', ids: [] });
-  const ids = useMemo(
-    () => (mission ? (trailState.missionId === mission.id ? trailState.ids : [mission.story[0].id]) : []),
-    [mission, trailState],
-  );
+  const ids = useMemo(() => (mission ? (trailState.missionId === mission.id ? trailState.ids : [mission.story[0].id]) : []), [mission, trailState]);
 
   const area = useRef<HTMLDivElement>(null);
   const pageRoot = useRef<HTMLDivElement>(null);
   // 'on' while he is being placed in the screen; 'off' when no slot fits and the plain layout shows. Reset when the list/story changes.
-  const [placed, setPlaced] = useState<{ view: string; ok: boolean; pose: string | null }>({ view: '', ok: true, pose: null });
+  const [placed, setPlaced] = useState<{
+    view: string;
+    ok: boolean;
+    pose: string | null;
+  }>({ view: '', ok: true, pose: null });
   const view = mission ? `story:${mission.id}` : 'list';
   const stage = placed.view !== view || placed.ok ? 'on' : 'off';
+  const plain = stage === 'off'; // the plain layout (no Refaey in the screen) is only rendered when nothing fit
   const pendingHop = useRef(false);
   const beat = useRef<HTMLDivElement>(null);
   const history = useRef<HTMLDivElement>(null);
@@ -81,12 +86,19 @@ export function MissionsPage() {
     (change: () => void) => {
       const el = area.current;
       if (!el || !motion) return change();
-      const out = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FADE_MS, easing: 'ease-in-out', fill: 'forwards' });
+      const out = el.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: FADE_MS,
+        easing: 'ease-in-out',
+        fill: 'forwards',
+      });
       void out.finished.then(() => {
         change();
         requestAnimationFrame(() => {
           out.cancel();
-          el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS, easing: 'ease-in-out' });
+          el.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: FADE_MS,
+            easing: 'ease-in-out',
+          });
         });
       });
     },
@@ -127,7 +139,10 @@ export function MissionsPage() {
   const currentId = ids[ids.length - 1];
   const previousId = ids[ids.length - 2];
   const current = mission && currentId ? resolve(currentId, previousId) : null;
-  const earlier = ids.slice(0, -1).map((id, i) => resolve(id, ids[i - 1])).filter((n): n is ResolvedNode => n !== null);
+  const earlier = ids
+    .slice(0, -1)
+    .map((id, i) => resolve(id, ids[i - 1]))
+    .filter((n): n is ResolvedNode => n !== null);
 
   // Finishing a story puts its lesson in the notebook.
   const finished = current?.learns && mission ? mission.lessonKey : null;
@@ -161,9 +176,20 @@ export function MissionsPage() {
   const allLearned = MISSIONS.every((m) => lessons[m.lessonKey]);
   const replies = current ? adaptReplies(current.replies, siteExists, getProvider().id === 'live') : [];
 
-  const stageContent: PanelContent = mission && current
-    ? { key: current.id, title: current.title, lines: current.lines, replies, link: current.link }
-    : { key: 'hub', lines: [say(allLearned ? HUB.allLearned : HUB.idle)], replies: [] };
+  const stageContent: PanelContent =
+    mission && current
+      ? {
+          key: current.id,
+          title: current.title,
+          lines: current.lines,
+          replies,
+          link: current.link,
+        }
+      : {
+          key: 'hub',
+          lines: [say(allLearned ? HUB.allLearned : HUB.idle)],
+          replies: [],
+        };
 
   return (
     <div
@@ -184,50 +210,67 @@ export function MissionsPage() {
         {!mission && <Lead align="left">{say(HUB.subtitle)}</Lead>}
       </header>
 
+      <RefaeyStage
+        key={view}
+        slots={mission ? MISSIONS_STORY_SLOTS : MISSIONS_LIST_SLOTS}
+        scope={pageRoot}
+        content={stageContent}
+        footer={mission && current?.usesFacts ? <FactsBadge /> : undefined}
+        onReply={mission ? onReply : () => undefined}
+        entrance="none"
+        reserveH={mission ? undefined : 120}
+        onPlaced={(ok, slot) =>
+          setPlaced((p) => (p.view === view && p.ok === ok && p.pose === (slot?.pose ?? null) ? p : { view, ok, pose: slot?.pose ?? null }))
+        }
+      />
       <div ref={area} className={s.area}>
         {!mission ? (
           <div className={[s.grid, s.list].join(' ')}>
-            <div className={s.figure} data-refaey-fallback>
-              <RefaeyActor height="var(--actor-h)" clickable />
-            </div>
+            {plain && (
+              <div className={s.figure} data-refaey-fallback>
+                <RefaeyActor height="var(--actor-h)" clickable />
+              </div>
+            )}
             <div className={s.listBody}>
-            <div className={s.idle}>
-              <div className={s.quipHost} data-quip={quip !== null} data-refaey-fallback>
-                <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
-                {quip && (
-                  <p className={s.quipLine} role="status">
-                    {quip}
-                  </p>
+              <div className={s.idle}>
+                {plain && (
+                  <div className={s.quipHost} data-quip={quip !== null}>
+                    <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
+                    {quip && (
+                      <p className={s.quipLine} role="status">
+                        {quip}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {allLearned && (
+                  <Button variant="primary" size="md" to={missionUrl.chooseSite()}>
+                    {say(HUB.plan)}
+                  </Button>
                 )}
               </div>
-              {allLearned && (
-                <Button variant="primary" size="md" to={missionUrl.chooseSite()}>
-                  {say(HUB.plan)}
-                </Button>
-              )}
-            </div>
-            <ul className={s.cards} data-refaey-anchor="cards">
-              {MISSIONS.map((m) => (
-                <li key={m.id} data-story={m.id} className={s.cardItem}>
-                  <Card onSelect={() => openStory(m)} padding="md" className={s.card}>
-                    <span className={s.cardTitle}>{m.name}</span>
-                    <span className={s.cardMeta}>
-                      {m.agency} · <span className="num">{m.years ?? yearOf(m.landed)}</span>
-                    </span>
-                    <span className={s.cardTag}>
-                      <span className="visually-hidden">{MISSIONS_COPY.lesson}: </span>
-                      {MISSIONS_COPY.lessons[m.lesson]}
-                    </span>
-                    <span className={s.cardLine}>{m.outcome}</span>
-                    {lessons[m.lessonKey] && (
-                      <span className={s.learned}>
-                        <Icon name="check" size={14} /> {HUB.learned}
+              <ul className={s.cards} data-refaey-anchor="cards">
+                {MISSIONS.map((m) => (
+                  <li key={m.id} data-story={m.id} className={s.cardItem}>
+                    <Card onSelect={() => openStory(m)} padding="md" className={s.card}>
+                      <span className={s.cardTitle}>{m.name}</span>
+                      <span className={s.cardMeta}>
+                        {m.agency} · <span className="num">{m.years ?? yearOf(m.landed)}</span>
                       </span>
-                    )}
-                  </Card>
-                </li>
-              ))}
-            </ul>
+                      <span className={s.cardTag}>
+                        <span className="visually-hidden">{MISSIONS_COPY.lesson}: </span>
+                        {MISSIONS_COPY.lessons[m.lesson]}
+                      </span>
+                      <span className={s.cardLine}>{m.outcome}</span>
+                      {lessons[m.lessonKey] && (
+                        <span className={s.learned}>
+                          <Icon name="check" size={14} /> {HUB.learned}
+                        </span>
+                      )}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         ) : (
@@ -237,7 +280,7 @@ export function MissionsPage() {
                 ← {MISSIONS_COPY.all}
               </Button>
             </div>
-            {earlier.length > 0 && (
+            {plain && earlier.length > 0 && (
               <div ref={history} data-refaey-fallback className={s.history} role="region" aria-label={MISSIONS_COPY.earlier} tabIndex={0}>
                 {earlier.map((n, i) => (
                   <div key={`${n.id}:${i}`} className={s.earlier}>
@@ -251,57 +294,51 @@ export function MissionsPage() {
                 ))}
               </div>
             )}
-            <div className={s.figure} data-refaey-fallback>
-              <RefaeyActor height="var(--actor-h)" clickable />
-            </div>
-            <div className={s.current} data-refaey-fallback>
-              <div className={s.inlineBust} aria-hidden>
-                <RefaeyBust mood={current?.mood ?? 'neutral'} size="var(--bust-inline)" />
-              </div>
-              <div className={s.say}>
-                <div ref={beat} tabIndex={-1} className={[s.beat, s.quipHost].join(' ')} aria-live="polite" data-quip={quip !== null}>
-                  {quip && (
-                    <p className={s.quipLine} role="status">
-                      {quip}
-                    </p>
-                  )}
-                  {current?.title && <p className={s.beatTitle}>{current.title}</p>}
-                  {current?.lines.map((l) => (
-                    <p key={l} className={s.beatText}>
-                      {l}
-                    </p>
-                  ))}
-                  {current?.link && <SourceLink link={current.link} />}
-                  {current?.usesFacts && (
-                    <div className={s.source}>
-                      <FactsBadge />
-                    </div>
-                  )}
+            {plain && (
+              <>
+                <div className={s.figure} data-refaey-fallback>
+                  <RefaeyActor height="var(--actor-h)" clickable />
                 </div>
-                <div className={s.replies}>
-                  {replies.map((rep) => (
-                    <div key={rep.label} className={s.replyRow}>
-                      <Button variant="ghost" size="md" icon="arrowRight" className={r.reply} onClick={() => onReply(rep)}>
-                        {rep.label}
-                      </Button>
+                <div className={s.current} data-refaey-fallback>
+                  <div className={s.inlineBust} aria-hidden>
+                    <RefaeyBust mood={current?.mood ?? 'neutral'} size="var(--bust-inline)" />
+                  </div>
+                  <div className={s.say}>
+                    <div ref={beat} tabIndex={-1} className={[s.beat, s.quipHost].join(' ')} aria-live="polite" data-quip={quip !== null}>
+                      {quip && (
+                        <p className={s.quipLine} role="status">
+                          {quip}
+                        </p>
+                      )}
+                      {current?.title && <p className={s.beatTitle}>{current.title}</p>}
+                      {current?.lines.map((l) => (
+                        <p key={l} className={s.beatText}>
+                          {l}
+                        </p>
+                      ))}
+                      {current?.link && <SourceLink link={current.link} />}
+                      {current?.usesFacts && (
+                        <div className={s.source}>
+                          <FactsBadge />
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div className={s.replies}>
+                      {replies.map((rep) => (
+                        <div key={rep.label} className={s.replyRow}>
+                          <Button variant="ghost" size="md" icon="arrowRight" className={r.reply} onClick={() => onReply(rep)}>
+                            {rep.label}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
       </div>
-      <RefaeyStage
-        key={view}
-        slots={mission ? MISSIONS_STORY_SLOTS : MISSIONS_LIST_SLOTS}
-        scope={pageRoot}
-        content={stageContent}
-        onReply={mission ? onReply : () => undefined}
-        entrance="none"
-        reserveH={mission ? undefined : 120}
-        onPlaced={(ok, slot) => setPlaced((p) => (p.view === view && p.ok === ok && p.pose === (slot?.pose ?? null) ? p : { view, ok, pose: slot?.pose ?? null }))}
-      />
     </div>
   );
 }

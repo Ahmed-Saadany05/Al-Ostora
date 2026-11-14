@@ -84,8 +84,8 @@ export function DialogueText({
     items[(items.indexOf(document.activeElement as HTMLElement) + step + items.length) % items.length].focus();
   };
 
-  const choice = (label: string, onClick: () => void) => (
-    <Button key={label} variant="ghost" size="md" icon="arrowRight" className={s.reply} data-reply onClick={onClick}>
+  const choice = (label: string, onClick: () => void, i = 0) => (
+    <Button key={`${i}:${label}`} variant="ghost" size="md" icon="arrowRight" className={s.reply} data-reply onClick={onClick}>
       {label}
     </Button>
   );
@@ -97,8 +97,8 @@ export function DialogueText({
       <div ref={lines} className={s.lines} aria-live="polite">
         {/* Only this part is re-created (and fades in) when the beat or the node changes. */}
         <div key={`${content.key}:${beat}`} className={s.fade}>
-          {shown.map((line) => (
-            <p key={line} className={s.line}>
+          {shown.map((line, i) => (
+            <p key={`${i}:${line}`} className={s.line}>
               {line}
             </p>
           ))}
@@ -115,7 +115,7 @@ export function DialogueText({
       {lastBeat && footer}
       <div key={`${content.key}:${beat}:r`} className={[s.replies, s.fade].join(' ')}>
         {lastBeat && content.link && <SourceLink link={content.link} />}
-        {lastBeat ? content.replies.map((r) => choice(r.label, () => onReply(r))) : choice(REFAEY_COPY.next, () => setBeat((b) => b + 1))}
+        {lastBeat ? content.replies.map((r, i) => choice(r.label, () => onReply(r), i)) : choice(REFAEY_COPY.next, () => setBeat((b) => b + 1))}
         {skip && (
           <Button variant="ghost" size="md" icon={null} className={[s.reply, s.skip].join(' ')} onClick={skip.onClick}>
             {skip.label}

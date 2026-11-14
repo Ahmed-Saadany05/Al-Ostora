@@ -34,18 +34,35 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
   const root = useRef<HTMLDivElement>(null);
   const [trail, setTrail] = useState<string[]>([firstId]);
   const [leaving, setLeaving] = useState(false);
+  const [plain, setPlain] = useState(false); // the large-text layout shows only if no slot fit
   const quip = useQuip();
   const nodeId = trail[trail.length - 1];
   const backTo = trail[trail.length - 2];
 
   const ctx: ResolveContext = useMemo(
-    () => ({ horizons: false, values: {}, flags: {}, facts: FACTS, story: { callsign }, terminalLabel: REFAEY_COPY.ok, hasExplainer }),
+    () => ({
+      horizons: false,
+      values: {},
+      flags: {},
+      facts: FACTS,
+      story: { callsign },
+      terminalLabel: REFAEY_COPY.ok,
+      hasExplainer,
+    }),
     [callsign],
   );
   const content = useMemo(() => {
     const node = getNode(nodeId, backTo);
     const r = node && resolveNode(node, ctx, (id) => getNode(id, backTo));
-    return r ? { key: r.id, title: r.title, lines: r.lines, replies: r.replies, link: r.link } : null;
+    return r
+      ? {
+          key: r.id,
+          title: r.title,
+          lines: r.lines,
+          replies: r.replies,
+          link: r.link,
+        }
+      : null;
   }, [nodeId, backTo, ctx]);
 
   const finish = (to: BriefingDestination) => {
@@ -54,7 +71,11 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
     const el = root.current;
     const done = () => onDone(to);
     if (!el) return done();
-    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: motion ? FADE_MS.motion : FADE_MS.still, easing: 'ease-in-out', fill: 'forwards' }).finished.then(done, done);
+    el.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: motion ? FADE_MS.motion : FADE_MS.still,
+      easing: 'ease-in-out',
+      fill: 'forwards',
+    }).finished.then(done, done);
   };
 
   const onReply = (r: Reply) => {
@@ -78,19 +99,31 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
         onReply={onReply}
         skip={skip}
         onEscape={() => finish('step1')}
-        onPlaced={() => undefined}
+        onPlaced={(ok) => setPlain(!ok)}
       />
-      <div className={s.briefingActor} data-refaey-fallback>
-        <RefaeyActor height="var(--actor-h)" walkIn clickable />
-      </div>
-      <div className={[s.briefingText, s.quipHost].join(' ')} data-quip={quip !== null} data-refaey-fallback>
-        <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
-        {quip && (
-          <p className={s.quipLine} role="status" style={{ '--say': 'clamp(var(--text-lg), 1.875vw, var(--text-2xl))' } as React.CSSProperties}>
-            {quip}
-          </p>
-        )}
-      </div>
+      {plain && (
+        <>
+          <div className={s.briefingActor} data-refaey-fallback>
+            <RefaeyActor height="var(--actor-h)" walkIn clickable />
+          </div>
+          <div className={[s.briefingText, s.quipHost].join(' ')} data-refaey-fallback data-quip={quip !== null}>
+            <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
+            {quip && (
+              <p
+                className={s.quipLine}
+                role="status"
+                style={
+                  {
+                    '--say': 'clamp(var(--text-lg), 1.875vw, var(--text-2xl))',
+                  } as React.CSSProperties
+                }
+              >
+                {quip}
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
