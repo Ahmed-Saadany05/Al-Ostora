@@ -94,11 +94,11 @@ for (const vp of VIEWPORTS.slice(0, 3)) {
     await click(b.page, 'Back');
     await click(b.page, 'Show me the landings');
     await b.page.waitForURL('**/missions');
-    await expect(b.page.getByText(/Refaey's homework before Shams flies/)).toBeVisible();
-    await expect(b.page.getByText(/what Shams does differently/)).toBeVisible();
+    await expect(b.page.getByText(/Refaey's homework before Shams flies/).first()).toBeVisible();
+    await expect(b.page.getByText(/what Shams does differently/).first()).toBeVisible();
     // a new document keeps the callsign for the session (sessionStorage)
     await b.page.reload();
-    await expect(b.page.getByText(/Refaey's homework before Shams flies/)).toBeVisible();
+    await expect(b.page.getByText(/Refaey's homework before Shams flies/).first()).toBeVisible();
     expect(b.errors).toEqual([]);
     await b.ctx.close();
 
@@ -160,10 +160,10 @@ for (const vp of VIEWPORTS) {
 
     // touchdown: tap the Moon to land
     await page.goto(`/mission/launch?site=${SITE}&launch=2026-11-20T01:00:00Z`);
-    await page.getByText('Tap the Moon to land').waitFor({ timeout: 40_000 });
+    await page.getByText('Tap the Moon to land').first().waitFor({ timeout: 40_000 });
     await page.waitForTimeout(3000);
     await page.mouse.click(Math.round(vp.width / 2), Math.round(vp.height / 2));
-    await page.getByText(/^Touchdown/).waitFor({ timeout: 40_000 });
+    await page.getByText(/^Touchdown/).first().waitFor({ timeout: 40_000 });
     if (narrow) {
       await page.waitForTimeout(1500);
       await expect(card).toBeHidden();

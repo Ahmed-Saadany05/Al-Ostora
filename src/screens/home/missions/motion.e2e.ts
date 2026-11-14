@@ -128,7 +128,10 @@ test('finishing a story makes him hop', async ({ browser }) => {
   await ctx.close();
 });
 
-test('the walk-in happens once per session, on the briefing', async ({ browser }) => {
+/** translateX of the sprite in px (0 when none). */
+const shiftX = (t: string) => Number(/translate\((-?[\d.]+)px/.exec(t)?.[1] ?? 0);
+
+test('the briefing: he drifts in from the left once per session (floating), then the balloon pops', async ({ browser }) => {
   const { ctx, page } = await newPage(browser, vp);
   await page.goto('/');
   await page.locator('[class*="_loader_"]').waitFor({ state: 'detached', timeout: 60_000 }).catch(() => undefined);
@@ -136,15 +139,26 @@ test('the walk-in happens once per session, on the briefing', async ({ browser }
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Begin the journey' }).click();
   await page.waitForSelector('[class*="_actorStage_"]', { timeout: 60_000 });
-  const seen = await sample(page, 1700, 40);
-  expect(seen.some((l) => l.startsWith('walk-strip')), 'he walks in').toBe(true);
-  const walkFrames = seen.filter((l) => l.startsWith('walk-strip'));
-  expect(walkFrames.length * 40, 'at most 1.2 s of walking (plus sampling)').toBeLessThanOrEqual(1400);
-  expect((await look(page)).startsWith('idle-strip'), 'then he idles').toBe(true);
+  const seen: string[] = [];
+  let dialogBeforeArrival = false;
+  for (let t = 0; t < 1800; t += 40) {
+    const l = await look(page);
+    seen.push(l);
+    if (Math.abs(shiftX(l)) > 2 && (await page.locator('[role="dialog"]').count())) dialogBeforeArrival = true;
+    await page.waitForTimeout(40);
+  }
+  expect(seen[0].startsWith('hop-strip'), 'floating pose: airborne frames, not a walk').toBe(true);
+  expect(shiftX(seen[0]), 'he starts beyond the left edge').toBeLessThan(-40);
+  expect(seen.some((l) => l.startsWith('walk-strip')), 'no walking on nothing').toBe(false);
+  const arrived = seen.findIndex((l) => Math.abs(shiftX(l)) <= 2);
+  expect(arrived, 'he arrives').toBeGreaterThan(0);
+  expect(arrived * 40, 'in at most 1.2 s (plus sampling)').toBeLessThanOrEqual(1400);
+  expect(dialogBeforeArrival, 'the balloon waits for his entrance to finish').toBe(false);
+  await expect(page.locator('[role="dialog"]')).toHaveCount(1);
   expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('refaey-seen')!).state.walkedIn)).toBe(true);
   await ctx.close();
 
-  // already walked in this session: the briefing starts with him standing
+  // already entered this session: the briefing starts with him in place and the balloon open
   const again = await newPage(browser, vp);
   await again.page.addInitScript(() => {
     if (!sessionStorage.getItem('refaey-seen')) sessionStorage.setItem('refaey-seen', JSON.stringify({ state: { seen: {}, walkedIn: true }, version: 0 }));
@@ -155,8 +169,9 @@ test('the walk-in happens once per session, on the briefing', async ({ browser }
   await again.page.waitForTimeout(1500);
   await again.page.getByRole('button', { name: 'Begin the journey' }).click();
   await again.page.waitForSelector('[class*="_actorStage_"]', { timeout: 60_000 });
-  const second = await sample(again.page, 1500, 40);
-  expect(second.some((l) => l.startsWith('walk-strip')), 'no second walk-in').toBe(false);
+  const second = await sample(again.page, 800, 40);
+  expect(second.every((l) => Math.abs(shiftX(l)) <= 6), 'no second entrance').toBe(true);
+  await expect(again.page.locator('[role="dialog"]')).toHaveCount(1);
   await again.ctx.close();
 });
 
