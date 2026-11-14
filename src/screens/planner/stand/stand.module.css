@@ -1,0 +1,449 @@
+/* Step 2 — Moon view layout, edge drawers and cards. Tokens only. */
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+}
+.grow {
+  flex: 1;
+}
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+.small {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------- overlays */
+
+.titleBlock {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-5);
+  left: var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+.titleBlock > * {
+  pointer-events: auto;
+}
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.viewToggle {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.launch {
+  position: absolute;
+  z-index: 4;
+  right: var(--gutter);
+  bottom: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- edge drawers */
+
+.peek {
+  position: absolute;
+  z-index: 5;
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: default;
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+.tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+/* Open: the tab steps aside for its panel (it keeps its box, so the hover doesn't drop). */
+.peek.open .tab {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.tabStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.tabVal,
+.tabRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.tabStrip {
+  display: block;
+  width: 168px;
+}
+.bottom .tab {
+  gap: var(--space-3);
+  padding: 5px var(--space-3);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.45);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--duration-slow) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+}
+/* .peek.open beats the per-side hidden offsets below (same file, higher specificity). */
+.peek.open .panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+/* Right edge: tab hugs the edge; cards slide in from the right, to the left of the tab. */
+.right {
+  right: var(--space-4);
+  top: 120px;
+}
+.right .tab {
+  flex-direction: column;
+  border-radius: var(--radius-md);
+}
+.right .panel {
+  right: 0;
+  top: -40px;
+  width: 340px;
+  max-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 200px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  transform: translateX(calc(100% + 120px));
+}
+.right .panel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Left edge: mirror of the right. */
+.left {
+  left: var(--space-4);
+  top: 50%;
+}
+.left .tab {
+  border-radius: var(--radius-md);
+}
+.left .panel {
+  left: 0;
+  top: -60px;
+  width: 340px;
+  transform: translateX(calc(-100% - 120px));
+}
+
+/* Bottom edge: a thin bar; the timeline slides up above it. */
+.bottom {
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+}
+.bottom .panel {
+  left: 50%;
+  bottom: 0;
+  width: min(1100px, calc(100vw - 2 * var(--gutter)));
+  transform: translate(-50%, calc(100% + 80px));
+}
+.peek.bottom.open .panel {
+  transform: translate(-50%, 0);
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.eyebrow {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dotSun {
+  background: var(--color-sun);
+}
+.dotEarth {
+  background: var(--color-earth);
+}
+.cardMain {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.big {
+  margin: 0;
+  font-size: var(--text-3xl);
+  line-height: 1;
+}
+.sketch {
+  width: 84px;
+  height: 48px;
+  flex: none;
+}
+.sketchGround {
+  fill: none;
+  stroke: var(--color-text-faint);
+  stroke-width: 1.2;
+}
+.sketchArc {
+  fill: none;
+  stroke: var(--color-line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.sketchSun,
+.sketchEarth {
+  stroke-width: 1.6;
+}
+.sketchSun {
+  stroke: var(--color-sun);
+}
+.sketchEarth {
+  stroke: var(--color-earth);
+}
+.sketchSunDot {
+  fill: var(--color-sun);
+}
+.sketchEarthDot {
+  fill: var(--color-earth);
+}
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: var(--border);
+}
+.facts dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+.facts dd {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.factRight {
+  text-align: right;
+}
+.factRight dt {
+  justify-content: flex-end;
+}
+
+/* How far away: Moon — Earth — // ×389 // — Sun */
+.track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 20px;
+}
+.track::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 10px;
+  top: 50%;
+  border-top: var(--border-strong);
+}
+.trackMoon,
+.trackEarth,
+.trackSun {
+  position: relative;
+  border-radius: 50%;
+  flex: none;
+}
+.trackMoon {
+  width: 8px;
+  height: 8px;
+  background: var(--color-text-muted);
+}
+.trackEarth {
+  width: 12px;
+  height: 12px;
+  margin-left: 18%;
+  background: var(--color-earth);
+}
+.trackGap {
+  position: relative;
+  margin: 0 auto;
+  padding: 0 var(--space-1);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+.trackSun {
+  width: 18px;
+  height: 18px;
+  background: var(--color-sun);
+}
+
+.nearName {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+}
+.reason {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+}
+
+/* ---------------------------------------------------------------- timeline panel */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+}
+.timelineHead,
+.timelineFoot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- side by side */
+
+.split {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: var(--color-line);
+}
+.pane {
+  position: relative;
+  overflow: hidden;
+}
+.paneHead {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--space-5) + 48px);
+  left: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+}
+.paneHead strong {
+  margin-right: auto;
+  font-weight: var(--weight-medium);
+}
+.paneFoot {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-4);
+  bottom: calc(var(--space-5) + 56px);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+}
+.picker select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-right: var(--space-2);
+  cursor: pointer;
+}
+.picker option {
+  background: var(--color-surface);
+}

@@ -1,6 +1,8 @@
 /**
- * STEP 3 — Compare. PLACEHOLDER — owner: Aser (cards) + Pink (mini panoramas).
- * by=sites: 2–4 sites over the same lunar day. by=dates: one site over 3 lunar days.
+ * STEP 3 — Compare. Owner: Aser (cards) + Pink (mini panoramas, flow).
+ * by=sites: 2–4 sites over the same lunar day → "Choose this site" → compare its dates.
+ * by=dates: one site over 3 lunar days → pick a day (card button or a click on its timeline) →
+ * the Moon view at that moment. Fits the screen: no page scroll; sideways only if cards don't fit.
  */
 import { useNavigate } from 'react-router-dom';
 import { SitePanorama } from '@/scenes';
@@ -13,13 +15,11 @@ import {
   EmptyState,
   Icon,
   LoadingState,
-  OwnerNote,
   Page,
   ProgressRing,
   SourceBadge,
   StepHeader,
-  Tabs,
-  TimelineStrip,
+  SkyTimeline,
 } from '@/shared/ui';
 import { useLunarDay } from './useLunarDay';
 import s from './flow.module.css';
@@ -32,10 +32,24 @@ interface Candidate {
   subtitle: string;
 }
 
+const REGION_NAME: Record<string, string> = { 'south-pole': 'South pole', 'north-pole': 'North pole', nearside: 'Near side', farside: 'Far side' };
 const DAY_MS = LUNAR.synodicDays * 86_400_000;
 const pad = (n: number) => String(n).padStart(2, '0');
 
-function CompareCard({ c, index, metrics, best }: { c: Candidate; index: number; metrics?: SiteMetrics; best: boolean }) {
+function CompareCard({
+  c,
+  index,
+  metrics,
+  best,
+  byDates,
+}: {
+  c: Candidate;
+  index: number;
+  metrics?: SiteMetrics;
+  best: boolean;
+  byDates: boolean;
+}) {
+  const navigate = useNavigate();
   const { data: report } = useDayReport(c.site, c.from, LUNAR.synodicDays);
   const look = metrics?.bestWindow?.start ?? c.from;
   const { data: sky } = useSky(c.site, look);
@@ -55,12 +69,20 @@ function CompareCard({ c, index, metrics, best }: { c: Candidate; index: number;
       </div>
       <div className={s.cmpBody}>
         <div className={s.rings}>
-          <ProgressRing value={metrics?.sunlitFraction} label="Sunlight" tone="sun" />
-          <ProgressRing value={metrics?.earthVisibleFraction} label="Earth link" tone="earth" />
-          <ProgressRing value={metrics?.bothFraction} label="Both" />
+          <ProgressRing value={metrics?.sunlitFraction} label="Sunlight" tone="sun" size={48} />
+          <ProgressRing value={metrics?.earthVisibleFraction} label="Earth link" tone="earth" size={48} />
+          <ProgressRing value={metrics?.bothFraction} label="Both" size={48} />
         </div>
         {report ? (
-          <TimelineStrip start={c.from} end={c.to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} highlight={metrics?.bestWindow} cells={40} ticks={0} size="sm" />
+          <SkyTimeline
+            label={`Timeline for ${c.site.name}`}
+            start={c.from}
+            end={c.to}
+            sunWindows={report.sunWindows}
+            earthWindows={report.earthWindows}
+            highlight={metrics?.bestWindow}
+            onSelectTime={byDates ? (t) => navigate(missionUrl.stand(c.site.id, t)) : undefined}
+          />
         ) : (
           <LoadingState compact />
         )}
@@ -81,9 +103,15 @@ function CompareCard({ c, index, metrics, best }: { c: Candidate; index: number;
         </dl>
         <div className={s.cmpFoot}>
           {metrics && <SourceBadge source={metrics.source} />}
-          <Button variant={best ? 'primary' : 'secondary'} to={missionUrl.date(c.site.id)}>
-            Choose this site
-          </Button>
+          {byDates ? (
+            <Button variant={best ? 'primary' : 'secondary'} to={missionUrl.stand(c.site.id, metrics?.bestWindow?.start ?? c.from)}>
+              Stand here
+            </Button>
+          ) : (
+            <Button variant={best ? 'primary' : 'secondary'} to={missionUrl.dates(c.site.id)}>
+              Choose this site
+            </Button>
+          )}
         </div>
       </div>
     </article>
@@ -112,7 +140,7 @@ export function ComparePage() {
           site,
           from,
           to: new Date(Date.parse(from) + DAY_MS).toISOString(),
-          subtitle: site.kind === 'custom' ? 'Custom coordinates' : site.region.replace('-', ' '),
+          subtitle: site.kind === 'custom' ? 'Custom coordinates' : REGION_NAME[site.region] ?? site.region,
         }));
 
   // Fixed number of hook calls (one per slot) — rules of hooks.
@@ -142,43 +170,35 @@ export function ComparePage() {
       </Page>
     );
 
+  const byDates = compareBy === 'dates';
   return (
-    <Page>
+    <div className={s.cmpPage}>
       <StepHeader
         step="compare"
         title="Compare"
-        accent={compareBy === 'dates' ? 'dates' : 'sites'}
-        back={{ to: missionUrl.chooseSite(siteIds), label: 'Change sites' }}
+        accent={byDates ? 'dates' : 'sites'}
+        back={{ to: missionUrl.chooseSite(siteIds), label: byDates ? 'Change site' : 'Change sites' }}
+        meta={byDates && sites[0] ? sites[0].name : undefined}
         aside={
-          <>
-            <Tabs
-              label="Compare by"
-              variant="pill"
-              value={compareBy}
-              onChange={(by) => navigate(missionUrl.compare(siteIds, by), { replace: true })}
-              items={[
-                { id: 'sites', label: 'Sites' },
-                { id: 'dates', label: 'Dates' },
-              ]}
-            />
-            {best?.m.bestWindow && (
-              <div className={s.bestMatch}>
-                <span className={s.label}>Best match</span>
-                <span>
-                  {best.c.site.name} · <span className="num">{formatUtc(best.m.bestWindow.start, false).slice(0, 6)}</span> —{' '}
-                  <span className="num">{formatDuration(best.m.bestWindow.durationH)}</span> window
-                </span>
-              </div>
-            )}
-          </>
+          best?.m.bestWindow && (
+            <div className={s.bestMatch}>
+              <span className={s.label}>{byDates ? 'Best day' : 'Best match'}</span>
+              <span>
+                {!byDates && <>{best.c.site.name} · </>}
+                <span className="num">{formatUtc(best.m.bestWindow.start, false).slice(0, 6)}</span> —{' '}
+                <span className="num">{formatDuration(best.m.bestWindow.durationH)}</span> window
+              </span>
+            </div>
+          )
         }
       />
+      {byDates && <p className={s.cmpHint}>Pick a lunar day: “Stand here” opens its best moment, or click any point on a timeline.</p>}
 
       <div className={s.cmpGrid}>
         {candidates.map((c, i) => (
-          <CompareCard key={c.key} c={c} index={i} metrics={metrics[i]} best={i === bestIdx} />
+          <CompareCard key={c.key} c={c} index={i} metrics={metrics[i]} best={i === bestIdx} byDates={byDates} />
         ))}
-        {compareBy === 'sites' && candidates.length < MAX_COMPARE && (
+        {!byDates && candidates.length < MAX_COMPARE && (
           <button type="button" className={s.addSlot} onClick={() => navigate(missionUrl.chooseSite(siteIds))}>
             <span className={s.addIcon}>
               <Icon name="plus" size={22} />
@@ -190,7 +210,6 @@ export function ComparePage() {
           </button>
         )}
       </div>
-      <OwnerNote owner="Aser (cards) · Pink (mini panoramas via drei View)">Step 3 placeholder. Match score formula is the engine's (Goda).</OwnerNote>
-    </Page>
+    </div>
   );
 }

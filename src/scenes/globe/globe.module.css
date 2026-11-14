@@ -2,12 +2,20 @@
 
 /* ---------------------------------------------------------------- step 1 layout */
 
+/* Fitted page frame: Step 1 starts right under the header and fills the screen with no page scroll.
+   moonHandoff measures an invisible copy of frame → layout → left, so keep that structure. */
+.frame {
+  width: 100%;
+  padding: var(--space-5) var(--gutter) var(--space-3);
+}
+
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: var(--space-6);
-  height: calc(100vh - var(--header-height) - var(--statusbar-height) - var(--space-6));
-  min-height: 520px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-8, 64px);
+  /* Exactly the space between header and status bar (minus the page's own top/bottom padding): no page scroll. */
+  height: calc(100vh - var(--header-height) - var(--statusbar-height) - var(--space-5) - var(--space-3));
+  min-height: 480px;
 }
 .left {
   position: relative;
@@ -92,105 +100,304 @@
   letter-spacing: var(--tracking-label);
 }
 
-/* ---------------------------------------------------------------- right menu */
+/* ---------------------------------------------------------------- left chrome */
+
+.backLink {
+  /* Top of the left column = top of the right menu: the two line up, well below the logo. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  line-height: 26px;
+}
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--duration-base) var(--ease-out);
+}
+.backBtn:hover {
+  color: var(--color-text);
+}
+/* Over bright imagery the left-side text keeps a soft shadow so it stays readable. */
+.backBtn,
+.caption {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
+}
+.caption {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  bottom: 56px;
+  display: grid;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.captionTitle {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.captionSub {
+  font-size: 0.625rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.captionHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------- right panel */
 
 .menu {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: var(--space-4);
   min-height: 0;
-  padding-top: var(--space-2);
+  height: 100%;
+  gap: var(--space-3);
+  padding-top: 0;
 }
-.menuLabel {
-  margin: 0;
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-label);
-  color: var(--color-text-muted);
-}
-.menuHead {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-.menuTitle {
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-tight);
-}
-.menuList {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-  overflow: auto;
-  min-height: 0;
-  padding-right: 4px;
-}
-.menuEmpty,
-.menuHint {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-.menuFooter {
-  margin-top: auto;
+.menuScroll {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: var(--border);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
 }
 
-.sectorRow,
-.siteRow {
+/* MISSION DESIGN  (01)(02)(03) */
+.stepper {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  text-align: left;
+  justify-content: space-between;
 }
-.sectorText {
+.kicker {
+  font-size: 0.625rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.steps {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
   display: grid;
-  gap: 2px;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-line);
+  font-size: 0.625rem;
+  color: var(--color-text-faint);
+}
+.stepNow {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+.stepDone {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+}
+
+/* + EYEBROW / Title / italic accent / lead */
+.panelHead {
+  display: grid;
+  gap: var(--space-2);
+}
+.eyebrowPlus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.625rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+.panelTitle {
+  display: grid;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: var(--weight-heading);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.05;
+}
+.panelTitle em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--color-text);
+}
+.panelLead {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+/* Hairline list rows. */
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--border);
+}
+.rows > li {
+  border-bottom: var(--border);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out);
+}
+.row:hover,
+.row:focus-visible {
+  background: rgba(255, 255, 255, 0.035);
+  outline: none;
+}
+.rowOn {
+  background: rgba(255, 255, 255, 0.05);
+}
+.rowNum {
+  width: 18px;
+  flex: none;
+  font-size: 0.625rem;
+  color: var(--color-text-faint);
+}
+.rowDot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  margin: 0 4px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.25);
+}
+.rowOn .rowDot {
+  background: var(--color-text);
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-text), 0 0 10px 2px rgba(255, 255, 255, 0.5);
+}
+.rowPin {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  flex: none;
+  color: var(--color-text-muted);
+}
+.rowText {
+  display: grid;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
-.sectorText > span {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  line-height: var(--leading-snug);
+.rowText strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
-.count {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
+.rowText strong.rowBig {
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+}
+.rowText small {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+}
+.regionIcon {
+  width: 22px;
+  height: 22px;
   flex: none;
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-text);
 }
-.check {
+.rowEnd {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
   flex: none;
-  border-radius: 6px;
-  border: var(--border-strong);
+  width: 24px;
+  color: var(--color-text-muted);
+  transition: transform var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
 }
-.kind {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex: none;
-  font-size: var(--text-2xs);
+.row:hover .rowEnd {
+  color: var(--color-text);
+  transform: translate(2px, -2px);
+}
+.menuEmpty {
+  padding: var(--space-4) 0;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
+/* Footer: selection + the primary button (a wide filled bar, as in the design). */
+.menuFooter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.menuFooter > a,
+.menuFooter > button {
+  width: 100%;
+  height: auto;
+  min-height: 46px;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm, 4px);
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.16);
+  white-space: normal;
+  text-align: left;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  justify-content: space-between;
+}
+.menuFooter > a:hover,
+.menuFooter > button:hover {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+.menuFooter > a > span,
+.menuFooter > button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Custom coordinates form. */
 .coordsForm {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 .coordRow {
@@ -255,6 +462,7 @@
   cursor: pointer;
   pointer-events: auto;
 }
+/* Pin: a small glowing light dot (the original style). */
 .dot {
   width: 12px;
   height: 12px;
@@ -262,14 +470,14 @@
   border-radius: 50%;
   background: var(--color-text);
   border: 2px solid var(--color-bg);
-  box-shadow: 0 0 0 1px var(--color-line-strong);
+  box-shadow: 0 0 0 1px var(--color-line-strong), 0 0 10px 2px rgba(255, 255, 255, 0.45);
   transition:
     transform var(--duration-base) var(--ease-out),
     box-shadow var(--duration-base) var(--ease-out);
 }
 .marker:hover .dot,
 .marker:focus-visible .dot {
-  box-shadow: 0 0 0 3px var(--color-line-strong);
+  box-shadow: 0 0 0 3px var(--color-line-strong), 0 0 14px 3px rgba(255, 255, 255, 0.55);
 }
 .marker:focus-visible {
   outline: none;
@@ -277,7 +485,8 @@
 .selected .dot {
   box-shadow:
     0 0 0 3px var(--color-bg),
-    0 0 0 5px var(--color-text);
+    0 0 0 5px var(--color-text),
+    0 0 16px 4px rgba(255, 255, 255, 0.5);
 }
 /* Hovered in the menu: the pin lights up. */
 .hot .dot {
@@ -289,24 +498,17 @@
 }
 .label {
   display: none;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  border: var(--border);
-}
-.label em {
-  font-style: normal;
-  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
 }
 .marker:hover .label,
 .marker:focus-visible .label,
 .selected .label,
 .hot .label,
-.showLabels .label {
-  display: inline-flex;
+.showLabels .label,
+.alwaysLabels .label {
+  display: inline;
 }
 
 /* Pin ripple where you clicked. */

@@ -9,6 +9,9 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
+    "test": "vitest run src/engine",
+    "horizons:download": "node scripts/horizons/download.mjs",
+    "horizons": "node scripts/horizons/compute.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -35,7 +38,9 @@
     "@types/react-dom": "^19.1.2",
     "@types/three": "^0.176.0",
     "@vitejs/plugin-react": "^4.4.1",
+    "geotiff": "^3.0.5",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   }
 }
