@@ -122,6 +122,31 @@ describe('live provider', () => {
     ).rejects.toThrow(/No Sun\/Earth data/);
   });
 
+  it("gatesAt 'best-window' (Compare): judged inside the best window; 0 only if there is none", async () => {
+    const { p } = make();
+    // Range starts inside totality: range-start gates fail, best-window gates pass.
+    const from = '2026-08-28T04:00:00Z';
+    const to = '2026-08-28T08:12:00Z';
+    const plain = await p.getMetrics(R01, from, to);
+    expect(plain.gates.basis).toBe('range-start');
+    expect(plain.matchScore).toBe(0);
+    const bw = await p.getMetrics(R01, from, to, { gatesAt: 'best-window' });
+    expect(bw.gates.basis).toBe('best-window');
+    expect(bw.gates.sunAtLanding && bw.gates.earthAtLanding).toBe(true);
+    expect(bw.matchScore).toBeGreaterThan(0);
+    const t = Date.parse(bw.gates.landingTime);
+    expect(t).toBeGreaterThanOrEqual(Date.parse(bw.bestWindow!.start));
+    expect(t).toBeLessThanOrEqual(Date.parse(bw.bestWindow!.end));
+    // A range entirely inside totality has no window with Sun AND Earth.
+    const none = await p.getMetrics(R01, '2026-08-28T03:10:00Z', '2026-08-28T05:20:00Z', { gatesAt: 'best-window' });
+    expect(none.bestWindow).toBeNull();
+    expect(none.matchScore).toBe(0);
+    expect(none.scoreBreakdown.map((l) => l.label)).toContain('No landing window');
+    // An explicit launch/landing time still wins over gatesAt.
+    const lt = await p.getMetrics(R01, from, to, { gatesAt: 'best-window', landingTime: '2026-08-28T04:30:00Z' });
+    expect(lt.gates.basis).toBe('landing-time');
+  });
+
   it('getMetrics without launch or landing time says the gates used the range start', async () => {
     const { p } = make();
     const m = await p.getMetrics(R01, '2026-08-28T00:12:00Z', '2026-08-28T08:12:00Z');
