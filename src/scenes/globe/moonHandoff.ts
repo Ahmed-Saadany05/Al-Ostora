@@ -87,18 +87,21 @@ export const preloadPickerGlobe = () => import('./PickerGlobe3D');
 // ---------------------------------------------------------------- preload Step 1 (code + imagery)
 
 const D2R = Math.PI / 180;
-/** All tiles of levels 0–2, plus level 3 on the side of the Moon Step 1 opens on. */
-function step1TileUrls(): string[] {
+/**
+ * Moon Trek imagery for a whole-Moon view centred on (lat, lon): all tiles of levels 0–2, plus
+ * level 3 on the side facing that point. Used to warm the cache before a globe appears.
+ */
+export function moonTileUrls(centerLat: number, centerLon: number): string[] {
   const layer = MOON_TREK_LAYERS.mosaic;
-  const la0 = OPENING_VIEW.lat * D2R;
-  const lo0 = OPENING_VIEW.lon * D2R;
+  const la0 = centerLat * D2R;
+  const lo0 = centerLon * D2R;
   const urls: string[] = [];
   for (let level = 0; level <= 3; level++) {
     const { cols, rows } = tileGrid(level);
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         if (level === 3) {
-          // Tile centre; keep it if it faces the opening view (within ~100° of it).
+          // Tile centre; keep it if it faces the centre point (within ~100° of it).
           const lat = (90 - ((row + 0.5) * 180) / rows) * D2R;
           const lon = (-180 + ((col + 0.5) * 360) / cols) * D2R;
           const cos = Math.sin(la0) * Math.sin(lat) + Math.cos(la0) * Math.cos(lat) * Math.cos(lon - lo0);
@@ -109,6 +112,31 @@ function step1TileUrls(): string[] {
     }
   }
   return urls;
+}
+
+/**
+ * Fetch URLs into the browser cache, a few at a time, each with a timeout; failures are skipped
+ * (this only warms the cache). `tick` runs once per URL, done or not.
+ */
+export function warmCache(urls: string[], tick: () => void = () => {}): Promise<void> {
+  const fetchOne = async (url: string) => {
+    const ctl = new AbortController();
+    const t = window.setTimeout(() => ctl.abort(), 10_000);
+    try {
+      const res = await fetch(url, { mode: 'cors', signal: ctl.signal });
+      if (res.ok) await res.blob(); // read it fully so it is cached
+    } catch {
+      /* skipped: the globe will just fetch it itself */
+    } finally {
+      window.clearTimeout(t);
+      tick();
+    }
+  };
+  const queue = [...urls];
+  const worker = async () => {
+    while (queue.length) await fetchOne(queue.shift()!);
+  };
+  return Promise.all(Array.from({ length: 6 }, worker)).then(() => undefined);
 }
 
 export interface Step1Progress {
@@ -132,7 +160,7 @@ export function onStep1Progress(fn: (p: Step1Progress) => void): () => void {
  */
 export function preloadStep1(): Promise<void> {
   if (step1Preload) return step1Preload;
-  const urls = step1TileUrls();
+  const urls = moonTileUrls(OPENING_VIEW.lat, OPENING_VIEW.lon);
   step1Progress = { done: 0, total: urls.length + 1 };
   const tick = () => {
     step1Progress = { ...step1Progress, done: step1Progress.done + 1 };
@@ -141,24 +169,7 @@ export function preloadStep1(): Promise<void> {
   const code = preloadPickerGlobe()
     .catch(() => undefined)
     .then(tick);
-  const fetchOne = async (url: string) => {
-    const ctl = new AbortController();
-    const t = window.setTimeout(() => ctl.abort(), 10_000);
-    try {
-      const res = await fetch(url, { mode: 'cors', signal: ctl.signal });
-      if (res.ok) await res.blob(); // read it fully so it is cached
-    } catch {
-      /* skipped: Step 1 will just fetch it itself */
-    } finally {
-      window.clearTimeout(t);
-      tick();
-    }
-  };
-  const queue = [...urls];
-  const worker = async () => {
-    while (queue.length) await fetchOne(queue.shift()!);
-  };
-  step1Preload = Promise.all([code, ...Array.from({ length: 6 }, worker)]).then(() => undefined);
+  step1Preload = Promise.all([code, warmCache(urls, tick)]).then(() => undefined);
   return step1Preload;
 }
 
@@ -177,8 +188,19 @@ export function rememberPickerStage(r: Rect) {
  * Step 1's globe box, measured: an invisible copy of its layout (frame → layout → left column + menu,
  * the same CSS classes) is placed under the header for a moment and the left column is read.
  */
+/** Height of the app header (the --header-height token): Home hides its header, Step 1 shows it. */
+function headerHeight(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:var(--header-height);';
+  document.body.appendChild(probe);
+  const h = probe.offsetHeight;
+  probe.remove();
+  return h;
+}
+
 function measureStage(): Rect | null {
-  const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+  // Step 1 sits under the header. On Home (minimal chrome, no header) use the header's height instead.
+  const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? headerHeight();
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
   host.style.cssText = `position:fixed;left:0;width:${document.documentElement.clientWidth}px;top:${header}px;visibility:hidden;pointer-events:none;z-index:-1;`;
