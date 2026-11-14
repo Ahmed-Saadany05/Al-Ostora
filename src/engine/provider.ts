@@ -19,6 +19,7 @@ import {
   ENGINE_DEFAULTS,
   landingMsFromLaunch,
   OBSERVER_HEIGHT_M,
+  TRANSIT_PRESETS,
   transitPreset,
 } from './constants';
 import { EphemerisStore, type Fetcher, type RecordedLoader } from './ephemeris';
@@ -157,10 +158,25 @@ export function createLiveProvider(deps: LiveDeps): LiveProvider {
         launchDate: new Date(launchMs).toISOString(),
         landingDate: new Date(landingMsFromLaunch(launchMs, transitId)).toISOString(),
         transitDays: preset.days,
-        assumption: `Assumes a ${preset.days}-day trip from launch to landing, like ${preset.label} (${preset.kind}). Real missions differ.`,
+        assumption: transitAssumption(preset.days, preset.label),
       };
     },
   };
+}
+
+/**
+ * Trip time is a mission's design choice (route and fuel), not something the date or site
+ * decides, so the note says so and gives the real range (decided 2026-11-14).
+ */
+export function transitAssumption(days: number, label: string): string {
+  const fast = TRANSIT_PRESETS.find((t) => t.id === 'apollo-11')!;
+  const slow = TRANSIT_PRESETS.find((t) => t.id === 'blue-ghost-1')!;
+  const plain = (l: string) => l.replace(/ \((\d{4})\)$/, ', $1'); // "Apollo 11 (1969)" → "Apollo 11, 1969"
+  return (
+    `Trip time is chosen by each mission (its route and fuel), not set by the date or site: ` +
+    `real landers took from ${fast.days} days (${plain(fast.label)}, fast route) to ${slow.days} days ` +
+    `(${plain(slow.label)}, low-energy route). We assume ${days} days, like ${label}.`
+  );
 }
 
 /** Recorded proxy responses → loader (used by index.ts with Vite's import.meta.glob). */
