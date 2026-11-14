@@ -13,9 +13,11 @@ import s from './SitePin.module.css';
  * The featured site's pin, drawn as real DOM at the crest. Hover or keyboard focus opens a small card with
  * Sun and Earth status. The Demo marker beside the label is the only demo label on Home, always visible.
  */
-/** Must match `top` of .card in SitePin.module.css (var(--space-5)) and leave a little room at the viewport edge. */
-const CARD_OFFSET_PX = 24;
-const EDGE_PX = 8;
+/** Space between the pin's label and the card, and the margin kept from the viewport edge. */
+const CARD_GAP_PX = 16;
+const EDGE_PX = 12;
+/** The card starts a little above the pin's own height, so its first line is level with the label. */
+const CARD_RISE_PX = 18;
 
 export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime; view: SkyView; x: number; y: number }) {
   const [hover, setHover] = useState(false);
@@ -24,17 +26,30 @@ export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime;
   const cardId = useId();
   const pinRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [flip, setFlip] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  // Where the card sits, in px from the pin's own point; set after measuring (see place()).
+  const [cardAt, setCardAt] = useState({ x: 0, y: 0 });
   // The Demo marker follows the data; if there is none, only the active provider id is known.
   const source = view.status === 'ready' ? view.sky.source : getProvider().id === 'demo' ? 'demo' : undefined;
   const open = (hover || focus) && !dismissed;
 
-  // Open below the pin; if the card would run off the bottom of the viewport, open above it instead.
+  /*
+   * The card opens to the right of the pin's label, so it never sits over the headline, the line or the buttons
+   * (they are centred above and to the left of the pin). Only when it would run off the right edge does it open
+   * to the left. Vertically it starts level with the pin and is kept inside the viewport.
+   */
   const place = () => {
     const pin = pinRef.current?.getBoundingClientRect();
+    const btn = btnRef.current?.getBoundingClientRect();
     const card = cardRef.current;
-    if (!pin || !card) return;
-    setFlip(pin.top + CARD_OFFSET_PX + card.offsetHeight > window.innerHeight - EDGE_PX);
+    if (!pin || !btn || !card) return;
+    const w = card.offsetWidth;
+    const h = card.offsetHeight;
+    const fitsRight = btn.right + CARD_GAP_PX + w <= window.innerWidth - EDGE_PX;
+    const x = fitsRight ? btn.right - pin.left + CARD_GAP_PX : btn.left - pin.left - CARD_GAP_PX - w;
+    const wanted = pin.top - CARD_RISE_PX;
+    const top = Math.min(Math.max(wanted, EDGE_PX), window.innerHeight - EDGE_PX - h);
+    setCardAt({ x: Math.round(x), y: Math.round(top - pin.top) });
   };
   useLayoutEffect(place, [open, view.status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -52,7 +67,6 @@ export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime;
       className={s.pin}
       style={{ left: x, top: y }}
       data-open={open}
-      data-flip={flip}
       onPointerEnter={() => {
         setHover(true);
         setDismissed(false);
@@ -65,7 +79,7 @@ export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime;
       onBlur={onBlur}
       onKeyDown={(e) => e.key === 'Escape' && setDismissed(true)}
     >
-      <button type="button" className={s.button} aria-expanded={open} aria-controls={cardId}>
+      <button ref={btnRef} type="button" className={s.button} aria-expanded={open} aria-controls={cardId}>
         <span className={s.marker} aria-hidden>
           <span className={s.ring} />
           <span className={s.pulse} data-pulse />
@@ -75,7 +89,7 @@ export function SitePin({ site, time, view, x, y }: { site: Site; time: IsoTime;
           {source && <SourceBadge source={source} />}
         </span>
       </button>
-      <div ref={cardRef} id={cardId} role="group" aria-label={PIN_COPY.cardTitle} className={s.card}>
+      <div ref={cardRef} id={cardId} role="group" aria-label={PIN_COPY.cardTitle} className={s.card} style={{ left: cardAt.x, top: cardAt.y }}>
         <p className={s.title}>{PIN_COPY.cardTitle}</p>
         <SkyStatus site={site} view={view} now={time} />
         <Link to={missionUrl.stand(site.id)} className={s.next} tabIndex={open ? 0 : -1}>

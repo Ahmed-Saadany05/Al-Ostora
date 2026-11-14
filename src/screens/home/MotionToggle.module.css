@@ -1,7 +1,7 @@
 /* Top-right of the hero: below the sticky header, which would hide anything placed above it. */
 .corner {
   position: absolute;
-  top: var(--space-3);
+  top: var(--space-5);
   right: var(--gutter);
   z-index: var(--z-content);
 }

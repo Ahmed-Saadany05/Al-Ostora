@@ -1,5 +1,5 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { preloadStep1 } from '@/scenes';
 import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
@@ -17,8 +17,16 @@ import { useSkyView } from './skyView';
 import { shouldPlayIntro, useIntro } from './useIntro';
 import s from './HomePage.module.css';
 
-/** The live site pin on the Moon is hidden for now (team decision); set true to bring it back. */
+/** The Shackleton pin on the crest (hover/focus card, Demo label). It stays inert until the intro reveals it. */
 const SHOW_SITE_PIN = false;
+
+/** Clear space between the buttons and the Moon's lit edge (the brief asks for at least 32 px; the pin label sits in it). */
+const MOON_GAP_PX = 48;
+/**
+ * The scene reports the pole's position. The pole leans toward the viewer, so the lit rim is a little above it:
+ * measured 15, 16 and 22 px at 1280, 1366 and 1920 wide, i.e. about 1.16% of the width.
+ */
+const RIM_ABOVE_POLE_PER_WIDTH = 0.0116;
 
 /** Longest the first loading screen waits for Step 1's preload before letting the intro play. */
 const PRELOAD_CAP_MS = 20_000;
@@ -45,6 +53,10 @@ export function HomePage() {
   const stars = useRef<HTMLDivElement>(null);
   const moon = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
+  const under = useRef<HTMLDivElement>(null);
+  const hero = useRef<HTMLElement>(null);
+  // How far the Moon is moved down so its lit edge clears the buttons; null until measured (the Moon stays hidden).
+  const [shift, setShift] = useState<number | null>(null);
   const pins = useRef<HTMLDivElement>(null);
   const handle = useRef<HeroMoonHandle>(null);
   // Step 1's code and opening imagery load during the first loading screen too, so the flight into it
@@ -62,58 +74,75 @@ export function HomePage() {
   const allReady = (textured || moonSettled) && step1Ready;
   const { done: introDone, pinRevealed } = useIntro(play, allReady, { stars, moon, copy, pins, handle });
 
+  const measure = useCallback(() => {
+    if (!pinAt || !under.current || !hero.current) return;
+    const heroTop = hero.current.getBoundingClientRect().top;
+    const buttonsBottom = under.current.getBoundingClientRect().bottom - heroTop; // .under is not animated; its children are
+    const edge = pinAt.y - RIM_ABOVE_POLE_PER_WIDTH * hero.current.clientWidth; // where the Moon's lit rim is now, in the (unshifted) layer's own box
+    setShift(Math.max(0, Math.round(buttonsBottom + MOON_GAP_PX - edge)));
+  }, [pinAt]);
+  useLayoutEffect(measure, [measure]);
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
 
   return (
-    <section className={s.hero}>
+    <section ref={hero} className={s.hero} style={{ '--moon-shift': `${shift ?? 0}px` } as CSSProperties}>
       <div ref={stars} className={s.stars} data-home-stars>
         {/* Stars drift on their own; they no longer follow the cursor. */}
         <StarLayers parallax={false} />
       </div>
 
-      <div ref={moon} className={s.moon}>
-        <MoonBoundary label={HOME_COPY.moonLabel} onFail={() => setMoonSettled(true)}>
-          <Suspense fallback={null}>
-            <HeroMoon
-              ref={handle}
-              autoRotate={motion}
-              tiltTowardSouthPole
-              highlightedPin={pin}
-              startDark={play}
-              onTextureReady={() => setTextured(true)}
-              onTextureFailed={() => setMoonSettled(true)}
-              onPinScreen={setPinAt}
-              label={HOME_COPY.moonLabel}
-            />
-          </Suspense>
-        </MoonBoundary>
+      <div className={s.moonShift} data-ready={shift !== null}>
+        <div ref={moon} className={s.moon}>
+          <MoonBoundary label={HOME_COPY.moonLabel} onFail={() => setMoonSettled(true)}>
+            <Suspense fallback={null}>
+              <HeroMoon
+                ref={handle}
+                autoRotate={motion}
+                tiltTowardSouthPole
+                highlightedPin={pin}
+                startDark={play}
+                onTextureReady={() => setTextured(true)}
+                onTextureFailed={() => setMoonSettled(true)}
+                onPinScreen={setPinAt}
+                label={HOME_COPY.moonLabel}
+              />
+            </Suspense>
+          </MoonBoundary>
+        </div>
       </div>
 
       <div ref={copy} className={s.copy}>
         <div data-intro className={s.headline}>
-          <DisplayHeading size="display" align="left" accent={HOME_COPY.headlineAccent}>
+          <DisplayHeading size="display" align="center" accent={HOME_COPY.headlineAccent}>
             {HOME_COPY.headlineLead}
           </DisplayHeading>
         </div>
-        <div data-intro>
-          <Lead align="left">{HOME_COPY.line}</Lead>
-        </div>
-        <div data-intro className={s.actions}>
-          <Button
-            variant="primary"
-            size="md"
-            icon="arrowRight"
-            onClick={() => {
-              // Same as clicking the Moon: it flies into Step 1. Without the Moon, go straight there.
-              if (handle.current) handle.current.enterStep1();
-              else navigate(missionUrl.chooseSite());
-            }}
-          >
-            {HOME_COPY.begin}
-          </Button>
-          <Button variant="ghost" to="/about">
-            {HOME_COPY.about}
-          </Button>
+        <div ref={under} className={s.under}>
+          <div data-intro>
+            <Lead align="center">{HOME_COPY.line}</Lead>
+          </div>
+          <div data-intro className={s.actions}>
+            <Button
+              variant="primary"
+              size="md"
+              icon="arrowRight"
+              onClick={() => {
+                // Same as clicking the Moon: it flies into Step 1. Without the Moon, go straight there.
+                if (handle.current) handle.current.enterStep1();
+                else navigate(missionUrl.chooseSite());
+              }}
+            >
+              {HOME_COPY.begin}
+            </Button>
+            <Button variant="ghost" to="/about">
+              {HOME_COPY.about}
+            </Button>
+          </div>
         </div>
       </div>
 
