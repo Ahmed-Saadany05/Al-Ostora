@@ -30,7 +30,7 @@ import { createMoonLight } from './globe/moonShading';
 import { STEP1_NIGHT_FLOOR } from './globe/pickerTypes';
 import { OPENING_VIEW, pickerDisc, preloadPickerGlobe, setMoonHandoff, type Rect } from './globe/moonHandoff';
 import { latLonToVec } from './lib/moonFrame';
-import { PARK_BOB_PX, PARK_SECONDS, PARK_SPIN, parkedDisc, UNPARK_SECONDS } from './parkMath';
+import { PARK_BOB_PX, PARK_EXPOSURE, PARK_NIGHT_FLOOR, PARK_SECONDS, PARK_SPIN, PARK_SUN, REWIND_DIAMETER_PER_HEIGHT, REWIND_SECONDS, REWIND_SPIN_MAX, parkedDisc, UNPARK_SECONDS } from './parkMath';
 
 export interface HeroMoonPin {
   id: string;
@@ -63,6 +63,8 @@ export interface HeroMoonHandle {
   park(dy?: number): Promise<void>;
   /** Float stops; the Moon glides back to exactly its Home framing. Resolves when done. */
   unpark(): Promise<void>;
+  /** From parked: the whole Moon glides to the centre and grows while spinning backwards, faster and faster. Does not unpark and asks for no new tiles. */
+  rewind(): Promise<void>;
 }
 
 /** Where the top of the dome sits, as a fraction of the canvas height measured from the top. */
@@ -135,6 +137,7 @@ type Controls = {
   fly: (target: { x: number; y: number; radius: number; distance: number }, done: (snapshot: string | null) => void) => void;
   park: (dy: number, instant: boolean) => Promise<void>;
   unpark: (instant: boolean) => Promise<void>;
+  rewind: () => Promise<void>;
 };
 
 function Scene({
@@ -159,7 +162,7 @@ function Scene({
   const sweep = useRef({ p: startDark ? 0 : 1 });
   const spinAngle = useRef(0);
   // Parking: p 0 = Home framing (exactly), 1 = parked. Home's own state is never touched, so p back at 0 is the Home frame again.
-  const park = useRef({ p: 0, dy: 0, spin: 0, floating: false, t: 0 });
+  const park = useRef({ p: 0, dy: 0, spin: 0, floating: false, t: 0, rw: 0, rate: PARK_SPIN });
   const light = useMemo(createMoonLight, []);
   const ready = useRef(false);
   const flight = useRef<{
@@ -198,6 +201,18 @@ function Scene({
     (camera as PerspectiveCamera & { manual?: boolean }).manual = true;
   }, [camera]);
 
+  if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__moonState = () => ({
+      sun: light.uSun.value.toArray().map((v) => +v.toFixed(5)),
+      exposure: +light.uExposure.value.toFixed(5),
+      floor: +light.uNightFloor.value.toFixed(5),
+      cam: [camera.position.x, camera.position.y, camera.position.z].map((v) => +v.toFixed(4)),
+      fov: +camera.fov.toFixed(5),
+      zoom: camera.zoom,
+      view: camera.view ? [camera.view.offsetX, camera.view.offsetY].map((v) => +v.toFixed(3)) : null,
+      park: { p: park.current.p, spin: +park.current.spin.toFixed(5) },
+      homeSpin: +(spinAngle.current).toFixed(5),
+    });
   controls.current = {
     dive: () => {
       gsap.to(camera, {
@@ -241,6 +256,14 @@ function Scene({
         if (instant) return done();
         pk.spin = turn;
         gsap.to(pk, { p: 0, spin: 0, duration: UNPARK_SECONDS, ease: 'power2.inOut', onComplete: done });
+      }),
+    rewind: () =>
+      new Promise<void>((resolve) => {
+        const pk = park.current;
+        gsap.killTweensOf(pk);
+        pk.floating = false;
+        // angular velocity: from the parked rate (forwards) to 180°/s backwards, ease-in
+        gsap.to(pk, { rw: 1, rate: -REWIND_SPIN_MAX, duration: REWIND_SECONDS, ease: 'power2.in', onComplete: () => resolve() });
       }),
     fly: (target, done) => {
       if (flight.current || !orient.current) return;
@@ -305,6 +328,7 @@ function Scene({
     if (autoRotate) spinAngle.current += dt * SPIN_RATE;
     // Parked: it turns slowly on its own axis (2°/s); on the way back the extra turn is wound away to exactly zero.
     if (pk.floating) pk.spin += dt * PARK_SPIN;
+    else if (pk.rw > 0) pk.spin += dt * pk.rate;
     if (o) {
       q.lean.setFromEuler(q.e.set(LEAN_TOWARD_VIEWER, 0, 0));
       q.tilt.setFromEuler(q.e.set(0, 0, tiltTowardSouthPole ? Math.PI : 0));
@@ -321,7 +345,13 @@ function Scene({
         const bob = pk.floating && pk.p >= 1 ? PARK_BOB_PX * Math.sin((2 * Math.PI * pk.t) / 5) : 0;
         const to: View = { d: home.d, r: disc.r, cx: disc.cx, cy: disc.cy - pk.dy + bob };
         const e = pk.p;
-        applyView(camera, { d: home.d, r: home.r * Math.pow(to.r / home.r, e), cx: home.cx + (to.cx - home.cx) * e, cy: home.cy + (to.cy - home.cy) * e }, width, height);
+        const parkedView: View = { d: home.d, r: home.r * Math.pow(to.r / home.r, e), cx: home.cx + (to.cx - home.cx) * e, cy: home.cy + (to.cy - home.cy) * e };
+        if (pk.rw > 0) {
+          // rewind: from the parked spot to the centre of the screen, growing; the whole sphere stays in view
+          const rr = (REWIND_DIAMETER_PER_HEIGHT * height) / 2;
+          const k = pk.rw;
+          applyView(camera, { d: home.d, r: parkedView.r * Math.pow(rr / parkedView.r, k), cx: parkedView.cx + (width / 2 - parkedView.cx) * k, cy: parkedView.cy + (height / 2 - pk.dy - parkedView.cy) * k }, width, height);
+        } else applyView(camera, parkedView, width, height);
       }
     }
 
@@ -334,6 +364,12 @@ function Scene({
     const lit = Math.min(1, sp * 1.5);
     light.uExposure.value = EXPOSURE * (RISE_EXPOSURE + (1 - RISE_EXPOSURE) * lit);
     light.uNightFloor.value = RISE_FLOOR + (0.035 - RISE_FLOOR) * lit;
+    if (pk.p > 0) {
+      // Parked: a bright, three-quarter-lit sphere (light toward the camera side + a soft fill). Home's light is blended back out by the same p, so p = 0 is exactly Home's.
+      light.uSun.value.lerp(tmp.set(PARK_SUN.x, PARK_SUN.y, PARK_SUN.z).normalize(), pk.p).normalize();
+      light.uExposure.value += (PARK_EXPOSURE - light.uExposure.value) * pk.p;
+      light.uNightFloor.value += (PARK_NIGHT_FLOOR - light.uNightFloor.value) * pk.p;
+    }
 
     // Project the pin to CSS pixels so the page can draw it as real, focusable DOM.
     if (pinAnchor.current && onPinScreen) {
@@ -426,6 +462,7 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
       enterStep1: enter,
       park: (dy = 0) => controls.current?.park(dy, !motion || osReduced()) ?? Promise.resolve(),
       unpark: () => controls.current?.unpark(!motion || osReduced()) ?? Promise.resolve(),
+      rewind: () => controls.current?.rewind() ?? Promise.resolve(),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [motion],

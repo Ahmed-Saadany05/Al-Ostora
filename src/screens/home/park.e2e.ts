@@ -73,13 +73,24 @@ test('plan choice: the Moon returns, then the flight arrives at Step 1', async (
   await ctx.close();
 });
 
-test('past missions: the Moon returns, a short dive, then /missions', async ({ browser }) => {
+test('past missions: the rewind, a fade to black, then /missions fades in', async ({ browser }) => {
   const { ctx, page } = await open(browser, VPS[0]);
   await begin(page);
   await page.waitForSelector('[data-refaey-stage] [role="dialog"]', { timeout: 60_000 });
   await page.getByRole('button', { name: 'Skip' }).click();
   await page.getByRole('button', { name: 'Explore past missions' }).click();
   await page.waitForURL('**/missions**', { timeout: 60_000 });
+  await ctx.close();
+});
+
+test('past missions with reduced motion: no rewind, no fade, straight to /missions', async ({ browser }) => {
+  const { ctx, page } = await open(browser, VPS[0], true);
+  await begin(page);
+  await page.waitForSelector('[data-refaey-stage] [role="dialog"]', { timeout: 60_000 });
+  await page.getByRole('button', { name: 'Skip' }).click();
+  await page.getByRole('button', { name: 'Explore past missions' }).click();
+  await page.waitForURL('**/missions**', { timeout: 15_000 });
+  expect(await page.evaluate(() => [...document.body.children].some((e) => (e as HTMLElement).style.zIndex === '9999')), 'no curtain').toBe(false);
   await ctx.close();
 });
 

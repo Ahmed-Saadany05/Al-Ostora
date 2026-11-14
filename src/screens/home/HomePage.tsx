@@ -7,6 +7,7 @@ import { Button, DisplayHeading, Lead } from '@/shared/ui';
 import { useNavigate } from 'react-router-dom';
 import { parkedKeepOut, type ParkRect } from '@/scenes/parkMath';
 import { missionUrl } from '@/shared/mission';
+import { modelUrl, PAST_MISSIONS, previewUrl } from '@/screens/journey/missions';
 import { RefaeyBriefing, useRefaey, type BriefingDestination } from './refaey';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
@@ -105,7 +106,6 @@ export function HomePage() {
   const [briefing, setBriefing] = useState(false);
   const [parked, setParked] = useState<ParkRect | null>(null);
   const copyFades = useRef<Animation[]>([]);
-  const diveDone = useRef<(() => void) | null>(null);
 
   const fadeCopy = useCallback(() => {
     const els = [copy.current, pins.current].filter((el): el is HTMLDivElement => !!el);
@@ -141,10 +141,40 @@ export function HomePage() {
     return () => window.removeEventListener('resize', onResize);
   }, [parked]);
 
+  // While Refaey talks, warm what "Explore past missions" will need, in idle time and at low priority: only fetches into the HTTP
+  // cache (nothing is parsed), so nothing loads or parses during the rewind. The route code itself is in the main bundle.
+  useEffect(() => {
+    if (!briefing) return;
+    const ric = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 400));
+    const warm = () => {
+      const first = PAST_MISSIONS[0];
+      const urls = [`/terrain/${first.id}.i16`, ...new Set(first.hardware.map((h) => modelUrl(h.model))), ...PAST_MISSIONS.map((m) => previewUrl(m.cover))];
+      urls.forEach((u) => void fetch(u, { priority: 'low' } as RequestInit).catch(() => undefined));
+      void preloadStep1(); // already done on Home's first load; a no-op then
+    };
+    const id = ric(warm);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id as number) : window.clearTimeout(id as number));
+  }, [briefing]);
+
   const endBriefing = useCallback(
     async (to: BriefingDestination) => {
-      // Refaey has already left (the briefing fades out before calling this). Now the Moon comes home.
+      // Refaey has already left (the briefing fades out before calling this).
       setBriefing(false);
+      if (to === 'missions' && handle.current && motion && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        // A rewind: the parked Moon glides to the centre, growing, spinning backwards faster and faster; then black; then the page fades in.
+        markBriefed();
+        await handle.current.rewind();
+        const curtain = document.createElement('div');
+        curtain.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--color-bg);opacity:0;pointer-events:none';
+        document.body.appendChild(curtain);
+        await curtain.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-in', fill: 'forwards' }).finished;
+        navigate('/missions');
+        // the page is built under the curtain; then it fades in from black
+        await new Promise((r) => window.setTimeout(r, 350));
+        await curtain.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished;
+        curtain.remove();
+        return;
+      }
       if (handle.current) await handle.current.unpark();
       frozen.current = false;
       setParked(null);
@@ -158,17 +188,8 @@ export function HomePage() {
         return;
       }
       markBriefed();
-      if (to === 'missions') {
-        if (handle.current && motion) {
-          // a short dive toward the pole, then the page
-          await new Promise<void>((resolve) => {
-            diveDone.current = resolve;
-            handle.current?.diveToSouthPole();
-            window.setTimeout(resolve, 2200); // never wait forever
-          });
-        }
-        navigate('/missions');
-      } else if (to === 'about') navigate('/about');
+      if (to === 'missions') navigate('/missions');
+      else if (to === 'about') navigate('/about');
       else if (handle.current) handle.current.enterStep1();
       else navigate(missionUrl.chooseSite());
     },
@@ -196,7 +217,6 @@ export function HomePage() {
                 startDark={play}
                 onTextureReady={() => setTextured(true)}
                 onTextureFailed={() => setMoonSettled(true)}
-                onDiveComplete={() => diveDone.current?.()}
                 onPinScreen={setPinAt}
                 label={HOME_COPY.moonLabel}
               />

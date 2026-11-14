@@ -8,8 +8,17 @@ export const PARK_DIAMETER_PER_HEIGHT = 0.24;
 export const PARK_EDGE_PX = 48;
 /** How far it bobs up and down while floating, px. */
 export const PARK_BOB_PX = 6;
-/** Spin while parked, radians per second (2° per second). */
-export const PARK_SPIN = (2 * Math.PI) / 180;
+/** Spin while parked, radians per second (12° per second: a full turn in 30 s). */
+export const PARK_SPIN = (12 * Math.PI) / 180;
+/** The rewind turns the other way, speeding up from the parked rate to this (180° per second). */
+export const REWIND_SPIN_MAX = (180 * Math.PI) / 180;
+export const REWIND_SECONDS = 1.4;
+/** Parked light: a three-quarter phase seen from the camera side (sun 60° off the view axis), with a soft fill on the night side. */
+export const PARK_SUN = { x: -0.87, y: 0.2, z: 0.5 };
+export const PARK_NIGHT_FLOOR = 0.22;
+export const PARK_EXPOSURE = 1.4;
+/** During the rewind the whole sphere is centred at this share of the viewport height across. */
+export const REWIND_DIAMETER_PER_HEIGHT = 0.8;
 export const PARK_SECONDS = 1.4;
 export const UNPARK_SECONDS = 1.2;
 
