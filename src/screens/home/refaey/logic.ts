@@ -26,7 +26,12 @@ export interface ResolveContext {
   /** True only when the numbers come from Horizons (not the demo provider). */
   horizons: boolean;
   values: TokenValues;
-  flags: { horizonLola?: boolean; altBetter?: boolean; altNone?: boolean };
+  flags: { horizonLola?: boolean; altBetter?: boolean; altNone?: boolean; athenaSunlit?: boolean; athenaHidden?: boolean };
+  /**
+   * Recorded JPL Horizons facts (facts/facts.json), already formatted. Unlike `values` they are not live: they fill on every
+   * provider, because they are history (a landing in 1969), not a prediction.
+   */
+  facts?: Partial<Record<string, string>>;
   /** Label for the closing reply added to a node that would otherwise have none. */
   terminalLabel: string;
   /** Whether an explainer id exists (a reply to a missing explainer is dropped). */
@@ -39,22 +44,34 @@ export interface ResolvedNode {
   title?: string;
   lines: string[];
   replies: Reply[];
+  /** True when a line shown uses a recorded Horizons fact. */
+  usesFacts: boolean;
 }
 
 const TOKEN = /\{([A-Za-z]+)\}/g;
 
 /** The text with its tokens filled, or null when it must be skipped. */
-export function fill(text: string, ctx: Pick<ResolveContext, 'horizons' | 'values'>): string | null {
+export function fill(text: string, ctx: Pick<ResolveContext, 'horizons' | 'values'> & { facts?: Partial<Record<string, string>> }): string | null {
   const names = [...text.matchAll(TOKEN)].map((m) => m[1]);
   if (names.length === 0) return text;
-  if (!ctx.horizons) return null;
   let out = text;
   for (const n of names) {
+    const recorded = ctx.facts?.[n];
+    if (recorded !== undefined && recorded !== '') {
+      out = out.replaceAll(`{${n}}`, recorded);
+      continue;
+    }
+    if (!ctx.horizons) return null;
     const v = ctx.values[n as Token];
     if (v === undefined || v === '') return null;
     out = out.replaceAll(`{${n}}`, v);
   }
   return out;
+}
+
+/** Does this text use a recorded fact (so the "JPL Horizons · recorded" label belongs next to it)? */
+export function usesFact(text: string, ctx: Pick<ResolveContext, 'facts'>): boolean {
+  return [...text.matchAll(TOKEN)].some((m) => (ctx.facts?.[m[1]] ?? '') !== '');
 }
 
 export function hasConditionMet(node: Pick<DialogueNode, 'when'>, ctx: Pick<ResolveContext, 'flags'>): boolean {
@@ -85,7 +102,7 @@ export function resolveNode(
     replies.push({ ...r, label });
   }
   if (replies.length === 0) replies.push({ label: ctx.terminalLabel, action: { type: 'collapse' } });
-  return { id: node.id, mood: node.mood ?? 'neutral', title: node.title, lines, replies: replies.slice(0, 3) };
+  return { id: node.id, mood: node.mood ?? 'neutral', title: node.title, lines, replies: replies.slice(0, 3), usesFacts: node.lines.some((l) => fill(l, ctx) !== null && usesFact(l, ctx)) };
 }
 
 /** Group whole lines into beats of at most `maxLines` visual lines. A single line taller than that stays whole. */

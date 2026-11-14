@@ -1,4 +1,4 @@
-// Run: node --test src/screens/home/refaey/
+// Run: node --test src/screens/home/refaey/   (files named *-test.mjs, so vitest does not pick them up)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';

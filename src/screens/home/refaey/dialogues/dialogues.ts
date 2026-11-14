@@ -23,7 +23,7 @@ export type DialogueNode = {
   mood?: RefaeyMood;
   lines: string[];
   replies: Reply[];
-  when?: 'horizonLola' | 'altBetter' | 'altNone';
+  when?: 'horizonLola' | 'altBetter' | 'altNone' | 'athenaSunlit' | 'athenaHidden';
 };
 
 /* ------------------------------------------------------------------ */
