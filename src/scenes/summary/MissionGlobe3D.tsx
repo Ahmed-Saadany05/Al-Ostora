@@ -4,8 +4,8 @@
  *
  * The landing site starts facing you. Drag to spin the Moon (with a little momentum). Earth hangs
  * in the sky top-left; when Earth is in sight from the site, a dotted radio beam runs from Earth to
- * the site (always drawn over the Moon), and the white site pin and its name ride on the surface:
- * both follow the Moon as it turns; the pin hides when the site turns away. Gold-lit when the Sun is up at touchdown,
+ * the site, and the white site pin and its name ride on the surface: both follow the Moon as it
+ * turns, and hide behind it when the site turns away. Gold-lit when the Sun is up at touchdown,
  * dimmed when not (the same rules as the flat picture it replaces).
  */
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
@@ -37,14 +37,6 @@ const EARTH_R = 0.17;
 /** Spin per pixel dragged (radians), and how fast the momentum dies (per second). */
 const SPIN_PER_PX = 0.008;
 const SPIN_DAMPING = 3.2;
-/**
- * Speed of the beam's dashes along the line (scene units / s). The beam's end travels over the
- * Moon's surface toward the site at this same speed after a spin.
- */
-const BEAM_SPEED = 0.35;
-/** Dashes (not dots): segment and gap lengths along the beam, scene units. */
-const BEAM_DASH = 0.1;
-const BEAM_GAP = 0.065;
 
 /** Moon-fixed lat/lon → the globe's scene frame (x = 0° lon, y = north, z = 90° W). */
 const toScene = (lat: number, lon: number, r = 1) => {
@@ -114,22 +106,8 @@ function Scene({
     light.uNightFloor.value = sunlit ? 0.04 : 0.25;
   }, [light, sunlit]);
 
-  type BeamLine = {
-    geometry: { setPositions: (p: number[]) => void };
-    computeLineDistances: () => void;
-    renderOrder: number;
-    material: { dashOffset: number; depthTest: boolean; depthWrite: boolean };
-  };
-  const beam = useRef<BeamLine | null>(null);
-  const beamShade = useRef<BeamLine | null>(null);
+  const beam = useRef<{ geometry: { setPositions: (p: number[]) => void }; computeLineDistances: () => void; material: { dashOffset: number } } | null>(null);
   const tmp = useMemo(() => ({ site: new THREE.Vector3(), normal: new THREE.Vector3(), toCam: new THREE.Vector3(), q: new THREE.Quaternion(), ax: new THREE.Vector3() }), []);
-  // Where the beam ends: travels toward the site over the Moon's surface (direction from the centre)
-  // at the dashes' own speed, so after a spin it glides back onto the landing site.
-  const beamDir = useRef<THREE.Vector3 | null>(null);
-  // Dash phase: `offset` is the line material's dashOffset (shared by both lines); `tipPhase` is the
-  // pattern's phase at the beam's end, held fixed while the end travels so the dashes look drawn.
-  const dash = useRef({ offset: 0, tipPhase: 0 });
-  const beamQ = useMemo(() => ({ a: new THREE.Quaternion(), end: new THREE.Vector3() }), []);
 
   useFrame(({ size }, dt) => {
     const m = moon.current;
@@ -147,41 +125,11 @@ function Scene({
     tmp.site.copy(siteLocal).applyQuaternion(m.quaternion).add(MOON_AT);
     tmp.normal.copy(tmp.site).sub(MOON_AT).normalize();
     const facing = tmp.normal.dot(tmp.toCam.copy(camera.position).sub(tmp.site).normalize()) > 0.02;
-    // Beam: Earth → site, drawn over the Moon.
-    // Always over the Moon: drawn last, ignoring depth (set here so it reaches each line's own
-    // material). A soft dark dashed outline under the blue dashes keeps it readable on bright ground.
-    let moving = false;
-    if (!beamDir.current) beamDir.current = tmp.normal.clone();
-    else {
-      // Move along the surface toward the site at the dashes' speed (arc length = angle × radius).
-      const angle = beamDir.current.angleTo(tmp.normal);
-      const step = (BEAM_SPEED * dt) / siteLocal.length();
-      moving = angle > 1e-4;
-      if (angle > 1e-5) {
-        beamQ.a.setFromUnitVectors(beamDir.current, tmp.normal);
-        beamDir.current.applyQuaternion(new THREE.Quaternion().slerp(beamQ.a, Math.min(1, step / angle))).normalize();
-      }
-    }
-    const end = beamQ.end.copy(beamDir.current).multiplyScalar(siteLocal.length()).add(MOON_AT);
-    const ends = [EARTH_AT.x, EARTH_AT.y, EARTH_AT.z, end.x, end.y, end.z];
-    // In sync: while the end travels, keep the dash phase at the tip fixed (new dashes appear exactly
-    // where the line grows, as if drawn); once it rests, the dashes flow toward the site at the same speed.
-    const len = EARTH_AT.distanceTo(end);
-    const d = dash.current;
-    if (moving) d.offset = d.tipPhase - len;
-    else d.offset -= BEAM_SPEED * dt;
-    d.tipPhase = d.offset + len;
-    for (const [line, order] of [
-      [beamShade.current, 999],
-      [beam.current, 1000],
-    ] as const) {
-      if (!line) continue;
-      line.renderOrder = order;
-      line.material.depthTest = false;
-      line.material.depthWrite = false;
-      line.geometry.setPositions(ends);
-      line.computeLineDistances();
-      line.material.dashOffset = d.offset;
+    // Beam: Earth → site (the Moon hides the part behind it).
+    if (beam.current) {
+      beam.current.geometry.setPositions([EARTH_AT.x, EARTH_AT.y, EARTH_AT.z, tmp.site.x, tmp.site.y, tmp.site.z]);
+      beam.current.computeLineDistances();
+      beam.current.material.dashOffset -= dt * 0.35;
     }
     // Pin + name (DOM): follow the site; hidden when it is on the far side.
     const el = pinEl.current;
@@ -205,30 +153,17 @@ function Scene({
         <Earth contact={contact} />
       </Suspense>
       {contact && (
-        <>
-          <Line
-            ref={beamShade as never}
-            points={[EARTH_AT.toArray(), MOON_AT.toArray()]}
-            color={color.bg}
-            lineWidth={5}
-            dashed
-            dashSize={BEAM_DASH}
-            gapSize={BEAM_GAP}
-            transparent
-            opacity={0.55}
-          />
-          <Line
-            ref={beam as never}
-            points={[EARTH_AT.toArray(), MOON_AT.toArray()]}
-            color={color.earth}
-            lineWidth={2.4}
-            dashed
-            dashSize={BEAM_DASH}
-            gapSize={BEAM_GAP}
-            transparent
-            opacity={1}
-          />
-        </>
+        <Line
+          ref={beam as never}
+          points={[EARTH_AT.toArray(), MOON_AT.toArray()]}
+          color={color.earth}
+          lineWidth={1.6}
+          dashed
+          dashSize={0.035}
+          gapSize={0.11}
+          transparent
+          opacity={0.9}
+        />
       )}
     </>
   );
