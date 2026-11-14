@@ -1,0 +1,135 @@
+/* Mission summary Moon — owner: Pink. Tokens only. */
+
+/* Same box as the flat picture it replaces (460 × 440). The two stack; the flat one fades out once
+   the real Moon is ready. */
+.stack {
+  position: relative;
+  aspect-ratio: 460 / 440;
+}
+.layer3D,
+.flat {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.7s var(--ease-out);
+}
+.layer3D {
+  opacity: 0;
+}
+.layerOn {
+  opacity: 1;
+}
+.flat > svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.flatOut {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- 3D view */
+
+.wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.wrap:active {
+  cursor: grabbing;
+}
+.wrap canvas {
+  display: block;
+}
+/* Sun up at touchdown: a soft gold glow behind the Moon (as in the flat picture). */
+.wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 52.5% 55%, color-mix(in srgb, var(--color-sun) 30%, transparent) 0, transparent 52%);
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
+  pointer-events: none;
+}
+.sunlit::before {
+  opacity: 1;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+/* Landing site: white dot with a black pulse, name underneath; follows the site as the Moon spins. */
+.pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+.pin[data-hidden='true'] {
+  opacity: 0;
+}
+.dot,
+.ring {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot {
+  /* White dot with a thin black outline, so it reads on bright lunar ground too. */
+  background: var(--color-text);
+  box-shadow:
+    0 0 0 1.5px var(--color-bg),
+    0 0 10px 2px rgba(255, 255, 255, 0.6);
+}
+.ring {
+  /* Black pulse around the white dot. */
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  animation: pulse 2s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+.name {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 13px;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+.hint {
+  position: absolute;
+  right: 4%;
+  bottom: 2%;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
+  }
+}

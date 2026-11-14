@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { interpolateSky, SitePanorama } from '@/scenes';
+import { interpolateSky, preloadMissionGlobe, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
@@ -104,6 +104,10 @@ export function StandPage() {
   // ?landed=<launch ISO>: arrived after landing → "Summarize trip" instead of Launch.
   const landedRaw = params.get('landed');
   const landed = landedRaw && Number.isFinite(Date.parse(landedRaw)) ? landedRaw : null;
+  // After landing, the summary is next: have its real Moon ready before "Summarize trip".
+  useEffect(() => {
+    if (landed && site) void preloadMissionGlobe(site.lat, site.lon);
+  }, [landed, site]);
 
   // Timeline picks: a single pick (click, the best-window tag, a key press) sweeps there; the rapid
   // updates of a drag (< 120 ms apart) follow the pointer directly.
