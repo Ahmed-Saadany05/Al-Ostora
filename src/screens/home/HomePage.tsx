@@ -4,8 +4,8 @@ import { preloadStep1 } from '@/scenes';
 import { useSites } from '@/shared/data';
 import { useApp } from '@/shared/store/app';
 import { Button, DisplayHeading, Lead } from '@/shared/ui';
-import { useBlocker, useNavigate } from 'react-router-dom';
-import { releaseMoonHandoff } from '@/scenes/globe/moonHandoff';
+import { useNavigate } from 'react-router-dom';
+import { parkedKeepOut, type ParkRect } from '@/scenes/parkMath';
 import { missionUrl } from '@/shared/mission';
 import { RefaeyBriefing, useRefaey, type BriefingDestination } from './refaey';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
@@ -61,6 +61,7 @@ export function HomePage() {
   const copy = useRef<HTMLDivElement>(null);
   const under = useRef<HTMLDivElement>(null);
   const hero = useRef<HTMLElement>(null);
+  const shiftBox = useRef<HTMLDivElement>(null);
   // How far the Moon is moved down so its lit edge clears the buttons; null until measured (the Moon stays hidden).
   const [shift, setShift] = useState<number | null>(null);
   const pins = useRef<HTMLDivElement>(null);
@@ -80,8 +81,10 @@ export function HomePage() {
   const allReady = (textured || moonSettled) && step1Ready;
   const { done: introDone, pinRevealed } = useIntro(play, allReady, { stars, moon, copy, pins, handle });
 
+  // While the Moon is parked (or travelling to/from the corner) its pole is somewhere else: the shift is frozen, not re-measured.
+  const frozen = useRef(false);
   const measure = useCallback(() => {
-    if (!pinAt || !under.current || !hero.current) return;
+    if (frozen.current || !pinAt || !under.current || !hero.current) return;
     const heroTop = hero.current.getBoundingClientRect().top;
     const buttonsBottom = under.current.getBoundingClientRect().bottom - heroTop; // .under is not animated; its children are
     const edge = pinAt.y - RIM_ABOVE_POLE_PER_WIDTH * hero.current.clientWidth; // where the Moon's lit rim is now, in the (unshifted) layer's own box
@@ -93,47 +96,83 @@ export function HomePage() {
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
 
-  // "Begin the journey": the whole hero (title, line, buttons, pin) fades out, then Pink's flight takes the Moon toward Step 1.
-  // When the flight ends it navigates to Step 1; that navigation is held here (it is the flight's completion signal) so the
-  // briefing can play first. Once per session. Refaey is never on screen together with the hero.
+  // "Begin the journey": the hero copy fades, the Moon zooms out and parks in the bottom-right corner (floating), and Refaey's
+  // briefing plays beside it. A choice sends him away, the Moon glides back to exactly its Home framing, and then the
+  // flight / dive / navigation happens. Once the briefing has been seen this session, Begin plays the flight straight away.
+  // Without a Moon (WebGL failed) the briefing appears at once and choices navigate directly.
+  const briefed = useRefaey((st) => st.briefed);
   const [leaving, setLeaving] = useState(false);
-  const journey = useRef(false);
-  const blocker = useBlocker(({ nextLocation }) => journey.current && nextLocation.pathname === missionUrl.chooseSite());
   const [briefing, setBriefing] = useState(false);
-  const decided = useRef(false); // the held navigation is dealt with once: shown the briefing, or let through
-  useEffect(() => {
-    if (blocker.state !== 'blocked' || decided.current) return;
-    decided.current = true;
-    // Always: the flight's last frame is still held up as an image; Refaey's two choices cover it, so let it go.
-    releaseMoonHandoff(0);
-    setBriefing(true);
-  }, [blocker]);
+  const [parked, setParked] = useState<ParkRect | null>(null);
+  const copyFades = useRef<Animation[]>([]);
+  const diveDone = useRef<(() => void) | null>(null);
+
+  const fadeCopy = useCallback(() => {
+    const els = [copy.current, pins.current].filter((el): el is HTMLDivElement => !!el);
+    copyFades.current = els.map((el) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }));
+    return Promise.all(copyFades.current.map((a) => a.finished.catch(() => undefined)));
+  }, []);
 
   const startJourney = useCallback(() => {
     if (leaving) return;
     setLeaving(true);
-    journey.current = true;
-    const fade = [copy.current, pins.current].flatMap((el) =>
-      el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
-    );
-    // With motion the flight starts at once (it fades the hero itself); without it, wait for the cross-fade, then change view.
-    // No Moon (WebGL failed): nothing will fly, so Refaey's choices come straight away.
-    if (!handle.current) return void Promise.all(fade).then(() => setBriefing(true));
-    if (motion) handle.current.enterStep1();
-    else void Promise.all(fade).then(() => handle.current?.enterStep1());
-  }, [leaving, motion]);
+    const fade = fadeCopy();
+    if (!briefed && handle.current) frozen.current = true;
+    if (!handle.current) return void fade.then(() => setBriefing(true));
+    if (briefed) {
+      // seen already: the flight, as before (no flight under reduced motion: wait for the cross-fade first)
+      if (motion) handle.current.enterStep1();
+      else void fade.then(() => handle.current?.enterStep1());
+      return;
+    }
+    void fade
+      .then(() => handle.current?.park(shiftBox.current ? new DOMMatrixReadOnly(getComputedStyle(shiftBox.current).transform).m42 : 0))
+      .then(() => {
+        setParked(parkedKeepOut(window.innerWidth, window.innerHeight));
+        setBriefing(true);
+      });
+  }, [leaving, fadeCopy, briefed, motion, shift]);
+
+  // The parked Moon's keep-out follows the viewport.
+  useEffect(() => {
+    if (!parked) return;
+    const onResize = () => setParked(parkedKeepOut(window.innerWidth, window.innerHeight));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [parked]);
 
   const endBriefing = useCallback(
-    (to: BriefingDestination) => {
+    async (to: BriefingDestination) => {
+      // Refaey has already left (the briefing fades out before calling this). Now the Moon comes home.
+      setBriefing(false);
+      if (handle.current) await handle.current.unpark();
+      frozen.current = false;
+      setParked(null);
+      if (to === 'close') {
+        // closed without choosing: Home as it was, Begin works again
+        copyFades.current.forEach((a) => a.cancel());
+        copyFades.current = [];
+        const els = [copy.current, pins.current].filter((el): el is HTMLDivElement => !!el);
+        els.forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: motion ? LEAVE_MS : 0, easing: 'ease-in' }));
+        setLeaving(false);
+        return;
+      }
       markBriefed();
-      journey.current = false;
-      if (to === 'missions' || to === 'about') {
-        if (blocker.state === 'blocked') blocker.reset();
-        navigate(to === 'missions' ? '/missions' : '/about');
-      } else if (blocker.state === 'blocked') blocker.proceed();
+      if (to === 'missions') {
+        if (handle.current && motion) {
+          // a short dive toward the pole, then the page
+          await new Promise<void>((resolve) => {
+            diveDone.current = resolve;
+            handle.current?.diveToSouthPole();
+            window.setTimeout(resolve, 2200); // never wait forever
+          });
+        }
+        navigate('/missions');
+      } else if (to === 'about') navigate('/about');
+      else if (handle.current) handle.current.enterStep1();
       else navigate(missionUrl.chooseSite());
     },
-    [blocker, markBriefed, navigate],
+    [markBriefed, motion, navigate],
   );
 
   const pin = site ? { id: site.id, lat: site.lat, lon: site.lon, label: HOME_COPY.pinLabel } : null;
@@ -145,7 +184,7 @@ export function HomePage() {
         <StarLayers parallax={false} />
       </div>
 
-      <div className={s.moonShift} data-ready={shift !== null}>
+      <div ref={shiftBox} className={s.moonShift} data-ready={shift !== null}>
         <div ref={moon} className={s.moon}>
           <MoonBoundary label={HOME_COPY.moonLabel} onFail={() => setMoonSettled(true)}>
             <Suspense fallback={null}>
@@ -157,6 +196,7 @@ export function HomePage() {
                 startDark={play}
                 onTextureReady={() => setTextured(true)}
                 onTextureFailed={() => setMoonSettled(true)}
+                onDiveComplete={() => diveDone.current?.()}
                 onPinScreen={setPinAt}
                 label={HOME_COPY.moonLabel}
               />
@@ -200,7 +240,7 @@ export function HomePage() {
         )}
       </div>
 
-      {briefing && <RefaeyBriefing onDone={endBriefing} />}
+      {briefing && <RefaeyBriefing onDone={endBriefing} avoid={parked ?? undefined} />}
 
       <MotionToggle />
 

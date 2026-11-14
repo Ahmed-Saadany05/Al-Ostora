@@ -13,9 +13,9 @@ import { getNode, hasExplainer } from './registry';
 import { useRefaey } from './store';
 import s from './refaey.module.css';
 
-export type BriefingDestination = 'step1' | 'missions' | 'about';
+export type BriefingDestination = 'step1' | 'missions' | 'about' | 'close';
 
-const FADE_MS = { motion: 600, still: 250 } as const;
+const FADE_MS = { motion: 400, still: 250 } as const;
 const FACTS = recordedTokens();
 const END = 'b7';
 /** Beats after b7 (and b7 itself) have no Skip: there is nowhere further to skip to. */
@@ -27,7 +27,16 @@ const AT_END = new Set(['b7', 'b7r']);
  * text links below them. No scrim and no box. Picking a path, or pressing Esc, dissolves it away and calls `onDone`.
  * He asks for a callsign for his lander (b6); "Skip" on any beat jumps to the last beat with the default callsign.
  */
-export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: BriefingDestination) => void; firstId?: string }) {
+export function RefaeyBriefing({
+  onDone,
+  firstId = 'b1',
+  avoid,
+}: {
+  onDone: (to: BriefingDestination) => void;
+  firstId?: string;
+  /** A rectangle (viewport px) Refaey and his balloon must stay clear of: the Moon parked in the corner. */
+  avoid?: { x: number; y: number; w: number; h: number };
+}) {
   const motion = useApp((st) => st.motion);
   const callsign = useRefaey((st) => st.callsign);
   const setCallsign = useRefaey((st) => st.setCallsign);
@@ -91,6 +100,7 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
   const skip = AT_END.has(nodeId) || isSideNode(nodeId) ? undefined : { label: 'Skip', onClick: () => setTrail([END]) };
   return (
     <div ref={root} className={s.briefing} inert={leaving}>
+      {avoid && <div aria-hidden data-refaey-avoid style={{ position: 'fixed', left: avoid.x, top: avoid.y, width: avoid.w, height: avoid.h, pointerEvents: 'none' }} />}
       <RefaeyStage
         slots={BRIEFING_SLOTS}
         scope={root}
@@ -98,7 +108,7 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
         content={content}
         onReply={onReply}
         skip={skip}
-        onEscape={() => finish('step1')}
+        onEscape={() => finish('close')}
         onPlaced={(ok) => setPlain(!ok)}
       />
       {plain && (
@@ -107,7 +117,7 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
             <RefaeyActor height="var(--actor-h)" walkIn clickable />
           </div>
           <div className={[s.briefingText, s.quipHost].join(' ')} data-refaey-fallback data-quip={quip !== null}>
-            <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
+            <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('close')} skip={skip} />
             {quip && (
               <p
                 className={s.quipLine}
