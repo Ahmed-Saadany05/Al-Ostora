@@ -22,6 +22,7 @@ import { color } from '@/shared/theme/tokens';
 import type { HorizonProfile, SkyState } from '@/shared/types';
 import { azElToLocal, skyPathSegments, type Vec3Tuple } from './skyMath';
 import { type TerrainSource } from './terrain';
+import { detailSeed, NEAR_HALF, NEAR_HOLE, rockField, surfaceDetail, type SurfaceDetail } from './nearDetail';
 import v from './moonview.module.css';
 
 /** Sky objects are built on this sphere (metres) inside a dome scaled by SKY_SCALE (≈ 3,200 km). */
@@ -208,7 +209,44 @@ float sunShadow(vec3 lightDirView) {
 }
 `;
 
-function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
+type ShadowUniforms = Record<'uHeight' | 'uRadius' | 'uTexN' | 'uSunWorld' | 'uSunView', THREE.IUniform>;
+
+/**
+ * A regolith material with Hagras's ray-marched terrain shadows (factored out by Aser so the near
+ * detail patch and the rocks share them). `hole`: hide this surface inside |x|,|z| < hole (the coarse
+ * mesh under the detailed patch). `instanced`: for InstancedMesh (rocks).
+ */
+function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms: ShadowUniforms, opts: { key: string; hole?: number; instanced?: boolean }) {
+  const m = new THREE.MeshStandardMaterial(params);
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms, { uHole: { value: opts.hole ?? 0 } });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainPos;')
+      .replace(
+        '#include <project_vertex>',
+        `#include <project_vertex>\nvTerrainPos = (modelMatrix * ${opts.instanced ? 'instanceMatrix * ' : ''}vec4(transformed, 1.0)).xyz;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\nuniform float uHole;\n${SHADOW_GLSL}`)
+      .replace(
+        '#include <clipping_planes_fragment>',
+        '#include <clipping_planes_fragment>\n\tif (uHole > 0.0 && max(abs(vTerrainPos.x), abs(vTerrainPos.z)) < uHole) discard;',
+      )
+      .replace(
+        '#include <lights_fragment_begin>',
+        THREE.ShaderChunk.lights_fragment_begin.replace(
+          /RE_Direct\( directLight, geometryPosition/g,
+          'directLight.color *= sunShadow( directLight.direction );\n\t\tRE_Direct( directLight, geometryPosition',
+        ),
+      );
+  };
+  m.customProgramCacheKey = () => `terrain-raymarch-shadow-v2-${opts.key}`;
+  return m;
+}
+
+function Terrain({ terrain, sky, seed }: { terrain: TerrainSource; sky?: SkyState; seed: number }) {
+  // Aser: detail finer than the NASA grid, only near the observer (nearDetail.ts).
+  const surface = useMemo(() => surfaceDetail(seed, !terrain.placeholder), [seed, terrain.placeholder]);
   const { geometry, heightTex } = useMemo(() => {
     const size = terrain.radius * 2;
     // 512 cells: ~23 m apart over the 12 km real-terrain patch (data is 20 m).
@@ -224,7 +262,8 @@ function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
       p.setY(i, h);
       halves[i] = THREE.DataUtils.toHalfFloat(h);
       const d = Math.hypot(p.getX(i), p.getZ(i)) / terrain.radius;
-      rgba.set([1, 1, 1, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
+      const a = surface.albedoAt(p.getX(i), p.getZ(i), false);
+      rgba.set([a, a, a, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
     }
     g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
     g.computeVertexNormals();
@@ -232,7 +271,44 @@ function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
     tex.magFilter = tex.minFilter = THREE.LinearFilter;
     tex.needsUpdate = true;
     return { geometry: g, heightTex: tex };
-  }, [terrain]);
+  }, [terrain, surface]);
+
+  // Aser: the detailed patch around the observer, a point every 1 m. Real ground + small craters,
+  // bumps and brightness patches; near its edge it blends into the coarse mesh's own (interpolated)
+  // heights so there is no step where they meet.
+  const near = useMemo(() => {
+    const cell = (terrain.radius * 2) / SEGMENTS;
+    const coarseAt = (x: number, z: number) => {
+      const fx = (x + terrain.radius) / cell;
+      const fz = (z + terrain.radius) / cell;
+      const ix = Math.floor(fx);
+      const iz = Math.floor(fz);
+      const tx = fx - ix;
+      const tz = fz - iz;
+      const at = (i: number, j: number) => terrain.heightAt(i * cell - terrain.radius, j * cell - terrain.radius);
+      const top = at(ix, iz) * (1 - tx) + at(ix + 1, iz) * tx;
+      const bot = at(ix, iz + 1) * (1 - tx) + at(ix + 1, iz + 1) * tx;
+      return top * (1 - tz) + bot * tz;
+    };
+    const n = NEAR_HALF * 2;
+    const g = new THREE.PlaneGeometry(n, n, n, n);
+    g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position;
+    const rgba = new Float32Array(p.count * 4);
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i);
+      const z = p.getZ(i);
+      const edge = THREE.MathUtils.smoothstep(Math.max(Math.abs(x), Math.abs(z)), NEAR_HOLE - 35, NEAR_HOLE);
+      const fine = terrain.heightAt(x, z) + surface.heightAt(x, z);
+      p.setY(i, edge > 0 ? fine * (1 - edge) + coarseAt(x, z) * edge : fine);
+      const a = surface.albedoAt(x, z, true);
+      rgba.set([a, a, a, 1], i * 4);
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
+    g.computeVertexNormals();
+    return g;
+  }, [terrain, surface]);
+  useEffect(() => () => near.dispose(), [near]);
   useEffect(
     () => () => {
       geometry.dispose();
@@ -260,36 +336,34 @@ function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
     [heightTex, terrain.radius],
   );
 
-  const material = useMemo(() => {
+  // The same bump texture on the patch, offset so its tiles line up with the coarse mesh's.
+  const nearDetailTex = useMemo(() => {
+    const t = detail.clone();
+    t.repeat.set((NEAR_HALF * 2) / DETAIL_TILE_M, (NEAR_HALF * 2) / DETAIL_TILE_M);
+    const off = ((terrain.radius - NEAR_HALF) / DETAIL_TILE_M) % 1;
+    t.offset.set(off, off);
+    t.needsUpdate = true;
+    return t;
+  }, [detail, terrain.radius]);
+  useEffect(() => () => nearDetailTex.dispose(), [nearDetailTex]);
+
+  const { material, nearMaterial } = useMemo(() => {
     // Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only.
-    const m = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0.55, 0.54, 0.52),
-      roughness: 1,
-      metalness: 0,
-      vertexColors: true,
-      transparent: true,
-      bumpMap: detail,
-      bumpScale: 2.2,
-    });
-    m.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, uniforms);
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainPos;')
-        .replace('#include <project_vertex>', '#include <project_vertex>\nvTerrainPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\n${SHADOW_GLSL}`)
-        .replace(
-          '#include <lights_fragment_begin>',
-          THREE.ShaderChunk.lights_fragment_begin.replace(
-            /RE_Direct\( directLight, geometryPosition/g,
-            'directLight.color *= sunShadow( directLight.direction );\n\t\tRE_Direct( directLight, geometryPosition',
-          ),
-        );
+    const base = { color: new THREE.Color(0.55, 0.54, 0.52), roughness: 1, metalness: 0, vertexColors: true, bumpScale: 2.2 };
+    return {
+      // The coarse mesh, hidden under the detailed patch.
+      material: shadowedMaterial({ ...base, transparent: true, bumpMap: detail }, uniforms, { key: 'coarse', hole: NEAR_HOLE }),
+      // Drawn in front where the two overlap (the last metres of the patch), so no flicker.
+      nearMaterial: shadowedMaterial({ ...base, bumpMap: nearDetailTex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, uniforms, { key: 'near' }),
     };
-    m.customProgramCacheKey = () => 'terrain-raymarch-shadow-v1';
-    return m;
-  }, [detail, uniforms]);
-  useEffect(() => () => material.dispose(), [material]);
+  }, [detail, nearDetailTex, uniforms]);
+  useEffect(
+    () => () => {
+      material.dispose();
+      nearMaterial.dispose();
+    },
+    [material, nearMaterial],
+  );
 
   // Keep the Sun direction current (world for the march, view for matching the light).
   const sunWorld = useMemo(() => new THREE.Vector3(), []);
@@ -300,7 +374,64 @@ function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
     uniforms.uSunView.value.copy(sunWorld).transformDirection(camera.matrixWorldInverse);
   });
 
-  return <mesh geometry={geometry} material={material} />;
+  return (
+    <>
+      <mesh geometry={geometry} material={material} />
+      <mesh geometry={near} material={nearMaterial} />
+      <Rocks terrain={terrain} surface={surface} seed={seed} uniforms={uniforms} />
+    </>
+  );
+}
+
+/**
+ * Rocks and boulders near the observer (Aser). Procedural (no models): squashed, jittered
+ * icosahedra, many small and few large, all under 1.1 m (below the 1.8 m eye), so they can never hide
+ * the Sun or Earth. They sit on the detailed ground and get the same terrain shadows.
+ */
+function Rocks({ terrain, surface, seed, uniforms }: { terrain: TerrainSource; surface: SurfaceDetail; seed: number; uniforms: ShadowUniforms }) {
+  const rocks = useMemo(() => rockField(seed), [seed]);
+  const geometry = useMemo(() => {
+    let s = seed * 31 + 7;
+    const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+    const geo = new THREE.IcosahedronGeometry(1, 1);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const f = 0.75 + rnd() * 0.45;
+      p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.7, p.getZ(i) * f);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }, [seed]);
+  const material = useMemo(
+    () => shadowedMaterial({ color: new THREE.Color(0.47, 0.46, 0.44), roughness: 1, metalness: 0, flatShading: true }, uniforms, { key: 'rocks', instanced: true }),
+    [uniforms],
+  );
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    rocks.forEach((r, i) => {
+      e.set(r.rot[0], r.rot[1], r.rot[2]);
+      q.setFromEuler(e);
+      pos.set(r.x, terrain.heightAt(r.x, r.z) + surface.heightAt(r.x, r.z) + r.size * 0.25, r.z);
+      scl.set(r.size, r.size * r.squash[0], r.size * r.squash[1]);
+      mesh.setMatrixAt(i, m.compose(pos, q, scl));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [rocks, terrain, surface]);
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      material.dispose();
+    },
+    [geometry, material],
+  );
+  return <instancedMesh ref={ref} args={[geometry, material, rocks.length]} />;
 }
 
 /**
@@ -656,7 +787,7 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
         </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
         {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} topY={globeTop} />}
-        <Terrain terrain={terrain} sky={sky} />
+        <Terrain terrain={terrain} sky={sky} seed={detailSeed(site?.lat, site?.lon)} />
         {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />

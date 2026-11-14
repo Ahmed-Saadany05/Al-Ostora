@@ -43,7 +43,7 @@ export function ChooseSitePage() {
       <Button
         variant="primary"
         icon="arrowRight"
-        to={missionUrl.dates(sites[0].id)}
+        to={missionUrl.stand(sites[0].id)}
       >
         Continue with {sites[0].kind === "custom" ? "your pin" : sites[0].name}
       </Button>
