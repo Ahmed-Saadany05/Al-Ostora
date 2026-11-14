@@ -23,6 +23,7 @@ const CREDITS = [
   'Moon imagery: NASA Moon Trek / LRO WAC (NASA/GSFC/Arizona State University)',
   'Terrain: LRO LOLA (NASA/GSFC)',
   '3-D terrain outside the poles: SLDEM2015, LRO LOLA + SELENE/Kaguya Terrain Camera (NASA/GSFC, JAXA)',
+  'Past-mission photos: Apollo 11 bootprint AS11-40-5878 (NASA); Apollo 15 rover AS15-88-11901 (NASA); Lunokhod 1 as seen by LROC NAC M175502049RE (NASA/GSFC/Arizona State University); Chang’e 4 lander imaged by Yutu-2 (CNSA/CLEP/NAOC, via DLR); Chandrayaan-3 Vikram seen by Pragyan, 30 August 2023 (ISRO); Athena lander on its side (Intuitive Machines, via NASA)',
 ];
 
 interface Ref {

@@ -1,9 +1,11 @@
 /** Past missions: Refaey asks you to pick a landing; each card takes you to stand on that site at touchdown. */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDeg } from '@/shared/format';
 import { missionUrl } from '@/shared/mission';
 import { Button, Icon } from '@/shared/ui';
 import { landingOf, PAST_MISSIONS, previewUrl } from './missions';
+import { MISSION_PHOTOS } from './photos';
 import { RefaeyTalk } from './RefaeyTalk';
 import s from './journey.module.css';
 
@@ -12,6 +14,25 @@ const HUB_TALK = {
   lines: ['Every crew here picked a place and a moment. Pick one, and I’ll stand you there at the minute it touched down.'],
   replies: [],
 };
+
+/** The mission's photograph (with its credit); the 3D-model preview if there is none or it fails to load. */
+function CardArt({ mission }: { mission: (typeof PAST_MISSIONS)[number] }) {
+  const photo = MISSION_PHOTOS[mission.id];
+  const [failed, setFailed] = useState(false);
+  if (!photo || failed) {
+    return (
+      <span className={s.cardArt}>
+        <img src={previewUrl(mission.cover)} alt="" loading="lazy" draggable={false} />
+      </span>
+    );
+  }
+  return (
+    <span className={[s.cardArt, s.cardPhoto].join(' ')}>
+      <img src={photo.src} width={photo.width} height={photo.height} alt={photo.alt} loading="lazy" draggable={false} onError={() => setFailed(true)} />
+      <span className={s.photoCredit}>{photo.credit}</span>
+    </span>
+  );
+}
 
 export function MissionsHub() {
   return (
@@ -31,9 +52,7 @@ export function MissionsHub() {
           return (
             <li key={m.id}>
               <Link to={`/missions/${m.id}`} className={s.card}>
-                <span className={s.cardArt}>
-                  <img src={previewUrl(m.cover)} alt="" loading="lazy" draggable={false} />
-                </span>
+                <CardArt mission={m} />
                 <span className={s.cardBody}>
                   <span className={s.cardMeta}>
                     {m.agency} · {m.year}
