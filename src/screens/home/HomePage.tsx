@@ -1,5 +1,6 @@
 /** Home — owner: Hady. Cinematic hero: one headline, one line, one primary action. */
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { preloadStep1 } from '@/scenes';
 import { useNavigate } from 'react-router-dom';
 import { useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
@@ -8,6 +9,7 @@ import { Button, DisplayHeading, Lead } from '@/shared/ui';
 import { CREDITS, FEATURED_SITE_ID, HOME_COPY, IMAGERY_CREDIT } from './content';
 import type { HeroMoonHandle } from './HeroMoon';
 import { MoonBoundary } from './MoonBoundary';
+import { MoonLoader } from './MoonLoader';
 import { MotionToggle } from './MotionToggle';
 import { SitePin } from './SitePin';
 import { StarLayers } from './StarLayers';
@@ -16,7 +18,7 @@ import { shouldPlayIntro, useIntro } from './useIntro';
 import s from './HomePage.module.css';
 
 /** The Shackleton pin on the crest (hover/focus card, Demo label). It stays inert until the intro reveals it. */
-const SHOW_SITE_PIN = true;
+const SHOW_SITE_PIN = false;
 
 /** Clear space between the buttons and the Moon's lit edge (the brief asks for at least 32 px; the pin label sits in it). */
 const MOON_GAP_PX = 48;
@@ -25,6 +27,9 @@ const MOON_GAP_PX = 48;
  * measured 15, 16 and 22 px at 1280, 1366 and 1920 wide, i.e. about 1.16% of the width.
  */
 const RIM_ABOVE_POLE_PER_WIDTH = 0.0116;
+
+/** Longest the first loading screen waits for Step 1's preload before letting the intro play. */
+const PRELOAD_CAP_MS = 20_000;
 
 const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroMoon })));
 
@@ -54,7 +59,20 @@ export function HomePage() {
   const [shift, setShift] = useState<number | null>(null);
   const pins = useRef<HTMLDivElement>(null);
   const handle = useRef<HeroMoonHandle>(null);
-  const { done: introDone, pinRevealed } = useIntro(play, textured || moonSettled, { stars, moon, copy, pins, handle });
+  // Step 1's code and opening imagery load during the first loading screen too, so the flight into it
+  // lands on a ready Moon (also on a cold deployed visit). Capped so a slow network never traps the page.
+  const [step1Ready, setStep1Ready] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const cap = window.setTimeout(() => live && setStep1Ready(true), PRELOAD_CAP_MS);
+    void preloadStep1().then(() => live && setStep1Ready(true));
+    return () => {
+      live = false;
+      window.clearTimeout(cap);
+    };
+  }, []);
+  const allReady = (textured || moonSettled) && step1Ready;
+  const { done: introDone, pinRevealed } = useIntro(play, allReady, { stars, moon, copy, pins, handle });
 
   const measure = useCallback(() => {
     if (!pinAt || !under.current || !hero.current) return;
@@ -134,6 +152,9 @@ export function HomePage() {
       </div>
 
       <MotionToggle />
+
+      {/* First visit: black loading screen until the Moon imagery is in, then the intro plays. */}
+      <MoonLoader ready={allReady} />
 
       {introDone && (textured || (view.status === 'ready' && view.sky.source === 'horizons')) && (
         <p className={s.credit}>

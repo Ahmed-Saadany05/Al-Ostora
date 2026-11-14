@@ -1,0 +1,58 @@
+/* First-visit loading screen — owner: Pink. Tokens only. */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  display: grid;
+  place-items: center;
+  background: var(--color-bg);
+  transition: opacity 0.7s var(--ease-out);
+}
+.out {
+  opacity: 0;
+  pointer-events: none;
+}
+.inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  width: min(320px, calc(100vw - 2 * var(--gutter)));
+  animation: rise 0.5s var(--ease-out) both;
+}
+.label {
+  grid-column: 1 / -1;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.track {
+  position: relative;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+.bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--color-text);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  transition: transform 0.4s var(--ease-out);
+}
+.pct {
+  font-size: var(--text-2xs);
+  color: var(--color-text);
+}
+.source {
+  grid-column: 1 / -1;
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

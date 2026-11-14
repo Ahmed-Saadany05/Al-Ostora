@@ -1,0 +1,250 @@
+/* Sky timeline — owner: Pink. Thin black/white glass; Sun and Earth as continuous lanes. Tokens only. */
+
+.root {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  --lane: 2px;
+  --lane-gap: 3px;
+}
+.full {
+  --lane: 5px;
+  --lane-gap: 4px;
+}
+
+/* ---------------------------------------------------------------- track */
+
+.track {
+  position: relative;
+  height: calc(2 * var(--lane) + var(--lane-gap) + 10px);
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  outline: none;
+  touch-action: none;
+  transition: height var(--duration-base) var(--ease-out);
+}
+.interactive .track {
+  cursor: pointer;
+}
+.track:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus);
+}
+/* Compact grows a little on hover — inside its own box, so nothing around it moves. */
+.compact:hover {
+  --lane: 4px;
+}
+
+.lanes {
+  position: relative;
+  display: grid;
+  gap: var(--lane-gap);
+  width: 100%;
+}
+.lane {
+  position: relative;
+  height: var(--lane);
+  border-radius: var(--lane);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  transition: height var(--duration-base) var(--ease-out);
+}
+.seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+}
+.sun .seg {
+  background: var(--color-sun);
+}
+.earth .seg {
+  background: var(--color-earth);
+}
+
+/* Mono: black and white only. */
+.mono .sun .seg {
+  background: rgba(255, 255, 255, 0.9);
+}
+.mono .earth .seg {
+  background: rgba(255, 255, 255, 0.38);
+}
+.mono .best {
+  display: none;
+}
+
+/* Small ticks under the lanes at each labelled day (never across the lanes). */
+.tickMark {
+  position: absolute;
+  bottom: -1px;
+  height: 4px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+/* Best window: a soft band behind the lanes with a thin white underline (no box, no floating label). */
+.best {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 -1.5px 0 rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+/* Now: a white needle with a small cap. */
+.needle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--color-text);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+.needle::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--color-text);
+}
+.ghost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+/* Compact readout: floats above the bar while hovering. */
+.tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  white-space: nowrap;
+  font-size: var(--text-2xs);
+  color: var(--color-text);
+  pointer-events: none;
+  z-index: 2;
+}
+.tip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.tipSun {
+  background: var(--color-sun);
+}
+.tipEarth {
+  background: var(--color-earth);
+}
+.tipOff {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-text-faint);
+}
+
+/* ---------------------------------------------------------------- day labels */
+
+.days {
+  position: relative;
+  height: 14px;
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+.days span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.days span:first-child {
+  transform: none;
+}
+/* Compact: labels only while hovering, overlaid so the card doesn't grow. */
+.compact .days {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+.compact:hover .days {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- legend (full) */
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  display: inline-block;
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+}
+.keySun {
+  background: var(--color-sun);
+}
+.keyEarth {
+  background: var(--color-earth);
+}
+.keyBest {
+  height: 6px !important;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 -1.5px 0 rgba(255, 255, 255, 0.75);
+}
+.legend b {
+  font-weight: var(--weight-regular);
+  color: var(--color-text);
+}
+.grow {
+  flex: 1;
+}
+.legendTime {
+  color: var(--color-text);
+}
+.legendTime b {
+  font-weight: var(--weight-regular);
+}
+.onSun {
+  color: var(--color-sun);
+}
+.onEarth {
+  color: var(--color-earth);
+}
+.off {
+  color: var(--color-text-faint);
+}

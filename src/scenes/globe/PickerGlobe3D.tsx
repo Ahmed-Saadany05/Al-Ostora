@@ -14,10 +14,11 @@ import { formatLatLon } from '@/shared/format';
 import { color } from '@/shared/theme/tokens';
 import { useApp } from '@/shared/store/app';
 import type { Site } from '@/shared/types';
-import { Icon, Tabs } from '@/shared/ui';
-import { MoonTrekGlobe } from './MoonTrekGlobe';
+import { Tabs } from '@/shared/ui';
+import { DEFAULT_SUN, MoonTrekGlobe } from './MoonTrekGlobe';
+import { createMoonLight } from './moonShading';
 import { RegionGlow } from './RegionGlow';
-import { FIT_DISTANCE, KIND_ICON, KIND_WORD, OPENING_VIEW, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
+import { FIT_DISTANCE, KIND_WORD, OPENING_VIEW, STEP1_NIGHT_FLOOR, openingDistance, PICKER_FOV, START_DISTANCE, type CameraGoal, type PickerGlobe3DProps } from './pickerTypes';
 import {
   MOON_RADIUS_M,
   latLonToVec,
@@ -43,6 +44,8 @@ const startPosition = (site?: Site) =>
 const MIN_DISTANCE = 1.025; // ≈ 43 km above the surface
 const MAX_DISTANCE = 12;
 const LABELS_BELOW_DISTANCE = 1.6;
+/** Up to this many pins in a sector, their names are always shown. */
+const LABELS_ALWAYS_MAX = 6;
 const CLICK_SLOP_PX = 5;
 
 // ---------------------------------------------------------------- 3D pieces
@@ -143,7 +146,8 @@ function MarkerLayer({
     else els.current.delete(id);
   };
   return (
-    <div className={g.anchors}>
+    // Few sites: names always shown next to the letters (as in the design); many: on hover/selection.
+    <div className={[g.anchors, sites.length <= LABELS_ALWAYS_MAX && g.alwaysLabels].filter(Boolean).join(' ')}>
       {sites.map((site) => {
         const selected = selectedIds.includes(site.id);
         return (
@@ -156,11 +160,7 @@ function MarkerLayer({
               title={`${site.name} · ${KIND_WORD[site.kind]} · ${formatLatLon(site.lat, site.lon)}`}
             >
               <span className={g.dot} />
-              <span className={g.label}>
-                <Icon name={KIND_ICON[site.kind]} size={12} />
-                {site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}
-                {selected && <em>· Selected</em>}
-              </span>
+              <span className={g.label}>{site.kind === 'custom' ? formatLatLon(site.lat, site.lon, 2) : site.name}</span>
             </button>
           </div>
         );
@@ -274,6 +274,20 @@ interface SceneProps {
 function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, onMoonHoverRegion, onMoonClick, onImageryReady }: SceneProps) {
   const body = useRef<THREE.Group>(null);
   const moonHover = useRef<RegionId | null>(null);
+  // A fixed Sun on the Moon (one side in shadow, turning with it), with the night side lifted so its
+  // big features stay visible.
+  const light = useMemo(() => {
+    const l = createMoonLight();
+    l.uNightFloor.value = STEP1_NIGHT_FLOOR;
+    return l;
+  }, []);
+  const bodyQ = useMemo(() => new THREE.Quaternion(), []);
+  useFrame(() => {
+    const b = body.current;
+    if (!b) return;
+    b.getWorldQuaternion(bodyQ);
+    light.uSun.value.set(DEFAULT_SUN.x, DEFAULT_SUN.y, DEFAULT_SUN.z).applyQuaternion(bodyQ).normalize();
+  });
   const inverse = useMemo(() => new THREE.Matrix4(), []);
   const ray = useMemo(() => new THREE.Ray(), []);
 
@@ -305,7 +319,7 @@ function Scene({ layer, motion, goal, hoverRegion, activeRegion, anchors, els, o
 
   return (
     <>
-      <MoonTrekGlobe ref={body} layer={layer} onImageryReady={onImageryReady}>
+      <MoonTrekGlobe ref={body} layer={layer} light={light} onImageryReady={onImageryReady}>
         <RegionGlow hover={hoverRegion} active={activeRegion} motion={motion} />
         <RegionOutlines hovered={hoverRegion} />
         <ScreenAnchors anchors={anchors} els={els} />

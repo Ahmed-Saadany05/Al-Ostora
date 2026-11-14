@@ -29,7 +29,7 @@ export interface PickerGlobe3DProps extends SitePickerGlobeProps {
 }
 
 /** Camera distances in lunar radii. */
-export const START_DISTANCE = 4.4; // whole disc fits the 32° view with a margin
+export const START_DISTANCE = 5.2; // whole disc ≈ 70 % of the view height, with room around it
 export const SECTOR_DISTANCE = 3.3;
 export const SITE_DISTANCE = 1.18; // close-up, ≈ 310 km above the site
 
@@ -48,7 +48,7 @@ export const KIND_WORD: Record<SiteKind, string> = {
 
 /** Step 1 camera: vertical field of view, and the opening view (also where Home's flight lands). */
 export const PICKER_FOV = 32;
-export const OPENING_VIEW = { lat: -55, lon: 8 } as const;
+export const OPENING_VIEW = { lat: -55, lon: 28 } as const; // turned a little to the left
 
 /**
  * Opening camera distance for a globe box of w × h px: START_DISTANCE, or further back when the box
@@ -62,3 +62,15 @@ export function openingDistance(w: number, h: number): number {
 
 /** Goal distance meaning "the opening distance for this box" (see openingDistance). */
 export const FIT_DISTANCE = -1;
+
+/** Letter for the i-th site of a sector (A, B, … Z, then AA, AB …), shared by the menu and the pins. */
+export function siteLetter(i: number): string {
+  return i < 26 ? String.fromCharCode(65 + i) : siteLetter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
+}
+
+/**
+ * Step 1 is lit by a fixed Sun (DEFAULT_SUN, as when the real Moon first went in), so one side is in
+ * shadow. The night side is lifted to this level: clearly dark, but its big features stay visible.
+ * Home's flight ends on the same light and floor, so the hand-off matches.
+ */
+export const STEP1_NIGHT_FLOOR = 0.3;

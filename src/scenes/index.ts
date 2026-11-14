@@ -3,3 +3,5 @@ export type { SitePickerGlobeProps, SitePanoramaProps, LaunchSequenceProps } fro
 export { SitePickerGlobe } from './SitePickerGlobe';
 export { SitePanorama } from './SitePanorama';
 export { LaunchSequence } from './LaunchSequence';
+export { interpolateSky } from './moonview/skyMath';
+export { preloadStep1, onStep1Progress, type Step1Progress } from './globe/moonHandoff';
