@@ -18,7 +18,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router-dom";
-import { Icon, Pill } from "@/shared/ui";
+import { Icon, LOADER_SPRITE, Pill, SpriteAnimation } from "@/shared/ui";
 import type { SitePickerGlobeProps } from "./contracts";
 import { SitePickerMap } from "./SitePickerMap";
 import { REGION_COPY, SectorMenu } from "./globe/SectorMenu";
@@ -77,8 +77,13 @@ class GlobeBoundary extends Component<
 function Loading() {
   return (
     <div className={g.stage} aria-busy="true">
-      <span className={g.loading}>
-        <Pill icon="clock" label="Loading the 3D Moon…" />
+      <span className={g.loading} role="status" aria-label="Loading the 3D Moon">
+        {/* The loading animation, when a sprite sheet is set; otherwise the pill. */}
+        {LOADER_SPRITE ? (
+          <SpriteAnimation sheet={LOADER_SPRITE} size="72px" />
+        ) : (
+          <Pill icon="clock" label="Loading the 3D Moon…" />
+        )}
       </span>
     </div>
   );
