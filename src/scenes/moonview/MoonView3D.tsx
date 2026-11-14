@@ -19,7 +19,7 @@ import { formatDeg } from '@/shared/format';
 import { DEFAULT_SUN, MoonTrekGlobe } from '../globe/MoonTrekGlobe';
 import { enuAxes, MOON_RADIUS_M, type Vec3 } from '../lib/moonFrame';
 import { color } from '@/shared/theme/tokens';
-import type { SkyState } from '@/shared/types';
+import type { HorizonProfile, SkyState } from '@/shared/types';
 import { azElToLocal, skyPathSegments, type Vec3Tuple } from './skyMath';
 import { type TerrainSource } from './terrain';
 import v from './moonview.module.css';
@@ -49,6 +49,8 @@ export interface MoonView3DProps {
   /** Time-ordered sky samples over the lunar day (DayReport.samples) for the dotted paths. */
   samples?: SkyState[];
   terrain: TerrainSource;
+  /** Real horizon profile: draws the distant skyline beyond the terrain patch (stand mode). */
+  horizon?: HorizonProfile;
   mode: 'stand' | 'above';
   sunLabel?: BodyLabel;
   earthLabel?: BodyLabel;
@@ -104,12 +106,68 @@ function placeholderEarthTexture() {
   return t;
 }
 
+/**
+ * COSMETIC surface detail (Hagras): small craters, pebbles and grain as a BUMP texture, tiled every
+ * DETAIL_TILE_M metres. It only changes shading — never heights, the skyline, or any number — so the
+ * 10–20 m NASA terrain reads like real regolith up close. Seeded, so it looks the same every time.
+ */
+const DETAIL_TILE_M = 160;
+function regolithDetail() {
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,128)';
+  g.fillRect(0, 0, size, size);
+  let s = 90210;
+  const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+  // Fine grain.
+  const img = g.getImageData(0, 0, size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (rnd() - 0.5) * 34;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+  }
+  g.putImageData(img, 0, 0);
+  // Craters (dark bowl + bright raised rim), many small, few large; drawn wrapped so tiles join.
+  const crater = (x: number, y: number, r: number) => {
+    for (const dx of [-size, 0, size])
+      for (const dy of [-size, 0, size]) {
+        const cx = x + dx;
+        const cy = y + dy;
+        if (cx + r * 1.4 < 0 || cy + r * 1.4 < 0 || cx - r * 1.4 > size || cy - r * 1.4 > size) continue;
+        const bowl = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+        bowl.addColorStop(0, 'rgba(40,40,40,0.55)');
+        bowl.addColorStop(0.85, 'rgba(90,90,90,0.25)');
+        bowl.addColorStop(1, 'rgba(128,128,128,0)');
+        g.fillStyle = bowl;
+        g.beginPath();
+        g.arc(cx, cy, r, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(205,205,205,0.45)';
+        g.lineWidth = Math.max(1, r * 0.18);
+        g.beginPath();
+        g.arc(cx, cy, r * 1.02, 0, Math.PI * 2);
+        g.stroke();
+      }
+  };
+  for (let i = 0; i < 260; i++) crater(rnd() * size, rnd() * size, 1.5 + rnd() ** 3 * 9);
+  for (let i = 0; i < 26; i++) crater(rnd() * size, rnd() * size, 10 + rnd() ** 2 * 34);
+  // Pebbles: tiny bright specks.
+  g.fillStyle = 'rgba(220,220,220,0.6)';
+  for (let i = 0; i < 900; i++) g.fillRect(rnd() * size, rnd() * size, 1 + rnd() * 1.5, 1 + rnd() * 1.5);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+
 // ---------------------------------------------------------------- scene parts
 
 function Terrain({ terrain }: { terrain: TerrainSource }) {
   const geometry = useMemo(() => {
     const size = terrain.radius * 2;
-    const g = new THREE.PlaneGeometry(size, size, 256, 256);
+    // 512 cells: ~23 m apart over the 12 km real-terrain patch (data is 20 m).
+    const g = new THREE.PlaneGeometry(size, size, 512, 512);
     g.rotateX(-Math.PI / 2);
     const p = g.attributes.position;
     // Round patch whose outer rim fades out, so from above it melts into the globe below.
@@ -124,10 +182,63 @@ function Terrain({ terrain }: { terrain: TerrainSource }) {
     return g;
   }, [terrain]);
   useEffect(() => () => geometry.dispose(), [geometry]);
+  const detail = useMemo(() => {
+    const t = regolithDetail();
+    const reps = (terrain.radius * 2) / DETAIL_TILE_M;
+    t.repeat.set(reps, reps);
+    return t;
+  }, [terrain]);
+  useEffect(() => () => detail.dispose(), [detail]);
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
-      {/* Regolith: grey, fully rough, no gloss (airless). */}
-      <meshStandardMaterial color={new THREE.Color(0.55, 0.54, 0.52)} roughness={1} metalness={0} vertexColors transparent />
+      {/* Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only. */}
+      <meshStandardMaterial
+        color={new THREE.Color(0.55, 0.54, 0.52)}
+        roughness={1}
+        metalness={0}
+        vertexColors
+        transparent
+        bumpMap={detail}
+        bumpScale={2.2}
+      />
+    </mesh>
+  );
+}
+
+/**
+ * Distant skyline beyond the terrain patch (Hagras): a ring just outside the patch whose top edge
+ * sits at the horizon profile's elevation for every azimuth (720 values, real LOLA / SLDEM terrain
+ * out to 310 km). The visible skyline is then the higher of the near mesh and this ring, exactly
+ * the horizon the cards use, so the view never shows the Sun while a card says "hidden".
+ */
+function HorizonRing({ horizon, terrain }: { horizon: HorizonProfile; terrain: TerrainSource }) {
+  const geometry = useMemo(() => {
+    const eye = terrain.heightAt(0, 0) + EYE_HEIGHT;
+    const d = terrain.radius * 1.04;
+    const n = horizon.elevationsDeg.length;
+    const pos = new Float32Array((n + 1) * 2 * 3);
+    for (let i = 0; i <= n; i++) {
+      const az = (i % n) * horizon.azStepDeg;
+      const [x, , z] = azElToLocal(az, 0, d);
+      const top = eye + d * Math.tan((horizon.elevationsDeg[i % n] * Math.PI) / 180);
+      const bottom = Math.min(top, eye) - 600; // well below the ground and the globe at that distance
+      pos.set([x, bottom, z, x, top, z], i * 6);
+    }
+    const idx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * 2;
+      idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }, [horizon, terrain]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial color={new THREE.Color(0.4, 0.39, 0.38)} roughness={1} metalness={0} side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -168,7 +279,9 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
     };
   }, [scene, target]);
   const dir = sky ? azElToLocal(sky.sun.azDeg, sky.sun.elDeg, radius * 1.5) : ([1, 0.05, 0] as Vec3Tuple);
-  const up = sky ? sky.sun.elDeg > -0.3 : false;
+  // Lit only as much as the Sun's disc clears the REAL skyline (same rule as the cards).
+  const lit = sky ? (sky.sun.visibleFraction ?? (sky.sunVisible ? 1 : 0)) : 0;
+  const up = lit > 0;
   const earth = sky ? azElToLocal(sky.earth.azDeg, sky.earth.elDeg) : ([0, 0.1, -1] as Vec3Tuple);
   return (
     <>
@@ -176,7 +289,8 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         ref={sun}
         position={dir}
         target={target}
-        intensity={up ? 3.2 : 0}
+        // Exposure: bright for the pole's grazing light, toned down as the Sun climbs (no blow-out).
+        intensity={up ? (3.2 * lit) / (1 + 3 * Math.sin((Math.max(0, sky?.sun.elDeg ?? 0) * Math.PI) / 180)) : 0}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -190,7 +304,10 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
       />
       {/* Earthshine: faint blue-white light from Earth's direction; shadows are dark, not black. */}
       <directionalLight position={earth.map((x) => x * 100) as Vec3Tuple} intensity={sky?.earthVisible ? 0.18 : 0.05} color={color.earth} />
-      <ambientLight intensity={0.07} />
+      {/* Bounce light: sunlit regolith lights the shadows a little (no air, so still very dark).
+          Comes from the side opposite the Sun, low; scales with how much Sun there is. */}
+      <directionalLight position={[-dir[0], radius * 0.4, -dir[2]]} intensity={0.22 * lit} color={new THREE.Color(0.85, 0.82, 0.78)} />
+      <ambientLight intensity={0.07 + 0.06 * lit} />
     </>
   );
 }
@@ -350,7 +467,7 @@ function LabelProjector({ anchors, els }: { anchors: Anchor[]; els: MutableRefOb
 
 // ---------------------------------------------------------------- component
 
-export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
+export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
   // Open looking toward the Sun (or Earth if the Sun is down), slightly above the horizon.
   const initialYaw = sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
   const look = useRef<Look>({ yaw: initialYaw, pitch: (4 * Math.PI) / 180 });
@@ -428,6 +545,7 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
         <Lighting sky={sky} radius={terrain.radius} />
         {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} />}
         <Terrain terrain={terrain} />
+        {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />
       </Canvas>
@@ -473,7 +591,8 @@ export default function MoonView3D({ sky, site, samples, terrain, mode, sunLabel
           <span aria-hidden>↔</span> Drag to look around
         </span>
       )}
-      {terrain.placeholder && <span className={v.terrainNote}>{terrain.label}</span>}
+      {/* Always say what the ground is: "Placeholder terrain" or "Real terrain · NASA LOLA 10 m". */}
+      <span className={v.terrainNote}>{terrain.label}</span>
     </div>
   );
 }
