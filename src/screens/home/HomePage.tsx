@@ -40,7 +40,6 @@ const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroM
 
 export function HomePage() {
   const navigate = useNavigate();
-  const briefed = useRefaey((st) => st.briefed);
   const markBriefed = useRefaey((st) => st.markBriefed);
   const motion = useApp((st) => st.motion);
   const { data: sites } = useSites();
@@ -105,13 +104,10 @@ export function HomePage() {
   useEffect(() => {
     if (blocker.state !== 'blocked' || decided.current) return;
     decided.current = true;
-    if (briefed) blocker.proceed();
-    else {
-      // The flight's last frame is still held up as an image; the briefing covers it, so let it go.
-      releaseMoonHandoff(0);
-      setBriefing(true);
-    }
-  }, [blocker, briefed]);
+    // Always: the flight's last frame is still held up as an image; Refaey's two choices cover it, so let it go.
+    releaseMoonHandoff(0);
+    setBriefing(true);
+  }, [blocker]);
 
   const startJourney = useCallback(() => {
     if (leaving) return;
@@ -121,7 +117,9 @@ export function HomePage() {
       el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
     );
     // With motion the flight starts at once (it fades the hero itself); without it, wait for the cross-fade, then change view.
-    if (motion) handle.current?.enterStep1();
+    // No Moon (WebGL failed): nothing will fly, so Refaey's choices come straight away.
+    if (!handle.current) return void Promise.all(fade).then(() => setBriefing(true));
+    if (motion) handle.current.enterStep1();
     else void Promise.all(fade).then(() => handle.current?.enterStep1());
   }, [leaving, motion]);
 
@@ -129,9 +127,9 @@ export function HomePage() {
     (to: BriefingDestination) => {
       markBriefed();
       journey.current = false;
-      if (to === 'missions') {
+      if (to === 'missions' || to === 'about') {
         if (blocker.state === 'blocked') blocker.reset();
-        navigate('/missions');
+        navigate(to === 'missions' ? '/missions' : '/about');
       } else if (blocker.state === 'blocked') blocker.proceed();
       else navigate(missionUrl.chooseSite());
     },
@@ -188,9 +186,6 @@ export function HomePage() {
             </Button>
             <Button variant="ghost" to="/about">
               {HOME_COPY.about}
-            </Button>
-            <Button variant="ghost" to="/missions">
-              {HOME_COPY.pastMissions}
             </Button>
           </div>
         </div>

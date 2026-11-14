@@ -33,6 +33,8 @@ export interface ResolveContext {
    * provider, because they are history (a landing in 1969), not a prediction.
    */
   facts?: Partial<Record<string, string>>;
+  /** Story tokens ({callsign}): not data, they fill on every provider. */
+  story?: Partial<Record<string, string>>;
   /** Label for the closing reply added to a node that would otherwise have none. */
   terminalLabel: string;
   /** Whether an explainer id exists (a reply to a missing explainer is dropped). */
@@ -47,19 +49,26 @@ export interface ResolvedNode {
   replies: Reply[];
   /** True when a line shown uses a recorded Horizons fact. */
   usesFacts: boolean;
+  transition?: true;
+  learns?: true;
+  /** A source card's link. */
+  link?: { label: string; href: string };
 }
 
 const TOKEN = /\{([A-Za-z0-9]+)\}/g;
 
 /** The text with its tokens filled, or null when it must be skipped. */
-export function fill(text: string, ctx: Pick<ResolveContext, 'horizons' | 'values'> & { facts?: Partial<Record<string, string>> }): string | null {
+export function fill(
+  text: string,
+  ctx: Pick<ResolveContext, 'horizons' | 'values'> & { facts?: Partial<Record<string, string>>; story?: Partial<Record<string, string>> },
+): string | null {
   const names = [...text.matchAll(TOKEN)].map((m) => m[1]);
   if (names.length === 0) return text;
   let out = text;
   for (const n of names) {
-    const recorded = ctx.facts?.[n];
-    if (recorded !== undefined && recorded !== '') {
-      out = out.replaceAll(`{${n}}`, recorded);
+    const known = ctx.story?.[n] ?? ctx.facts?.[n];
+    if (known !== undefined && known !== '') {
+      out = out.replaceAll(`{${n}}`, known);
       continue;
     }
     if (!ctx.horizons) return null;
@@ -85,7 +94,7 @@ export function isVisible(node: DialogueNode, ctx: ResolveContext): boolean {
 }
 
 export function resolveNode(
-  node: DialogueNode & { title?: string },
+  node: DialogueNode & { title?: string; link?: { label: string; href: string } },
   ctx: ResolveContext,
   lookup: (id: string) => (DialogueNode & { title?: string }) | undefined,
 ): ResolvedNode | null {
@@ -95,7 +104,8 @@ export function resolveNode(
   for (const r of node.replies) {
     const label = fill(r.label, ctx);
     if (label === null) continue;
-    if (r.next) {
+    // 'missions-hub' is the list itself (the /missions page handles it), not a beat.
+    if (r.next && r.next !== 'missions-hub') {
       const target = lookup(r.next);
       if (!target || !isVisible(target, ctx)) continue;
     }
@@ -103,7 +113,7 @@ export function resolveNode(
     replies.push({ ...r, label });
   }
   if (replies.length === 0) replies.push({ label: ctx.terminalLabel, action: { type: 'collapse' } });
-  return { id: node.id, mood: node.mood ?? 'neutral', title: node.title, lines, replies: replies.slice(0, 3), usesFacts: node.lines.some((l) => fill(l, ctx) !== null && usesFact(l, ctx)) };
+  return { id: node.id, mood: node.mood ?? 'neutral', title: node.title, lines, replies: replies.slice(0, 3), usesFacts: node.lines.some((l) => fill(l, ctx) !== null && usesFact(l, ctx)), transition: node.transition, learns: node.learns, link: node.link };
 }
 
 /** Group whole lines into beats of at most `maxLines` visual lines. A single line taller than that stays whole. */

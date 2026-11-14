@@ -1,0 +1,56 @@
+{
+  "scale": {
+    "idle": 1.0,
+    "walk": 1.1856401788883284,
+    "hop": 1.375414895195906
+  },
+  "sheets": {
+    "idle": {
+      "frames": 8,
+      "frame_w": 196,
+      "frame_h": 433,
+      "strip_kb": 81.8,
+      "halo_literal_pct": 0.0,
+      "halo_fringe_pct": 0.0,
+      "helmet_drift_native_px": 1.0,
+      "helmet_drift_display_px": 1.02,
+      "torso_drift_display_px": 1.52,
+      "halo_ok": true,
+      "drift_ok": true,
+      "size_ok": true
+    },
+    "walk": {
+      "frames": 12,
+      "frame_w": 255,
+      "frame_h": 403,
+      "strip_kb": 183.7,
+      "halo_literal_pct": 0.0,
+      "halo_fringe_pct": 0.0,
+      "helmet_drift_native_px": 7.0,
+      "helmet_drift_display_px": 7.64,
+      "torso_drift_display_px": 7.64,
+      "halo_ok": true,
+      "drift_ok": null,
+      "size_ok": true
+    },
+    "hop": {
+      "frames": 12,
+      "frame_w": 288,
+      "frame_h": 451,
+      "strip_kb": 203.6,
+      "halo_literal_pct": 0.0,
+      "halo_fringe_pct": 0.0,
+      "helmet_drift_native_px": 37.5,
+      "helmet_drift_display_px": 36.59,
+      "torso_drift_display_px": 35.61,
+      "halo_ok": true,
+      "drift_ok": null,
+      "size_ok": true
+    }
+  },
+  "busts": {
+    "80": 2.8,
+    "160": 6.9
+  },
+  "total_kb": 478.8
+}

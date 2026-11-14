@@ -1,0 +1,138 @@
+{
+  "retrieved": "2026-11-14",
+  "source": "JPL Horizons via api/_lib/horizons-handler.ts, 1-minute rows at touchdown",
+  "landings": {
+    "apollo-11": {
+      "siteId": "apollo-11",
+      "time": "1969-07-20T20:17:40Z",
+      "timeSource": "NASA / engine fixture apollo_landings.json",
+      "lat": 0.67416,
+      "lon": 23.47314,
+      "sun": {
+        "azDeg": 88.81,
+        "elDeg": 10.7,
+        "distanceKm": 151871258,
+        "angularDiameterDeg": 0.5249,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47314%2C0.67416%2C0%27&START_TIME=%271969-07-20+20%3A17%27&STOP_TIME=%271969-07-20+20%3A19%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 272.19,
+        "elDeg": 59.22,
+        "distanceKm": 387941,
+        "angularDiameterDeg": 1.8841,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47314%2C0.67416%2C0%27&START_TIME=%271969-07-20+20%3A17%27&STOP_TIME=%271969-07-20+20%3A19%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 67.23489
+      }
+    },
+    "apollo-15": {
+      "siteId": "apollo-15",
+      "time": "1971-07-30T22:16:29Z",
+      "timeSource": "NSSDCA Apollo 15 page (nssdc.gsfc.nasa.gov/planetary/lunar/apollo15info.html)",
+      "lat": 26.13239,
+      "lon": 3.6333,
+      "sun": {
+        "azDeg": 95.72,
+        "elDeg": 12.02,
+        "distanceKm": 151905077,
+        "angularDiameterDeg": 0.5248,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%273.6333%2C26.13239%2C0%27&START_TIME=%271971-07-30+22%3A16%27&STOP_TIME=%271971-07-30+22%3A18%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 202.92,
+        "elDeg": 69.18,
+        "distanceKm": 398330,
+        "angularDiameterDeg": 1.8349,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%273.6333%2C26.13239%2C0%27&START_TIME=%271971-07-30+22%3A16%27&STOP_TIME=%271971-07-30+22%3A18%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 45.5361
+      }
+    },
+    "lunokhod-1": {
+      "siteId": "luna-17",
+      "time": "1970-11-17T03:47:00Z",
+      "timeSource": "NSSDCA Luna 17 / Lunokhod 1 catalogue entry (1970-095A)",
+      "lat": 38.23764,
+      "lon": -35.00163,
+      "sun": {
+        "azDeg": 190.81,
+        "elDeg": 49.69,
+        "distanceKm": 148159864,
+        "angularDiameterDeg": 0.5381,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27-35.00163%2C38.23764%2C0%27&START_TIME=%271970-11-17+03%3A47%27&STOP_TIME=%271970-11-17+03%3A49%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 129.44,
+        "elDeg": 32.67,
+        "distanceKm": 390823,
+        "angularDiameterDeg": 1.8702,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27-35.00163%2C38.23764%2C0%27&START_TIME=%271970-11-17+03%3A47%27&STOP_TIME=%271970-11-17+03%3A49%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 16.44534
+      }
+    },
+    "change-4": {
+      "siteId": "change-4",
+      "time": "2019-01-03T02:26:00Z",
+      "timeSource": "CNSA; same time as the recorded Refaey facts (facts.json)",
+      "lat": -45.4561,
+      "lon": 177.5885,
+      "sun": {
+        "azDeg": 50.71,
+        "elDeg": 31.5,
+        "distanceKm": 146769661,
+        "angularDiameterDeg": 0.5432,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27177.5885%2C-45.4561%2C0%27&START_TIME=%272019-01-03+02%3A26%27&STOP_TIME=%272019-01-03+02%3A28%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 190.34,
+        "elDeg": -39.19,
+        "distanceKm": 395839,
+        "angularDiameterDeg": 1.8465,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27177.5885%2C-45.4561%2C0%27&START_TIME=%272019-01-03+02%3A26%27&STOP_TIME=%272019-01-03+02%3A28%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 91.72028
+      }
+    },
+    "chandrayaan-3": {
+      "siteId": "chandrayaan-3",
+      "time": "2023-08-23T12:33:00Z",
+      "timeSource": "ISRO: 18:03 IST on 23 Aug 2023",
+      "lat": -69.3741,
+      "lon": 32.32,
+      "sun": {
+        "azDeg": 62.05,
+        "elDeg": 8.61,
+        "distanceKm": 151218718,
+        "angularDiameterDeg": 0.5272,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2732.32%2C-69.3741%2C0%27&START_TIME=%272023-08-23+12%3A33%27&STOP_TIME=%272023-08-23+12%3A35%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 319,
+        "elDeg": 13,
+        "distanceKm": 387943,
+        "angularDiameterDeg": 1.8841,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2732.32%2C-69.3741%2C0%27&START_TIME=%272023-08-23+12%3A33%27&STOP_TIME=%272023-08-23+12%3A35%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 59.32113
+      }
+    },
+    "athena": {
+      "siteId": "im-2-athena",
+      "time": "2025-03-06T17:30:00Z",
+      "timeSource": "Intuitive Machines IM-2; same time as the recorded Refaey facts (facts.json)",
+      "lat": -84.7906,
+      "lon": 29.1957,
+      "sun": {
+        "azDeg": 65.67,
+        "elDeg": 2.47,
+        "distanceKm": 148439727,
+        "angularDiameterDeg": 0.5371,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2729.1957%2C-84.7906%2C0%27&START_TIME=%272025-03-06+17%3A30%27&STOP_TIME=%272025-03-06+17%3A32%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27"
+      },
+      "earth": {
+        "azDeg": 335.85,
+        "elDeg": 11.19,
+        "distanceKm": 374796,
+        "angularDiameterDeg": 1.9502,
+        "horizonsUrl": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27399%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2729.1957%2C-84.7906%2C0%27&START_TIME=%272025-03-06+17%3A30%27&STOP_TIME=%272025-03-06+17%3A32%27&STEP_SIZE=%271+m%27&QUANTITIES=%274%2C10%2C13%2C20%27&ANG_FORMAT=%27DEG%27&CSV_FORMAT=%27YES%27",
+        "illuminationPct": 49.55766
+      }
+    }
+  }
+}

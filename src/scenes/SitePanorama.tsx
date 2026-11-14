@@ -18,6 +18,9 @@ import type { SitePanoramaProps } from './contracts';
 import { SitePanoramaStrip } from './SitePanoramaStrip';
 import { interpolateSky } from './moonview/skyMath';
 import { placeholderTerrain, seedFrom, type TerrainSource } from './moonview/terrain';
+import type { SceneObject } from './moonview/SceneObjects';
+
+export type { SceneObject };
 
 const MoonView3D = lazy(() => import('./moonview/MoonView3D'));
 
@@ -53,12 +56,23 @@ function nextLabel(samples: SkyState[] | undefined, time: string, kind: 'sun' | 
   return h > 0 ? `${visible ? 'Sets' : 'Rises'} in ${formatDuration(h)}` : null;
 }
 
-export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
-  const { site, time, sky, mode = 'stand', compact, dense } = props;
+/** Extra, optional: a fixed recorded sky (no day report, no paths) and hardware standing around you. */
+export interface SitePanoramaExtras {
+  dense?: boolean;
+  fixedSky?: SkyState;
+  objects?: SceneObject[];
+  onObject?: (id: string) => void;
+  selectedObject?: string;
+  initialYawDeg?: number;
+  aim?: { azDeg: number; elDeg: number; key: number };
+}
+
+export function SitePanorama(props: SitePanoramaProps & SitePanoramaExtras) {
+  const { site, time, sky, mode = 'stand', compact, dense, fixedSky, objects, onObject, selectedObject, initialYawDeg, aim } = props;
   const [webgl] = useState(hasWebGL);
   const rangeStart = useTime((s) => s.rangeStart);
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
-  const { data: report } = useDayReport(compact || !webgl ? undefined : site, rangeStart, LUNAR.synodicDays);
+  const { data: report } = useDayReport(compact || !webgl || fixedSky ? undefined : site, rangeStart, LUNAR.synodicDays);
   // Real NASA terrain (LOLA / SLDEM2015) when the site has an exported grid; placeholder until then.
   const placeholder = useMemo(() => placeholderTerrain(seedFrom(site.id)), [site.id]);
   const [real, setReal] = useState<{ id: string; terrain: TerrainSource } | null>(null);
@@ -74,7 +88,7 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
   // The far skyline (beyond the 6 km patch) comes from the site's horizon profile.
   const { data: horizon } = useHorizon(compact || !webgl ? undefined : site);
   // The sky at exactly `time`, blended from the samples: no lag while scrubbing or in a timelapse.
-  const live = useMemo(() => interpolateSky(report?.samples, time) ?? sky, [report, time, sky]);
+  const live = useMemo(() => fixedSky ?? interpolateSky(report?.samples, time) ?? sky, [fixedSky, report, time, sky]);
 
   const strip = <SitePanoramaStrip {...props} />;
   if (compact || !webgl) return strip;
@@ -86,11 +100,16 @@ export function SitePanorama(props: SitePanoramaProps & { dense?: boolean }) {
           site={{ lat: site.lat, lon: site.lon, name: site.kind === 'custom' ? 'your pin' : site.name }}
           samples={report?.samples}
           terrain={terrain}
-          horizon={!terrain.placeholder && horizon?.source !== 'demo' ? horizon : undefined}
+          horizon={terrain.placeholder ? undefined : [props.horizon, horizon].find((h) => h && h.source !== 'demo')}
           mode={mode}
           dense={dense}
-          sunLabel={{ next: live ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}
-          earthLabel={{ next: live ? nextLabel(report?.samples, time, 'earth', live.earthVisible) : null }}
+          objects={objects}
+          onObject={onObject}
+          selectedObject={selectedObject}
+          initialYawDeg={initialYawDeg}
+          aim={aim}
+          sunLabel={{ next: live && !fixedSky ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}
+          earthLabel={{ next: live && !fixedSky ? nextLabel(report?.samples, time, 'earth', live.earthVisible) : null }}
         />
       </Suspense>
     </ViewBoundary>
