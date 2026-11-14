@@ -11,6 +11,7 @@
  * No score on this page.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LaunchSequence } from '@/scenes';
 import { useDayReport, usePlanLaunch, useSky } from '@/shared/data';
 import { Explain } from '@/screens/home/Explain';
@@ -233,9 +234,16 @@ export function LaunchPage() {
   const { data: sky, error: eSky } = useSky(on, landing ?? '', params);
   const { data: afterReport, error: eAfter } = useDayReport(on, landing ?? '', LUNAR.synodicDays, params);
 
-  const [landed, setLanded] = useState(false);
+  // Flow (Pink): the orbit ends with "Tap the Moon to land" → the Moon view at touchdown, which has
+  // "Summarize trip" → back here with ?summary=1, straight to the Mission summary (no orbit replay).
+  const navigate = useNavigate();
+  const [sp] = useSearchParams();
+  const [landed, setLanded] = useState(() => sp.get('summary') === '1');
   const [verify, setVerify] = useState(false);
-  const onDone = useCallback(() => setLanded(true), []);
+  const onDone = useCallback(() => {
+    if (site && launchDate && landing) navigate(missionUrl.stand(site.id, landing, { landed: launchDate }));
+    else setLanded(true);
+  }, [site, launchDate, landing, navigate]);
 
   if (loading || (site && launchDate && !plan)) return <LoadingState title="Fuelling the rocket…" />;
   if (!site || !launchDate || !plan || !landing)

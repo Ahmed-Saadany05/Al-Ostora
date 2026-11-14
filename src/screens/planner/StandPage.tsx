@@ -5,14 +5,20 @@
  * right = Sun, Earth and How far away; left = Nearby; bottom = the timeline. Hover to peek, click to
  * pin. "Compare side by side" shows two Moon views (?with=<site id>). Launch → the launch-date step.
  * Numbers come only from the data hooks (demo provider now, the engine later).
+ *
+ * URL extras (Pink): ?at=ISO opens the view at that moment; ?others=a,b,c (from Compare sites) makes
+ * the back button "View other sites"; ?landed=<launch ISO> (after "Tap the Moon to land") swaps
+ * Launch for "Summarize trip". The timeline (Aser's) sweeps to a clicked moment (timelapse) and
+ * follows a drag directly; the cards read the sky blended from the day's samples, so they keep up.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { SitePanorama } from '@/scenes';
+import { interpolateSky, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
+import { cancelTimelapse, timelapseTo } from '@/shared/store/timelapse';
 import { useTime } from '@/shared/store/time';
 import { LUNAR, type Site, type IsoTime, type TimeWindow } from '@/shared/types';
 import {
@@ -59,9 +65,11 @@ export function StandPage() {
   const [mode, setMode] = useState<'stand' | 'above'>('stand');
   const [verify, setVerify] = useState(false);
 
-  const { data: sky } = useSky(site, time, lander);
+  const { data: fetchedSky } = useSky(site, time, lander);
   const { data: horizon } = useHorizon(site, lander);
   const { data: report } = useDayReport(site, from, days, lander);
+  // Blend the day's samples on the client, so the cards keep up while scrubbing or in a timelapse.
+  const sky = useMemo(() => interpolateSky(report?.samples, time) ?? fetchedSky, [report, time, fetchedSky]);
   const { data: metrics } = useMetrics(site, from, to, lander);
 
   // Nearby: placeholder suggestion = the closest other catalogue site (the engine suggests one later).
@@ -84,6 +92,30 @@ export function StandPage() {
     if (id) next.set('with', id);
     else next.delete('with');
     setParams(next, { replace: true });
+  };
+
+  // ?at=ISO: open the view at that moment (once per link), e.g. touchdown after landing.
+  const at = params.get('at');
+  useEffect(() => {
+    if (at) setTime(at);
+  }, [at, setTime]);
+  // ?others=a,b,c: arrived from Compare sites → the back button returns there.
+  const others = (params.get('others') ?? '').split(',').filter(Boolean);
+  // ?landed=<launch ISO>: arrived after landing → "Summarize trip" instead of Launch.
+  const landedRaw = params.get('landed');
+  const landed = landedRaw && Number.isFinite(Date.parse(landedRaw)) ? landedRaw : null;
+
+  // Timeline picks: a single pick (click, the best-window tag, a key press) sweeps there; the rapid
+  // updates of a drag (< 120 ms apart) follow the pointer directly.
+  const lastPick = useRef(0);
+  const pickTime = (ms: number) => {
+    const now = performance.now();
+    const dragging = now - lastPick.current < 120;
+    lastPick.current = now;
+    if (dragging) {
+      cancelTimelapse();
+      setTime(ms);
+    } else timelapseTo(ms);
   };
 
   if (loading) return <LoadingState title="Loading site…" />;
@@ -146,8 +178,13 @@ export function StandPage() {
       {/* Top-left: where you are. */}
       {!partner && (
         <div className={st.titleBlock}>
-          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.chooseSite([site.id])}>
-            Back to sites
+          <Button
+            variant="secondary"
+            leadingIcon="arrowLeft"
+            icon={null}
+            to={others.length > 0 ? missionUrl.compare(others, 'sites') : missionUrl.chooseSite([site.id])}
+          >
+            {others.length > 0 ? 'View other sites' : 'Back to sites'}
           </Button>
           <Eyebrow>
             {site.region.replace('-', ' ')} · <span className="num">{formatLatLon(site.lat, site.lon)}</span>
@@ -237,7 +274,7 @@ export function StandPage() {
             </span>
             <span className={st.grow} />
             {metrics?.bestWindow && (
-              <button type="button" className={fs.dockLink} onClick={() => setTime(metrics.bestWindow!.start)}>
+              <button type="button" className={fs.dockLink} onClick={() => timelapseTo(metrics.bestWindow!.start)}>
                 <Icon name="sun" size={14} /> Jump to best
               </button>
             )}
@@ -260,7 +297,7 @@ export function StandPage() {
               stepMinutes={report.stepMinutes}
               now={time}
               best={metrics?.bestWindow ?? null}
-              onSelect={setTime}
+              onSelect={pickTime}
               onScrubStart={pauseClock}
               slim
             />
@@ -272,9 +309,15 @@ export function StandPage() {
 
       {/* Always visible: the step's one primary action. */}
       <div className={st.launch}>
-        <Button variant="primary" size="lg" to={missionUrl.date(site.id)}>
-          Launch
-        </Button>
+        {landed ? (
+          <Button variant="primary" size="lg" to={missionUrl.launch(site.id, landed, true)}>
+            Summarize trip
+          </Button>
+        ) : (
+          <Button variant="primary" size="lg" to={missionUrl.date(site.id)}>
+            Launch
+          </Button>
+        )}
       </div>
 
       <VerifyDrawer site={site} time={time} open={verify} onClose={() => setVerify(false)} />

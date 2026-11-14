@@ -177,8 +177,19 @@ export function rememberPickerStage(r: Rect) {
  * Step 1's globe box, measured: an invisible copy of its layout (frame → layout → left column + menu,
  * the same CSS classes) is placed under the header for a moment and the left column is read.
  */
+/** Height of the app header (the --header-height token): Home hides its header, Step 1 shows it. */
+function headerHeight(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:var(--header-height);';
+  document.body.appendChild(probe);
+  const h = probe.offsetHeight;
+  probe.remove();
+  return h;
+}
+
 function measureStage(): Rect | null {
-  const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+  // Step 1 sits under the header. On Home (minimal chrome, no header) use the header's height instead.
+  const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? headerHeight();
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
   host.style.cssText = `position:fixed;left:0;width:${document.documentElement.clientWidth}px;top:${header}px;visibility:hidden;pointer-events:none;z-index:-1;`;
