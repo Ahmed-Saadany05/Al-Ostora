@@ -19,6 +19,7 @@ import { SitePanoramaStrip } from './SitePanoramaStrip';
 import { interpolateSky } from './moonview/skyMath';
 import { placeholderTerrain, seedFrom, type TerrainSource } from './moonview/terrain';
 import type { SceneObject } from './moonview/SceneObjects';
+import type { CamView, Clearing } from './moonview/MoonView3D';
 
 export type { SceneObject };
 
@@ -65,10 +66,13 @@ export interface SitePanoramaExtras {
   selectedObject?: string;
   initialYawDeg?: number;
   aim?: { azDeg: number; elDeg: number; key: number };
+  view?: CamView;
+  clearings?: Clearing[];
+  sceneExtras?: (terrain: TerrainSource) => ReactNode;
 }
 
 export function SitePanorama(props: SitePanoramaProps & SitePanoramaExtras) {
-  const { site, time, sky, mode = 'stand', compact, dense, fixedSky, objects, onObject, selectedObject, initialYawDeg, aim } = props;
+  const { site, time, sky, mode = 'stand', compact, dense, fixedSky, objects, onObject, selectedObject, initialYawDeg, aim, view, clearings, sceneExtras } = props;
   const [webgl] = useState(hasWebGL);
   const rangeStart = useTime((s) => s.rangeStart);
   // One lunar day of samples for the dotted Sun/Earth paths (cached by the data layer).
@@ -108,6 +112,9 @@ export function SitePanorama(props: SitePanoramaProps & SitePanoramaExtras) {
           selectedObject={selectedObject}
           initialYawDeg={initialYawDeg}
           aim={aim}
+          view={view}
+          clearings={clearings}
+          sceneExtras={sceneExtras}
           sunLabel={{ next: live && !fixedSky ? nextLabel(report?.samples, time, 'sun', live.sunVisible) : null }}
           earthLabel={{ next: live && !fixedSky ? nextLabel(report?.samples, time, 'earth', live.earthVisible) : null }}
         />
