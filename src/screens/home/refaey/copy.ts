@@ -1,12 +1,9 @@
 /** Refaey's interface copy (the dialogue itself lives in dialogues/dialogues.ts). All strings here, none in components. */
 export const REFAEY_COPY = {
   name: 'Refaey',
-  askTitle: 'Ask Refaey',
-  askOpen: 'Ask Refaey',
   next: 'Next',
   back: 'Back',
   ok: 'OK',
-  collapse: 'Close the conversation',
   /** The label on the inline card. */
   explains: 'Refaey explains',
   /** The speaker label above his line. */
