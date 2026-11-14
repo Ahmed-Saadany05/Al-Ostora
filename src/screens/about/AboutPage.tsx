@@ -7,7 +7,7 @@ import { Button, Card, Divider, DisplayHeading, Eyebrow, Lead, OwnerNote, Page }
  * Required citation format (JPL Horizons). Update the date to the day the final data
  * (live calls and recorded fixtures) was retrieved, in Horizons' YYYY-MON-DD form.
  */
-const HORIZONS_RETRIEVED = '2026-NOV-13';
+const HORIZONS_RETRIEVED = '2026-NOV-14';
 const HORIZONS_CITATION = `Giorgini, JD and JPL SSD Group, NASA/JPL Horizons On-Line Ephemeris System, https://ssd.jpl.nasa.gov/horizons/, data retrieved ${HORIZONS_RETRIEVED}`;
 
 const SOURCES = [
@@ -69,6 +69,22 @@ const REFERENCES: { group: string; refs: Ref[] }[] = [
   },
 ];
 
+/**
+ * "Use of AI" disclosure (Space Apps requires a complete, brief list of AI uses).
+ * One entry per person, in their own words. TODO before submission: Hagras, Aser, Pink, Hady.
+ */
+const AI_USE: { who: string; tool: string; uses: string }[] = [
+  {
+    who: 'Goda (science engine, quality)',
+    tool: 'Claude (Anthropic), via Claude Code',
+    uses: 'Finding and cross-checking sources; writing the science engine and its tests to the team\'s specification; checking the engine against JPL Horizons and NASA\'s long-term sunlight maps; code reviews; drafting this page, the video script and team messages.',
+  },
+  // { who: 'Hagras (data, shared code)', tool: '…', uses: '…' },
+  // { who: 'Aser (screens)', tool: '…', uses: '…' },
+  // { who: 'Pink (3D scenes)', tool: '…', uses: '…' },
+  // { who: 'Hady (Home, explainers, Refaey)', tool: '…', uses: '…' },
+];
+
 const muted = { color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' } as const;
 
 export function AboutPage() {
@@ -80,7 +96,7 @@ export function AboutPage() {
 
   return (
     <Page width="narrow">
-      <OwnerNote owner="Goda">AI-use disclosure is added at submission; update HORIZONS_RETRIEVED to the final data date.</OwnerNote>
+      <OwnerNote owner="Goda">Before submission: add each teammate's AI use to AI_USE (Hagras, Aser, Pink, Hady), then remove this note.</OwnerNote>
       <div>
         <Eyebrow>The project</Eyebrow>
         <DisplayHeading size="xl" align="left" accent="sources.">
@@ -137,6 +153,23 @@ export function AboutPage() {
           </ul>
         </Card>
       ))}
+
+      <Divider />
+      <Eyebrow as="h2">Use of AI</Eyebrow>
+      <Card padding="sm">
+        <p style={muted}>
+          We used AI tools as helpers. The idea, the design and every scientific decision were the team's. Every number in the
+          app comes from the NASA data listed above and was checked against published NASA values.
+        </p>
+        <ul style={{ margin: 'var(--space-2, 8px) 0 0', paddingLeft: '1.1em' }}>
+          {AI_USE.map((a) => (
+            <li key={a.who} style={{ marginBottom: 'var(--space-2, 8px)' }}>
+              <strong>{a.who}</strong> <span style={{ color: 'var(--color-text-muted)' }}>· {a.tool}</span>
+              <div style={muted}>{a.uses}</div>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Divider />
       <Eyebrow as="h2">Licence</Eyebrow>
