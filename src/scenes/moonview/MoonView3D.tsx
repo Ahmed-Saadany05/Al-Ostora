@@ -163,25 +163,84 @@ function regolithDetail() {
 
 // ---------------------------------------------------------------- scene parts
 
-function Terrain({ terrain }: { terrain: TerrainSource }) {
-  const geometry = useMemo(() => {
+const SEGMENTS = 512;
+
+/**
+ * TERRAIN SHADOWS (Hagras): instead of a shadow map (unreliable over a 12 km patch with a 1–5° Sun:
+ * straight cut-offs, camera-dependent), every fragment walks across the real height field toward
+ * the Sun. The highest terrain angle found, compared with the Sun's elevation and its 0.53° disc,
+ * gives the fraction of the disc visible from that spot — the same rule the horizon files and the
+ * cards use. Only the Sun's light is attenuated (matched by direction); earthshine and bounce are not.
+ * Shadows from terrain BEYOND the patch are handled by the light's global visibleFraction.
+ */
+const SHADOW_GLSL = /* glsl */ `
+uniform sampler2D uHeight;
+uniform float uRadius;
+uniform float uTexN;
+uniform vec3 uSunWorld;
+uniform vec3 uSunView;
+varying vec3 vTerrainPos;
+float terrainHeight(vec2 xz) {
+  vec2 uv = (xz + uRadius) / (2.0 * uRadius);
+  uv = (uv * (uTexN - 1.0) + 0.5) / uTexN;
+  return texture2D(uHeight, uv).r;
+}
+float sunShadow(vec3 lightDirView) {
+  if (dot(lightDirView, uSunView) < 0.9999) return 1.0; // not the Sun
+  vec3 s = normalize(uSunWorld);
+  float horiz = length(s.xz);
+  if (horiz < 1e-4) return 1.0;
+  vec2 dir = s.xz / horiz;
+  float el = atan(s.y, horiz);
+  float worst = -1.0; // highest (terrain angle − Sun elevation), radians
+  float t = 20.0;
+  for (int i = 0; i < 110; i++) {
+    vec2 p = vTerrainPos.xz + dir * t;
+    if (abs(p.x) > uRadius || abs(p.y) > uRadius) break;
+    // Tested from 2 m above the ground (a lander's panels), like the horizon files and the cards:
+    // big terrain shadows are unchanged, and the view never contradicts "sunlit" on the cards.
+    float a = atan(terrainHeight(p) - vTerrainPos.y - 2.0, t);
+    worst = max(worst, a - el);
+    t = t * 1.045 + 6.0;
+  }
+  // Sun disc radius 0.265° = 0.004625 rad: visible fraction of the disc (linearised).
+  return clamp(0.5 - 0.5 * worst / 0.004625, 0.0, 1.0);
+}
+`;
+
+function Terrain({ terrain, sky }: { terrain: TerrainSource; sky?: SkyState }) {
+  const { geometry, heightTex } = useMemo(() => {
     const size = terrain.radius * 2;
     // 512 cells: ~23 m apart over the 12 km real-terrain patch (data is 20 m).
-    const g = new THREE.PlaneGeometry(size, size, 512, 512);
+    const g = new THREE.PlaneGeometry(size, size, SEGMENTS, SEGMENTS);
     g.rotateX(-Math.PI / 2);
     const p = g.attributes.position;
     // Round patch whose outer rim fades out, so from above it melts into the globe below.
     const rgba = new Float32Array(p.count * 4);
+    // Same heights as the mesh, for the shadow ray-march (row 0 = north edge, like the mesh).
+    const halves = new Uint16Array(p.count);
     for (let i = 0; i < p.count; i++) {
-      p.setY(i, terrain.heightAt(p.getX(i), p.getZ(i)));
+      const h = terrain.heightAt(p.getX(i), p.getZ(i));
+      p.setY(i, h);
+      halves[i] = THREE.DataUtils.toHalfFloat(h);
       const d = Math.hypot(p.getX(i), p.getZ(i)) / terrain.radius;
       rgba.set([1, 1, 1, 1 - THREE.MathUtils.smoothstep(d, 0.82, 0.99)], i * 4);
     }
     g.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
     g.computeVertexNormals();
-    return g;
+    const tex = new THREE.DataTexture(halves, SEGMENTS + 1, SEGMENTS + 1, THREE.RedFormat, THREE.HalfFloatType);
+    tex.magFilter = tex.minFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
+    return { geometry: g, heightTex: tex };
   }, [terrain]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      heightTex.dispose();
+    },
+    [geometry, heightTex],
+  );
+
   const detail = useMemo(() => {
     const t = regolithDetail();
     const reps = (terrain.radius * 2) / DETAIL_TILE_M;
@@ -189,20 +248,59 @@ function Terrain({ terrain }: { terrain: TerrainSource }) {
     return t;
   }, [terrain]);
   useEffect(() => () => detail.dispose(), [detail]);
-  return (
-    <mesh geometry={geometry} receiveShadow castShadow>
-      {/* Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only. */}
-      <meshStandardMaterial
-        color={new THREE.Color(0.55, 0.54, 0.52)}
-        roughness={1}
-        metalness={0}
-        vertexColors
-        transparent
-        bumpMap={detail}
-        bumpScale={2.2}
-      />
-    </mesh>
+
+  const uniforms = useMemo(
+    () => ({
+      uHeight: { value: heightTex },
+      uRadius: { value: terrain.radius },
+      uTexN: { value: SEGMENTS + 1 },
+      uSunWorld: { value: new THREE.Vector3(1, 0.05, 0) },
+      uSunView: { value: new THREE.Vector3(1, 0, 0) },
+    }),
+    [heightTex, terrain.radius],
   );
+
+  const material = useMemo(() => {
+    // Regolith: grey, fully rough, no gloss (airless). Bump = cosmetic small-scale detail only.
+    const m = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0.55, 0.54, 0.52),
+      roughness: 1,
+      metalness: 0,
+      vertexColors: true,
+      transparent: true,
+      bumpMap: detail,
+      bumpScale: 2.2,
+    });
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vTerrainPos;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvTerrainPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>\n${SHADOW_GLSL}`)
+        .replace(
+          '#include <lights_fragment_begin>',
+          THREE.ShaderChunk.lights_fragment_begin.replace(
+            /RE_Direct\( directLight, geometryPosition/g,
+            'directLight.color *= sunShadow( directLight.direction );\n\t\tRE_Direct( directLight, geometryPosition',
+          ),
+        );
+    };
+    m.customProgramCacheKey = () => 'terrain-raymarch-shadow-v1';
+    return m;
+  }, [detail, uniforms]);
+  useEffect(() => () => material.dispose(), [material]);
+
+  // Keep the Sun direction current (world for the march, view for matching the light).
+  const sunWorld = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const d = sky ? azElToLocal(sky.sun.azDeg, sky.sun.elDeg) : ([1, 0.05, 0] as Vec3Tuple);
+    sunWorld.set(d[0], d[1], d[2]).normalize();
+    uniforms.uSunWorld.value.copy(sunWorld);
+    uniforms.uSunView.value.copy(sunWorld).transformDirection(camera.matrixWorldInverse);
+  });
+
+  return <mesh geometry={geometry} material={material} />;
 }
 
 /**
@@ -291,7 +389,7 @@ function Lighting({ sky, radius }: { sky?: SkyState; radius: number }) {
         target={target}
         // Exposure: bright for the pole's grazing light, toned down as the Sun climbs (no blow-out).
         intensity={up ? (3.2 * lit) / (1 + 3 * Math.sin((Math.max(0, sky?.sun.elDeg ?? 0) * Math.PI) / 180)) : 0}
-        castShadow
+        castShadow={false}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-camera-left={-radius}
@@ -382,7 +480,7 @@ function localToMoon(d: Vec3Tuple, lat: number, lon: number): Vec3 {
 
 /** The real Moon (Moon Trek imagery, true radius) laid under the site: site at the origin, its
  *  local up = +Y, east = +X, north = −Z. MoonTrekGlobe is 1 unit = 1 radius, so scale it back to metres. */
-function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: SkyState }) {
+function GlobeUnderSite({ lat, lon, sky, topY = 0 }: { lat: number; lon: number; sky?: SkyState; topY?: number }) {
   const quaternion = useMemo(() => {
     const { east, north, up } = enuAxes(lat, lon);
     // Moon-fixed → local rows (east, up, −north), after undoing the globe's own Z-up → Y-up turn.
@@ -392,7 +490,9 @@ function GlobeUnderSite({ lat, lon, sky }: { lat: number; lon: number; sky?: Sky
   }, [lat, lon]);
   const sun = useMemo(() => (sky ? localToMoon(azElToLocal(sky.sun.azDeg, sky.sun.elDeg), lat, lon) : DEFAULT_SUN), [sky, lat, lon]);
   return (
-    <group position={[0, -MOON_RADIUS_M, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
+    // Its top sits at `topY`: just below the lowest real ground, so the smooth sphere never covers the
+    // terrain (sites on summits and rims have ground far below them).
+    <group position={[0, -MOON_RADIUS_M + topY, 0]} quaternion={quaternion} scale={MOON_RADIUS_M}>
       <MoonTrekGlobe sun={sun} />
     </group>
   );
@@ -505,6 +605,18 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
     else els.current.delete(id);
   };
   const siteY = useMemo(() => terrain.heightAt(0, 0), [terrain]);
+  // Lowest ground in the patch (coarse scan), so the globe can sit just below it.
+  const globeTop = useMemo(() => {
+    let min = Infinity;
+    const R = terrain.radius;
+    for (let i = 0; i <= 96; i++)
+      for (let j = 0; j <= 96; j++) {
+        const x = -R + (2 * R * i) / 96;
+        const z = -R + (2 * R * j) / 96;
+        if (x * x + z * z <= R * R) min = Math.min(min, terrain.heightAt(x, z));
+      }
+    return Math.min(0, min) - 40;
+  }, [terrain]);
   const anchors = useMemo(() => {
     const a: Anchor[] = [];
     if (sky) {
@@ -543,8 +655,8 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
           <SkyPaths samples={samples} />
         </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
-        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} />}
-        <Terrain terrain={terrain} />
+        {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} topY={globeTop} />}
+        <Terrain terrain={terrain} sky={sky} />
         {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
         <CameraRig look={look} mode={mode} terrain={terrain} />
         <LabelProjector anchors={anchors} els={els} />
