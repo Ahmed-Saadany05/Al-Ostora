@@ -6,11 +6,11 @@ import { useMemo, useState } from 'react';
 import { Button, DisplayHeading, Eyebrow, Page } from '@/shared/ui';
 import { Explain } from '../Explain';
 import { RefaeyBriefing } from './RefaeyBriefing';
-import { RefaeyMoment, type MomentContext } from './RefaeyMoment';
+import { MomentCard, type MomentContext } from './MomentCard';
 import { useRefaey } from './store';
 
 const FAKE = { sunElev: '1.7°', sunsetIn: '3d 04h', earthStatus: 'below the horizon', siteName: 'Shackleton Crater Rim', landingDate: '14 Nov 2026' };
-const MOMENTS = ['plan-intro', 'step-site', 'step-stand', 'step-dates'];
+const MOMENTS = ['moment-compare', 'moment-stand'];
 
 export function RefaeySandbox() {
   const [horizons, setHorizons] = useState(false);
@@ -51,7 +51,7 @@ export function RefaeySandbox() {
       <p>Seen this session: {Object.keys(seen).join(', ') || 'none'}</p>
       <div key={round} style={{ display: 'grid', gap: 'var(--space-4)', maxWidth: 520 }}>
         {MOMENTS.map((id) => (
-          <RefaeyMoment key={id} id={id} context={context} />
+          <MomentCard key={id} id={id} placement="card" context={context} />
         ))}
       </div>
       {briefing && <RefaeyBriefing onDone={() => setBriefing(false)} />}

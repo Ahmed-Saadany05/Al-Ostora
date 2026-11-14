@@ -201,3 +201,41 @@
   text-decoration: underline;
   text-underline-offset: var(--space-1);
 }
+
+/* A slim row for page screens (compare dates): bust, text and actions on one line, so nothing is pushed below the fold. */
+.cardRow {
+  grid-template-columns: var(--bust-card) minmax(0, 1fr);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+.cardRow .cardBody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+}
+.cardRow .cardLabel {
+  display: none; /* the bust and the card say who is speaking; the label stays for screen readers via aria-label */
+}
+.cardRow .cardText {
+  flex: 1 1 24em;
+}
+.cardRow .cardActions {
+  margin: 0;
+  flex: none;
+}
+
+/* A compact card over a full-bleed 3D screen: bottom-left, below the "Nearby" drawer tab and the horizon, clear of the
+   terrain note, the timeline and the primary button. Behind every drawer (z-index), so a drawer that opens covers it. */
+.cardStage {
+  position: absolute;
+  z-index: 2;
+  left: var(--gutter);
+  bottom: var(--space-7);
+  width: min(360px, calc(100% - 2 * var(--gutter)));
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+.cardStage .cardBody {
+  gap: var(--space-1);
+}
