@@ -157,10 +157,18 @@ export function createLiveProvider(deps: LiveDeps): LiveProvider {
         launchDate: new Date(launchMs).toISOString(),
         landingDate: new Date(landingMsFromLaunch(launchMs, transitId)).toISOString(),
         transitDays: preset.days,
-        assumption: `Assumes a ${preset.days}-day trip from launch to landing, like ${preset.label} (${preset.kind}). Real missions differ.`,
+        assumption: transitAssumption(preset.days, preset.label),
       };
     },
   };
+}
+
+/** Trip-time note shown on Steps 4 and 5: the fixed trip time is an estimate from a real mission. */
+export function transitAssumption(days: number, label: string): string {
+  // Wording chosen by Goda (2026-11-14). "IM-1 Odysseus (2024)" → "IM-1 Odysseus's route and fuel use (2024)".
+  const m = /^(.*) \((\d{4})\)$/.exec(label);
+  const who = m ? `${m[1]}'s route and fuel use (${m[2]})` : `${label}'s route and fuel use`;
+  return `The ${days} days is an estimate based on ${who}.`;
 }
 
 /** Recorded proxy responses → loader (used by index.ts with Vite's import.meta.glob). */

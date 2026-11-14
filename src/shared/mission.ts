@@ -79,12 +79,15 @@ const q = (params: Record<string, string | undefined>) => {
 /** Build links between steps — use these instead of hand-writing URLs. */
 export const missionUrl = {
   chooseSite: (selected: string[] = []) => `/mission${q({ sites: selected.join(',') || undefined })}`,
-  stand: (siteId: string, at?: IsoTime) => `/mission/stand${q({ site: siteId, at })}`,
+  /** `extra`: `others` (compared site ids → "View other sites"), `landed` (launch ISO → "Summarize trip"). */
+  stand: (siteId: string, at?: IsoTime, extra: { others?: string; landed?: IsoTime } = {}) =>
+    `/mission/stand${q({ site: siteId, at, others: extra.others, landed: extra.landed })}`,
   compare: (siteIds: string[], by: 'sites' | 'dates' = 'sites') => `/mission/compare${q({ sites: siteIds.join(','), by })}`,
   /** One site over several lunar days: where the flow goes after a site is chosen. */
   dates: (siteId: string) => `/mission/compare${q({ sites: siteId, by: 'dates' })}`,
   date: (siteId: string) => `/mission/date${q({ site: siteId })}`,
-  launch: (siteId: string, launch: IsoTime) => `/mission/launch${q({ site: siteId, launch })}`,
+  /** `summary`: skip the launch animation and open the Mission summary (from "Summarize trip"). */
+  launch: (siteId: string, launch: IsoTime, summary = false) => `/mission/launch${q({ site: siteId, launch, summary: summary ? '1' : undefined })}`,
 };
 
 // ---------------------------------------------------------------- hook
