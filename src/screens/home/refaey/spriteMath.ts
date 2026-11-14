@@ -23,14 +23,14 @@ export function heightAt(t: number, h = HOP_HEIGHT_M, g = LUNAR_G) {
 
 export type Anim = 'idle' | 'walk' | 'hop';
 
-/** Idle: gentle, about 6 frames per second, ping-pong so the loop has no seam. Frame indices of one cycle. */
+/** Idle: gentle, 12 frames per second over the 24-frame idle sheet, ping-pong so the loop has no seam. Frame indices of one cycle. */
 export function idleCycle(count: number): number[] {
   const up = Array.from({ length: count }, (_, i) => i);
   return [...up, ...up.slice(1, -1).reverse()];
 }
-export const IDLE_FRAME_MS = 1000 / 6;
-/** Walk: about 12 frames per second. */
-export const WALK_FRAME_MS = 1000 / 12;
+export const IDLE_FRAME_MS = 1000 / 12;
+/** Walk (the running sheet, 24 frames): 24 frames per second, one stride cycle a second. */
+export const WALK_FRAME_MS = 1000 / 24;
 export const WALK_IN_MAX_S = 1.2;
 
 /**

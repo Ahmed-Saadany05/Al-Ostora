@@ -4,7 +4,7 @@ Refaey sprite pipeline: three 3D-render contact sheets -> clean animation strips
 
   python3 src/screens/home/refaey/art/tools/make_sprites.py [--preview DIR]
 
-Input  (art/source/):  idle-sheet.png (8 frames, 2x4), walk-sheet.png (12, 3x4), hop-sheet.png (12, 3x4). RGBA, cut out
+Input  (art/source/):  idle-sheet.png (24 frames, 6x4), walk-sheet.png (24, 6x4: running), hop-sheet.png (12, 3x4). RGBA, cut out
                        already but WhatsApp-compressed: soft low-alpha white speckle around the suit and colour fringing.
 Output (art/):         idle-strip.webp, walk-strip.webp, hop-strip.webp, bust-80.webp, bust-160.webp, sprites.json,
                        tools/last-run.json (measurements). Contact sheets go to --preview (outside the repo).
@@ -26,7 +26,7 @@ from scipy import ndimage as ndi
 HERE = Path(__file__).resolve().parent
 ART = HERE.parent
 SRC = ART / 'source'
-SHEETS = {'idle': dict(file='idle-sheet.png', frames=8, rows=2), 'walk': dict(file='walk-sheet.png', frames=12, rows=3), 'hop': dict(file='hop-sheet.png', frames=12, rows=3)}
+SHEETS = {'idle': dict(file='idle-sheet.png', frames=24, rows=4), 'walk': dict(file='walk-sheet.png', frames=24, rows=4), 'hop': dict(file='hop-sheet.png', frames=12, rows=3)}
 ALPHA_LO, ALPHA_HI = 40, 235          # alpha below LO is background, above HI is solid
 HALO_BUDGET = 0.005                    # share of outer-edge pixels
 DRIFT_BUDGET_PX = 2.0                  # helmet-centre drift across idle frames, at display size
