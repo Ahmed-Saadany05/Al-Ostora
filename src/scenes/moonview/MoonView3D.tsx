@@ -66,6 +66,12 @@ export interface MoonView3DProps {
   initialYawDeg?: number;
   /** Turn smoothly to look this way. Change `key` to repeat the same direction. */
   aim?: { azDeg: number; elDeg: number; key: number };
+  /** Walk the camera to a place and look at something (stand mode). */
+  view?: CamView;
+  /** Ground kept free of rocks (around hardware and the guide's stops). */
+  clearings?: Clearing[];
+  /** Extra things in the scene (e.g. the guide walking on the terrain). Rendered inside the Canvas. */
+  sceneExtras?: (terrain: TerrainSource) => ReactNode;
 }
 
 // ---------------------------------------------------------------- textures
@@ -253,7 +259,7 @@ function shadowedMaterial(params: THREE.MeshStandardMaterialParameters, uniforms
   return m;
 }
 
-function Terrain({ terrain, sky, seed }: { terrain: TerrainSource; sky?: SkyState; seed: number }) {
+function Terrain({ terrain, sky, seed, clearings }: { terrain: TerrainSource; sky?: SkyState; seed: number; clearings?: Clearing[] }) {
   // Aser: detail finer than the NASA grid, only near the observer (nearDetail.ts).
   const surface = useMemo(() => surfaceDetail(seed, !terrain.placeholder), [seed, terrain.placeholder]);
   const { geometry, heightTex } = useMemo(() => {
@@ -387,7 +393,7 @@ function Terrain({ terrain, sky, seed }: { terrain: TerrainSource; sky?: SkyStat
     <>
       <mesh geometry={geometry} material={material} />
       <mesh geometry={near} material={nearMaterial} />
-      <Rocks terrain={terrain} surface={surface} seed={seed} uniforms={uniforms} />
+      <Rocks terrain={terrain} surface={surface} seed={seed} uniforms={uniforms} clearings={clearings} />
     </>
   );
 }
@@ -397,8 +403,18 @@ function Terrain({ terrain, sky, seed }: { terrain: TerrainSource; sky?: SkyStat
  * icosahedra, many small and few large, all under 1.1 m (below the 1.8 m eye), so they can never hide
  * the Sun or Earth. They sit on the detailed ground and get the same terrain shadows.
  */
-function Rocks({ terrain, surface, seed, uniforms }: { terrain: TerrainSource; surface: SurfaceDetail; seed: number; uniforms: ShadowUniforms }) {
-  const rocks = useMemo(() => rockField(seed), [seed]);
+/** Circles kept free of rocks (hardware, the guide's stops): x east, z south, radius, metres. */
+export interface Clearing {
+  x: number;
+  z: number;
+  r: number;
+}
+
+function Rocks({ terrain, surface, seed, uniforms, clearings }: { terrain: TerrainSource; surface: SurfaceDetail; seed: number; uniforms: ShadowUniforms; clearings?: Clearing[] }) {
+  const rocks = useMemo(
+    () => rockField(seed).filter((r) => !clearings?.some((c) => (r.x - c.x) ** 2 + (r.z - c.z) ** 2 < (c.r + r.size) ** 2)),
+    [seed, clearings],
+  );
   const geometry = useMemo(() => {
     let s = seed * 31 + 7;
     const rnd = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
@@ -653,10 +669,36 @@ const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2
  * between them: the altitude grows geometrically (slow lift-off, then a fast climb), so it feels
  * like taking off rather than a zoom.
  */
-function CameraRig({ look, mode, terrain, target }: { look: MutableRefObject<Look>; mode: 'stand' | 'above'; terrain: TerrainSource; target?: MutableRefObject<Look | null> }) {
+/**
+ * A place to stand and what to look at (stand mode). The camera glides there; it looks either at a point on the terrain
+ * (`at`: x, z, height above the ground) or along an azimuth/elevation. Dragging hands the view back to the user.
+ */
+export interface CamView {
+  x: number;
+  z: number;
+  at?: { x: number; z: number; h: number };
+  azDeg?: number;
+  elDeg?: number;
+  /** Change it to repeat the same view. */
+  key: string | number;
+}
+
+function CameraRig({
+  look,
+  mode,
+  terrain,
+  target,
+  view,
+}: {
+  look: MutableRefObject<Look>;
+  mode: 'stand' | 'above';
+  terrain: TerrainSource;
+  target?: MutableRefObject<Look | null>;
+  view?: MutableRefObject<(CamView & { active: boolean }) | null>;
+}) {
   const camera = useThree((s) => s.camera);
-  const eye = useMemo(() => terrain.heightAt(0, 0) + EYE_HEIGHT, [terrain]);
   const k = useRef(mode === 'above' ? 1 : 0);
+  const base = useRef({ x: 0, z: 0 });
   const dir = useMemo(() => new THREE.Vector3(), []);
   const up = useMemo(() => new THREE.Vector3(), []);
   const t = useMemo(() => new THREE.Vector3(), []);
@@ -665,6 +707,32 @@ function CameraRig({ look, mode, terrain, target }: { look: MutableRefObject<Loo
     const step = Math.min(dt, 0.05) / FLY_S;
     k.current = goal > k.current ? Math.min(goal, k.current + step) : Math.max(goal, k.current - step);
     const e = ease(k.current);
+    // Glide to the requested place (stand only) and keep looking at its point.
+    const v = view?.current;
+    if (v && mode === 'stand') {
+      const g = 1 - Math.exp(-Math.min(dt, 0.05) * 1.6);
+      base.current.x += (v.x - base.current.x) * g;
+      base.current.z += (v.z - base.current.z) * g;
+      if (v.active) {
+        let yawT: number;
+        let pitchT: number;
+        if (v.at) {
+          const ey = terrain.heightAt(base.current.x, base.current.z) + EYE_HEIGHT;
+          const dx = v.at.x - base.current.x;
+          const dz = v.at.z - base.current.z;
+          const dyv = terrain.heightAt(v.at.x, v.at.z) + v.at.h - ey;
+          yawT = Math.atan2(dx, -dz);
+          pitchT = Math.atan2(dyv, Math.hypot(dx, dz));
+        } else {
+          yawT = ((v.azDeg ?? 0) * Math.PI) / 180;
+          pitchT = ((v.elDeg ?? 0) * Math.PI) / 180;
+        }
+        const f = 1 - Math.exp(-Math.min(dt, 0.05) * 2.5);
+        const dy = Math.atan2(Math.sin(yawT - look.current.yaw), Math.cos(yawT - look.current.yaw));
+        look.current.yaw += dy * f;
+        look.current.pitch += (THREE.MathUtils.clamp(pitchT, -0.5, 1.2) - look.current.pitch) * f;
+      }
+    }
     const want = target?.current;
     if (want) {
       // Shortest way round, eased (about a second).
@@ -679,7 +747,10 @@ function CameraRig({ look, mode, terrain, target }: { look: MutableRefObject<Loo
 
     const h = EYE_HEIGHT * (ABOVE_ALT / EYE_HEIGHT) ** e; // 1.8 m … 15 km, geometric
     const back = azElToLocal(yawDeg + 180, 0, (h - EYE_HEIGHT) * ABOVE_BACK);
-    camera.position.set(back[0], eye - EYE_HEIGHT + h, back[2]);
+    // Where you stand: the origin, or the place a story walked you to (flying above always starts from the origin).
+    const bx = base.current.x * (1 - e);
+    const bz = base.current.z * (1 - e);
+    camera.position.set(bx + back[0], terrain.heightAt(bx, bz) + h, bz + back[2]);
 
     dir.set(...azElToLocal(yawDeg, (pitch * 180) / Math.PI));
     up.set(...azElToLocal(yawDeg, ABOVE_PITCH_DEG));
@@ -716,7 +787,7 @@ function LabelProjector({ anchors, els }: { anchors: Anchor[]; els: MutableRefOb
 
 // ---------------------------------------------------------------- component
 
-export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense, objects, onObject, selectedObject, initialYawDeg, aim }: MoonView3DProps) {
+export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense, objects, onObject, selectedObject, initialYawDeg, aim, view, clearings, sceneExtras }: MoonView3DProps) {
   // Open looking toward the Sun (or Earth if the Sun is down), slightly above the horizon.
   const initialYaw =
     initialYawDeg !== undefined ? (initialYawDeg * Math.PI) / 180 : sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
@@ -724,8 +795,13 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
   const aimed = useRef(Boolean(sky) || initialYawDeg !== undefined);
   // A requested turn: eased in CameraRig, dropped as soon as the user drags.
   const target = useRef<Look | null>(null);
+  const viewRef = useRef<(CamView & { active: boolean }) | null>(null);
+  useEffect(() => {
+    viewRef.current = view ? { ...view, active: true } : null;
+  }, [view]);
   useEffect(() => {
     if (!aim) return;
+    if (viewRef.current) viewRef.current.active = false;
     target.current = { yaw: (aim.azDeg * Math.PI) / 180, pitch: THREE.MathUtils.clamp((aim.elDeg * Math.PI) / 180, -0.5, 1.2) };
   }, [aim]);
   const tops = useRef(new Map<string, THREE.Vector3>());
@@ -741,6 +817,7 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     drag.current = { x: e.clientX, y: e.clientY };
     target.current = null;
+    if (viewRef.current) viewRef.current.active = false;
     setGrabbing(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -819,9 +896,10 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
         </SkyDome>
         <Lighting sky={sky} radius={terrain.radius} />
         {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} topY={globeTop} />}
-        <Terrain terrain={terrain} sky={sky} seed={detailSeed(site?.lat, site?.lon)} />
+        <Terrain terrain={terrain} sky={sky} seed={detailSeed(site?.lat, site?.lon)} clearings={clearings} />
         {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
-        <CameraRig look={look} mode={mode} terrain={terrain} target={target} />
+        <CameraRig look={look} mode={mode} terrain={terrain} target={target} view={viewRef} />
+        {sceneExtras?.(terrain)}
         {objects && objects.length > 0 && (
           <>
             <SceneObjects objects={objects} terrain={terrain} tops={tops} />

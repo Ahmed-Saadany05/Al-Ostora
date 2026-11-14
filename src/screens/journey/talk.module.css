@@ -47,3 +47,18 @@
     order: -1;
   }
 }
+
+/* Bust-only mode (he is in the 3D scene): his face opens and closes the balloon. */
+.face {
+  flex: none;
+  align-self: flex-end;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.face:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
