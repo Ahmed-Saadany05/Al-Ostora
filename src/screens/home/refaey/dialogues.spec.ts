@@ -136,9 +136,8 @@ describe('the conversation graph', () => {
   it('the briefing: two short beats on the Sun and Earth, then past missions, planning and the real-or-not question', () => {
     expect(INTRO.find((n) => n.id === 'b1')!.replies.map((r) => r.next)).toEqual(['b5', 'b1a']);
     const b7 = INTRO.find((n) => n.id === 'b7')!;
-    expect(b7.replies.map((r) => r.label)).toEqual(['Explore past missions', 'Plan a future mission', "What's real here?"]);
-    expect(b7.replies[0].action).toEqual({ type: 'navigate', to: '/missions' });
-    expect(b7.replies[1].action).toEqual({ type: 'navigate', to: '/mission' });
+    // The two paths are big buttons on the briefing screen, not replies.
+    expect(b7.replies.map((r) => r.label)).toEqual(["What's real here?", 'Why is the Sun so low?']);
     expect(INTRO.find((n) => n.id === 'b7r')!.replies.map((r) => r.action ?? r.next)).toEqual(['b7', { type: 'navigate', to: '/about' }]);
   });
 

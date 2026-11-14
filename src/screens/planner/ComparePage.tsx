@@ -18,7 +18,7 @@ import { formatDuration, formatUtc } from '@/shared/format';
 import { MAX_COMPARE, missionUrl, useMission } from '@/shared/mission';
 import { LUNAR, type IsoTime, type Site, type SiteMetrics } from '@/shared/types';
 import { Button, Drawer, EmptyState, Icon, IconButton, LoadingState, Page, ProgressRing, StepHeader } from '@/shared/ui';
-import { EXAG, SiteScene } from './CompareScene3D';
+import { SiteScene } from './CompareScene3D';
 import { useLunarDay } from './useLunarDay';
 import { SettingsButton, usePlannerParams } from './SettingsDrawer';
 import { DataError } from './DataError';
@@ -327,8 +327,8 @@ export function ComparePage() {
             <p className={s.cqSummaryText}>
               <span className={s.label}>Best match</span>
               <b>{best.c.name}</b>
-              {dates && <> at {candidates[0].site.name}</>} · score <b className="num">{best.m!.matchScore}</b> {scoreWord(best.m!.matchScore)}
-              {why.length > 0 && <> · {why.slice(0, 2).join(' and ')}</>}
+              {dates && <> at {candidates[0].site.name}</>} · score <b className="num">{best.m!.matchScore}</b>
+              {why.length > 0 && <> · {why[0]}</>}
               {best.m!.bestWindow && (
                 <>
                   {' '}
@@ -377,12 +377,6 @@ export function ComparePage() {
           )}
         </section>
 
-        <p className={s.cxScoreNote}>
-          Scores assume you land at each site's best moment: the start of its best window, when the Sun and Earth are both up.{' '}
-          <b>Match score (0–100):</b> how good a site and date are for landing. Higher means more sunlight for the solar panels, more time to talk to mission control, and
-          shorter nights. ★ marks the best value in each row. In the 3D views, the ring is the real skyline around the lander (centre); solid rays mean the Sun or Earth
-          is visible, dashed means blocked by terrain. Heights are stretched ×{EXAG} so small angles are visible. Drag a view to look around.
-        </p>
 
 
         <ol className={s.cqGrid} style={{ gridTemplateColumns: `repeat(${nCols}, minmax(0, 1fr))` }}>

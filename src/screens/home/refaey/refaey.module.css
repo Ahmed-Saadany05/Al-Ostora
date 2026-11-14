@@ -466,3 +466,97 @@
   opacity: 0.85;
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------- the briefing's two paths */
+.paths {
+  /* Right half, centred vertically: clear of his words (left) and of Home's Moon (bottom-right). */
+  position: fixed;
+  z-index: 2;
+  right: clamp(var(--space-6), 7vw, 140px);
+  top: 50%;
+  transform: translateY(-60%);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  width: min(380px, 30vw);
+  animation: fade var(--duration-slow) var(--ease-out) 600ms backwards;
+}
+.path {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 112px;
+  padding: var(--space-5);
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out), background var(--duration-base) var(--ease-out);
+}
+.path:hover,
+.path:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+}
+.pathPrimary {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: transparent;
+}
+.pathPrimary:hover,
+.pathPrimary:focus-visible {
+  background: var(--color-text);
+  border-color: transparent;
+}
+.pathPrimary small {
+  color: color-mix(in srgb, var(--color-bg) 70%, transparent) !important;
+}
+.pathIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.pathText {
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+}
+.pathText strong {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+.pathText small {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.pathArrow {
+  flex: none;
+}
+@media (max-width: 1100px) {
+  .paths {
+    top: auto;
+    bottom: var(--space-5);
+    right: var(--gutter);
+    left: var(--gutter);
+    width: auto;
+    transform: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .path {
+    min-height: 84px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paths {
+    animation: none;
+  }
+}

@@ -15,6 +15,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { interpolateSky, preloadMissionGlobe, preloadMoonDisc, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
+import { Guide3D } from '@/scenes/moonview/Guide3D';
+import { groundPoint, IDLE, WALK } from '@/screens/journey/refaeyStrips';
+import { useApp } from '@/shared/store/app';
 import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
@@ -104,6 +107,14 @@ export function StandPage() {
   // ?landed=<launch ISO>: arrived after landing → "Summarize trip" instead of Launch.
   const landedRaw = params.get('landed');
   const landed = landedRaw && Number.isFinite(Date.parse(landedRaw)) ? landedRaw : null;
+  const motion = useApp((st) => st.motion);
+  // Where he runs from and to: the view opens facing the Sun (or Earth when the Sun is down), so he lands in front of you.
+  const [runIn, setRunIn] = useState<{ from: { x: number; z: number }; to: { x: number; z: number } } | null>(null);
+  useEffect(() => {
+    if (!landed || !sky || runIn) return;
+    const face = sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg;
+    setRunIn({ from: groundPoint(face - 75, 22), to: groundPoint(face - 14, 7) });
+  }, [landed, sky, runIn]);
   // Before launch, the launch-date step is next: have its small real Moon ready.
   useEffect(() => {
     if (!landed) void preloadMoonDisc();
@@ -180,7 +191,15 @@ export function StandPage() {
           onClose={() => setWith(null)}
         />
       ) : (
-        <SitePanorama site={site} time={time} sky={sky} horizon={horizon} mode={mode} />
+        <SitePanorama
+          site={site}
+          time={time}
+          sky={sky}
+          horizon={horizon}
+          mode={mode}
+          // After touchdown Refaey runs into the scene from the left and stands a few metres in front of you.
+          sceneExtras={landed && runIn ? (terrain) => <Guide3D terrain={terrain} idle={IDLE} walk={WALK} from={runIn.from} to={runIn.to} motion={motion} /> : undefined}
+        />
       )}
 
       {/* Top-left: where you are. */}

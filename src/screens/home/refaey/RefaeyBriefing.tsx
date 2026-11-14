@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useApp } from '@/shared/store/app';
+import { Icon } from '@/shared/ui';
 import { RefaeyActor, useQuip } from './RefaeyActor';
 import { RefaeyStage } from './RefaeyStage';
 import { BRIEFING_SLOTS } from './slots';
@@ -101,6 +102,29 @@ export function RefaeyBriefing({
   return (
     <div ref={root} className={s.briefing} inert={leaving}>
       {avoid && <div aria-hidden data-refaey-avoid style={{ position: 'fixed', left: avoid.x, top: avoid.y, width: avoid.w, height: avoid.h, pointerEvents: 'none' }} />}
+      {/* The two paths: big, centred, away from his balloon. Always there, whatever beat he is on. */}
+      <div className={s.paths} data-refaey-avoid>
+        <button type="button" className={s.path} onClick={() => finish('missions')}>
+          <span className={s.pathIcon} aria-hidden>
+            <Icon name="clock" size={26} />
+          </span>
+          <span className={s.pathText}>
+            <strong>Explore past missions</strong>
+            <small>Stand where six real landings touched down</small>
+          </span>
+          <Icon name="arrowRight" size={20} className={s.pathArrow} />
+        </button>
+        <button type="button" className={[s.path, s.pathPrimary].join(' ')} onClick={() => finish('step1')}>
+          <span className={s.pathIcon} aria-hidden>
+            <Icon name="pin" size={26} />
+          </span>
+          <span className={s.pathText}>
+            <strong>Plan a future mission</strong>
+            <small>Help Refaey pick his site and date</small>
+          </span>
+          <Icon name="arrowRight" size={20} className={s.pathArrow} />
+        </button>
+      </div>
       <RefaeyStage
         slots={BRIEFING_SLOTS}
         scope={root}
