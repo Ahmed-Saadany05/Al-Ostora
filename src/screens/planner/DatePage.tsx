@@ -17,6 +17,7 @@
  */
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { MoonDisc } from '@/scenes';
 import { useDayReport, useMetrics, usePlanLaunch, useSky } from '@/shared/data';
 import { Explain } from '@/screens/home/Explain';
 import { formatDuration, formatLatLon, hoursBetween } from '@/shared/format';
@@ -116,9 +117,43 @@ export function Trajectory({
   const pinVisible = Math.cos(la) * Math.cos(lo) >= -0.05 || Math.abs(lat) > 75;
   const pin = { x: M.x + M.r * 0.92 * Math.cos(la) * Math.sin(lo), y: M.y - M.r * 0.92 * Math.sin(la) };
 
+  // The real Moon (Pink's MoonDisc, NASA Moon Trek imagery) sits behind the drawn one, measured onto the
+  // drawing's Moon disc (the SVG is letterboxed when its height is capped, so it is measured, not %).
+  // Until its imagery is in, the flat picture shows; then the picture fades and the real Moon shows.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [disc, setDisc] = useState<{ left: number; top: number; size: number } | null>(null);
+  const [realMoon, setRealMoon] = useState(false);
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const svg = svgRef.current;
+    if (!wrap || !svg) return;
+    const measure = () => {
+      const w = wrap.getBoundingClientRect();
+      const r = svg.getBoundingClientRect();
+      const k = Math.min(r.width / 1000, r.height / 260); // viewBox 1000 × 260, "meet"
+      const ox = r.left - w.left + (r.width - 1000 * k) / 2;
+      const oy = r.top - w.top + (r.height - 260 * k) / 2;
+      setDisc({ left: ox + (M.x - M.r) * k, top: oy + (M.y - M.r) * k, size: 2 * M.r * k });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, [M.x, M.y, M.r]);
+
   const craft = [0, 1, 2, 3, 4];
   return (
-    <svg viewBox="0 0 1000 260" className={s.trajSvg} role="img" aria-label={`Launch ${dayTime(launch)}, touchdown ${dayTime(landing)}`}>
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      {disc && (
+        <MoonDisc
+          sunlit={sunlit}
+          sun={[0.6, 0.6, 0.5]} /* the Sun is drawn to the upper right */
+          onShow={() => setRealMoon(true)}
+          style={{ position: 'absolute', zIndex: 0, left: disc.left, top: disc.top, width: disc.size, height: disc.size }}
+        />
+      )}
+    <svg ref={svgRef} viewBox="0 0 1000 260" className={s.trajSvg} style={{ position: 'relative', zIndex: 1 }} role="img" aria-label={`Launch ${dayTime(launch)}, touchdown ${dayTime(landing)}`}>
       <defs>
         <linearGradient id={`g${uid}`} x1="0" x2="1">
           <stop offset="0%" stopColor="var(--color-earth)" />
@@ -185,7 +220,7 @@ export function Trajectory({
 
       {/* Moon: NASA image of the near side, shaded as a sphere; gold glow + rim when sunlit. */}
       <circle cx={M.x} cy={M.y} r={M.r + 26} fill={`url(#moonGlow${uid})`} className={cls(s.trajGlow, sunlit && s.trajGlowOn)} />
-      <g clipPath={`url(#moonClip${uid})`}>
+      <g clipPath={`url(#moonClip${uid})`} style={{ opacity: realMoon ? 0 : 1, transition: 'opacity 0.6s ease-out' }}>
         <circle cx={M.x} cy={M.y} r={M.r} className={s.trajMoonBase} />
         {/* Equirectangular map: 360° wide → 2 × diameter, so the near side (−90°…+90°) fills the disk. */}
         <image href={MOON_IMG} x={M.x - 2 * M.r} y={M.y - M.r} width={4 * M.r} height={2 * M.r} preserveAspectRatio="none" />
@@ -221,6 +256,7 @@ export function Trajectory({
       ))}
 
     </svg>
+    </div>
   );
 }
 

@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { interpolateSky, preloadMissionGlobe, SitePanorama } from '@/scenes';
+import { interpolateSky, preloadMissionGlobe, preloadMoonDisc, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
@@ -104,6 +104,10 @@ export function StandPage() {
   // ?landed=<launch ISO>: arrived after landing → "Summarize trip" instead of Launch.
   const landedRaw = params.get('landed');
   const landed = landedRaw && Number.isFinite(Date.parse(landedRaw)) ? landedRaw : null;
+  // Before launch, the launch-date step is next: have its small real Moon ready.
+  useEffect(() => {
+    if (!landed) void preloadMoonDisc();
+  }, [landed]);
   // After landing, the summary is next: have its real Moon ready before "Summarize trip".
   useEffect(() => {
     if (landed && site) void preloadMissionGlobe(site.lat, site.lon);

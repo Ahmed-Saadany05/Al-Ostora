@@ -45,13 +45,13 @@ const paths = {
   orbit: (
     <>
       <g transform="rotate(-45 12 12)">
-        <path d="M2 12A10 3.8 0 0 1 22 12" />
+        <path d="M2 12A10 2 0 0 1 22 12" />
       </g>
       <circle cx="12" cy="12" r="5.5" style={{ fill: 'var(--icon-fill, var(--color-bg))' }} />
       <g transform="rotate(-45 12 12)">
-        <path d="M2 12A10 3.8 0 0 0 22 12" />
+        <path d="M2 12A10 2 0 0 0 22 12" />
         {/* The small moon rides on the ring (placed in the ring's own, untilted frame). */}
-        <circle cx="20.18" cy="11.14" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="20.18" cy="10.85" r="1.4" fill="currentColor" stroke="none" />
       </g>
     </>
   ),
