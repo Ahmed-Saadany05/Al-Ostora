@@ -3,20 +3,19 @@
  *
  * Full-screen 3D Moon view (SitePanorama) with the overlays tucked into edge drawers (PeekPanel):
  * right = Sun, Earth and How far away; left = Nearby; bottom = the timeline. Hover to peek, click to
- * pin. "Compare side by side" shows two Moon views (?with=<site id>). ?at=ISO opens it at that moment
- * (from Compare dates). Launch → the launch-date step.
+ * pin. "Compare side by side" shows two Moon views (?with=<site id>). Launch → the launch-date step.
  * Numbers come only from the data hooks (demo provider now, the engine later).
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { interpolateSky, SitePanorama } from '@/scenes';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
 import { RefaeyMoment } from '@/screens/home/refaey';
-import { nextTransition, useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
+import { useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
 import { useTime } from '@/shared/store/time';
-import { LUNAR, type Site, type SkyState } from '@/shared/types';
+import { LUNAR, type Site, type IsoTime, type TimeWindow } from '@/shared/types';
 import {
   Button,
   EmptyState,
@@ -26,16 +25,17 @@ import {
   LoadingState,
   Page,
   Pill,
-  SkyTimeline,
   SourceBadge,
   Tabs,
 } from '@/shared/ui';
-import { timelapseTo } from '@/shared/store/timelapse';
 import { PeekPanel } from './stand/PeekPanel';
 import { SideBySide } from './stand/SideBySide';
 import { BodyCard, HowFarCard, NearbyCard } from './stand/StandCards';
 import { useLunarDay } from './useLunarDay';
 import { VerifyDrawer } from './VerifyDrawer';
+import { SettingsButton, usePlannerParams } from './SettingsDrawer';
+import { StandTimeline } from './standTimeline';
+import fs from './flow.module.css';
 import st from './stand/stand.module.css';
 
 /** Great-circle distance on the Moon, km. */
@@ -47,6 +47,8 @@ function moonKm(a: Site, b: Site) {
 }
 
 export function StandPage() {
+  const lander = usePlannerParams(); // Lander settings (Aser) feed every data hook below.
+  const pauseClock = useTime((x) => x.pause);
   const { site, loading } = useMission();
   const { data: catalogue } = useSites();
   const [params, setParams] = useSearchParams();
@@ -58,18 +60,10 @@ export function StandPage() {
   const [mode, setMode] = useState<'stand' | 'above'>('stand');
   const [verify, setVerify] = useState(false);
 
-  // Arriving from "Compare dates" with ?at=ISO: open the view at that moment (once per link).
-  const at = params.get('at');
-  useEffect(() => {
-    if (at) setTime(at);
-  }, [at, setTime]);
-
-  const { data: fetchedSky } = useSky(site, time);
-  const { data: horizon } = useHorizon(site);
-  const { data: report } = useDayReport(site, from, days);
-  // Blend the day's samples on the client so scrubbing and timelapses never wait for data.
-  const sky = useMemo(() => interpolateSky(report?.samples, time) ?? fetchedSky, [report, time, fetchedSky]);
-  const { data: metrics } = useMetrics(site, from, to);
+  const { data: sky } = useSky(site, time, lander);
+  const { data: horizon } = useHorizon(site, lander);
+  const { data: report } = useDayReport(site, from, days, lander);
+  const { data: metrics } = useMetrics(site, from, to, lander);
 
   // Nearby: placeholder suggestion = the closest other catalogue site (the engine suggests one later).
   const nearby = useMemo(() => {
@@ -82,7 +76,7 @@ export function StandPage() {
     }
     return best;
   }, [site, catalogue]);
-  const { data: nearbyMetrics } = useMetrics(nearby?.site, from, to);
+  const { data: nearbyMetrics } = useMetrics(nearby?.site, from, to, lander);
 
   const withId = params.get('with');
   const partner = withId ? catalogue?.find((c) => c.id === withId) : undefined;
@@ -109,9 +103,21 @@ export function StandPage() {
       </Page>
     );
 
-  const ahead = report?.samples.filter((x) => x.time >= time) ?? [];
-  const sunUp = (x: SkyState) => x.sunVisible;
-  const earthUp = (x: SkyState) => x.earthVisible;
+  // Countdowns from the report's Sun / Earth WINDOWS, not the hourly samples (Goda's review #7):
+  // the live engine refines window edges to ~±15 s, so these are minute-accurate. They are relative
+  // to the clock `time` (which moves when you play / scrub), unlike useMetrics' next*, which are
+  // relative to the start of the lunar day.
+  //   up now  → the end of the window you are in (null if it runs past this lunar day)
+  //   down now → the start of the next window (null if none before this lunar day ends)
+  const nextChange = (windows: TimeWindow[] | undefined, up: boolean): IsoTime | null => {
+    if (!windows) return null;
+    const t = Date.parse(time);
+    if (up) {
+      const w = windows.find((x) => Date.parse(x.start) <= t && t <= Date.parse(x.end));
+      return w && !(w.clipped && Date.parse(w.end) >= Date.parse(to) - 60_000) ? w.end : null;
+    }
+    return windows.find((x) => Date.parse(x.start) > t)?.start ?? null;
+  };
   const status = sky
     ? sky.sunVisible && sky.earthVisible
       ? 'Sunlit and in contact with Earth'
@@ -141,8 +147,8 @@ export function StandPage() {
       {/* Top-left: where you are. */}
       {!partner && (
         <div className={st.titleBlock}>
-          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.dates(site.id)}>
-            Back to dates
+          <Button variant="secondary" leadingIcon="arrowLeft" icon={null} to={missionUrl.chooseSite([site.id])}>
+            Back to sites
           </Button>
           <Eyebrow>
             {site.region.replace('-', ' ')} · <span className="num">{formatLatLon(site.lat, site.lon)}</span>
@@ -157,6 +163,7 @@ export function StandPage() {
 
       {/* Top-centre: view toggle. */}
       <div className={st.viewToggle}>
+        <SettingsButton />
         <Tabs
           label="View"
           variant="pill"
@@ -188,8 +195,8 @@ export function StandPage() {
             </span>
           }
         >
-          <BodyCard kind="sun" body={sky.sun} visible={sky.sunVisible} now={time} next={nextTransition(ahead, sunUp, sky.sunVisible)} source={sky.source} />
-          <BodyCard kind="earth" body={sky.earth} visible={sky.earthVisible} now={time} next={nextTransition(ahead, earthUp, sky.earthVisible)} source={sky.source} />
+          <BodyCard kind="sun" body={sky.sun} visible={sky.sunVisible} now={time} next={nextChange(report?.sunWindows, sky.sunVisible)} source={sky.source} />
+          <BodyCard kind="earth" body={sky.earth} visible={sky.earthVisible} now={time} next={nextChange(report?.earthWindows, sky.earthVisible)} source={sky.source} />
           <HowFarCard earthKm={sky.earth.distanceKm} sunKm={sky.sun.distanceKm} source={sky.source} />
         </PeekPanel>
       )}
@@ -217,55 +224,50 @@ export function StandPage() {
         label="Timeline"
         tab={
           <span className={st.tabRow}>
-            <Icon name={playing ? 'pause' : 'clock'} size={12} />
+            <Icon name={playing ? 'pause' : 'clock'} size={14} />
             <span className="num">{formatUtc(time)}</span>
-            {report && (
-              <span className={st.tabStrip}>
-                <SkyTimeline mono start={from} end={to} sunWindows={report.sunWindows} earthWindows={report.earthWindows} now={time} />
-              </span>
-            )}
           </span>
         }
       >
+        {/* Slim time dock (Aser): one line of controls over the ribbons, no box. */}
         <section className={st.timeline}>
           <div className={st.timelineHead}>
             <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} onClick={toggle} active={playing} />
-            <div>
-              <Eyebrow>Sky at</Eyebrow>
+            <span className={fs.dockTime}>
               <span className="num">{formatUtc(time)}</span>
-            </div>
+            </span>
             <span className={st.grow} />
             {metrics?.bestWindow && (
-              <Button variant="secondary" onClick={() => timelapseTo(metrics.bestWindow!.start)}>
-                Jump to best
-              </Button>
+              <button type="button" className={fs.dockLink} onClick={() => setTime(metrics.bestWindow!.start)}>
+                <Icon name="sun" size={14} /> Jump to best
+              </button>
             )}
-            <Button variant="secondary" leadingIcon="plus" icon={null} to={missionUrl.chooseSite([site.id])}>
-              Compare
-            </Button>
+            <span className={fs.explainUp}>
+              <Explain id="best-window" />
+            </span>
+            <Link className={fs.dockLink} to={missionUrl.chooseSite([site.id])}>
+              <Icon name="plus" size={14} /> Compare
+            </Link>
+            <button type="button" className={fs.dockLink} onClick={() => setVerify(true)}>
+              <Icon name="orbit" size={14} /> Check against JPL Horizons
+            </button>
+            {sky && <SourceBadge source={sky.source} />}
           </div>
           {report ? (
-            <SkyTimeline
-              size="full"
-              label={`Timeline for ${site.name}`}
-              start={from}
-              end={to}
-              sunWindows={report.sunWindows}
-              earthWindows={report.earthWindows}
-              highlight={metrics?.bestWindow}
+            <StandTimeline
+              from={from}
+              to={to}
+              samples={report.samples}
+              stepMinutes={report.stepMinutes}
               now={time}
-              onSelectTime={(t) => timelapseTo(t)}
-              onScrub={setTime}
+              best={metrics?.bestWindow ?? null}
+              onSelect={setTime}
+              onScrubStart={pauseClock}
+              slim
             />
           ) : (
             <LoadingState compact />
           )}
-          <div className={st.timelineFoot}>
-            <Button variant="ghost" icon={null} leadingIcon="check" onClick={() => setVerify(true)}>
-              Verify with JPL Horizons
-            </Button>
-            {sky && <SourceBadge source={sky.source} />}
-          </div>
         </section>
       </PeekPanel>
 

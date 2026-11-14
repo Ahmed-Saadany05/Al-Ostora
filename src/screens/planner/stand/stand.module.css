@@ -56,6 +56,9 @@
   top: var(--space-5);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 .launch {
   position: absolute;
@@ -83,20 +86,34 @@
   color: var(--color-text);
   font: inherit;
   font-size: var(--text-xs);
-  cursor: default;
+  cursor: pointer;
   transition:
-    opacity var(--duration-base) var(--ease-out),
-    transform var(--duration-base) var(--ease-out),
-    border-color var(--duration-base) var(--ease-out);
+    border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
+}
+.tab:hover,
+.open .tab {
+  border-color: var(--color-line-strong);
 }
 .tab:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-/* Open: the tab steps aside for its panel (it keeps its box, so the hover doesn't drop). */
-.peek.open .tab {
-  opacity: 0;
-  transform: scale(0.96);
+.pinned .tab {
+  background: var(--color-surface-raised);
+}
+.pinMark {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: var(--border);
+  color: var(--color-text-muted);
+}
+.pinned .pinMark {
+  color: var(--color-text);
+  border-color: var(--color-line-strong);
 }
 .tabStack {
   display: flex;
@@ -113,16 +130,7 @@
 }
 .tabStrip {
   display: block;
-  width: 168px;
-}
-.bottom .tab {
-  gap: var(--space-3);
-  padding: 5px var(--space-3);
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.45);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.02em;
-  color: var(--color-text-muted);
+  width: 220px;
 }
 
 .panel {
@@ -153,17 +161,28 @@
   border-radius: var(--radius-md);
 }
 .right .panel {
-  right: 0;
+  right: calc(100% + var(--space-3));
   top: -40px;
   width: 340px;
-  max-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 200px);
+  max-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 220px);
   overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
   transform: translateX(calc(100% + 120px));
 }
-.right .panel::-webkit-scrollbar {
-  display: none;
+/* Aser: while peeking (hover / focus, not pinned) the small tab fades away and the cards take its
+   place at the edge, so the same numbers aren't shown twice. The tab stays in the layout (only
+   invisible), so the pointer never "leaves" and the panel doesn't flicker. Pinned keeps the tab, so
+   it can be clicked to unpin. */
+.right .tab {
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+}
+.right.open:not(.pinned) .tab {
+  opacity: 0;
+}
+.right.open:not(.pinned) .panel {
+  right: 0;
 }
 
 /* Left edge: mirror of the right. */
@@ -175,7 +194,7 @@
   border-radius: var(--radius-md);
 }
 .left .panel {
-  left: 0;
+  left: calc(100% + var(--space-3));
   top: -60px;
   width: 340px;
   transform: translateX(calc(-100% - 120px));
@@ -189,7 +208,7 @@
 }
 .bottom .panel {
   left: 50%;
-  bottom: 0;
+  bottom: calc(100% + var(--space-3));
   width: min(1100px, calc(100vw - 2 * var(--gutter)));
   transform: translate(-50%, calc(100% + 80px));
 }
@@ -200,15 +219,13 @@
 /* ---------------------------------------------------------------- cards */
 
 .card {
+  /* No box (Aser): a soft dark fade behind the text so it stays readable over the 3D Moon. */
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  box-shadow: var(--shadow-panel);
+  border-radius: 24px;
+  background: radial-gradient(130% 120% at 50% 50%, color-mix(in srgb, var(--color-surface) 78%, transparent), transparent 80%);
 }
 .cardHead {
   display: flex;
@@ -366,15 +383,13 @@
 /* ---------------------------------------------------------------- timeline panel */
 
 .timeline {
+  /* Slim time dock (Aser): no card — a soft dark fade under the controls so they read over the Moon. */
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--color-glass);
-  backdrop-filter: var(--blur-glass);
-  box-shadow: var(--shadow-panel);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-2);
+  border-radius: 28px;
+  background: radial-gradient(120% 140% at 50% 100%, color-mix(in srgb, var(--color-surface) 85%, transparent), transparent 75%);
 }
 .timelineHead,
 .timelineFoot {

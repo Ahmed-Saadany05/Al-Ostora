@@ -174,14 +174,24 @@ export function computeMetrics(
   const darknessRaw = 100 * clamp(1 - longestNightH / p.maxDarknessH, 0, 1);
 
   // Must-pass gates at landing.
-  const { ms: landingMs, basis } = landingOf(p, fromMs);
-  const atLanding = skyAt(landingMs);
-  const gates = {
-    sunAtLanding: atLanding.sunVisible,
-    earthAtLanding: atLanding.earthVisible,
-    landingTime: iso(landingMs),
-    basis,
-  };
+  let { ms: landingMs, basis } = landingOf(p, fromMs);
+  let gates: EngineMetrics['gates'];
+  if (basis === 'range-start' && p.gatesAt === 'best-window') {
+    basis = 'best-window';
+    if (best) {
+      // A minute inside the window (its start is refined to ±15 s), never past its end.
+      landingMs = Math.min(best[0] + 60_000, (best[0] + best[1]) / 2);
+      const s = skyAt(landingMs);
+      gates = { sunAtLanding: s.sunVisible, earthAtLanding: s.earthVisible, landingTime: iso(landingMs), basis };
+    } else {
+      // No moment with Sun AND Earth together: no landing in this range passes.
+      landingMs = fromMs;
+      gates = { sunAtLanding: false, earthAtLanding: false, landingTime: iso(fromMs), basis };
+    }
+  } else {
+    const atLanding = skyAt(landingMs);
+    gates = { sunAtLanding: atLanding.sunVisible, earthAtLanding: atLanding.earthVisible, landingTime: iso(landingMs), basis };
+  }
 
   const w = p.scoreWeights;
   const wSum = w.power + w.comms + w.darkness;
@@ -206,9 +216,12 @@ export function computeMetrics(
     },
   ];
   const gateOk = gates.sunAtLanding && gates.earthAtLanding;
-  if (!gates.sunAtLanding)
+  const noWindow = gates.basis === 'best-window' && !best;
+  if (noWindow)
+    breakdown.push({ label: 'No landing window', points: 0, reason: 'No moment in these dates with the Sun AND Earth in view together' });
+  else if (!gates.sunAtLanding)
     breakdown.push({ label: 'Sun at landing', points: 0, reason: 'No sunlight at the landing time: the lander cannot charge' });
-  if (!gates.earthAtLanding)
+  if (!noWindow && !gates.earthAtLanding)
     breakdown.push({ label: 'Earth at landing', points: 0, reason: 'Earth is not in view at the landing time: no direct link home' });
   const matchScore = gateOk ? Math.round(breakdown.reduce((s, l) => s + l.points, 0)) : 0;
   for (const l of breakdown) l.points = Math.round(l.points * 10) / 10; // 1 decimal for display

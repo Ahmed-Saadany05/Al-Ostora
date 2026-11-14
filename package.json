@@ -12,7 +12,8 @@
     "test": "vitest run src/engine src/screens/home",
     "horizons:download": "node scripts/horizons/download.mjs",
     "horizons": "node scripts/horizons/compute.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "terrain": "node scripts/terrain/export.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.5",

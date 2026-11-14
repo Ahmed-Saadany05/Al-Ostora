@@ -531,8 +531,3 @@
     opacity: 0;
   }
 }
-
-/* Sector descriptions are body text: normal width. */
-.sectorText > span {
-  font-stretch: var(--stretch-body);
-}
