@@ -36,6 +36,7 @@ async function follow(page: Page, clicks: string[]) {
 
 for (const vp of VIEWPORTS.slice(0, 3)) {
   test(`briefing at ${vp.name} [${MODE}]: every beat of every branch, nothing overlaps`, async ({ browser }) => {
+    test.setTimeout(600_000); // fourteen beats, each a fresh Home → Begin → briefing
     // reduced motion skips the flight; the flight itself is recorded separately
     const { ctx, page, errors } = await newPage(browser, vp, { reduced: true });
     for (const beat of BRIEFING(LIVE)) {
@@ -180,6 +181,8 @@ for (const vp of VIEWPORTS) {
     await shot(page, vp.name, 'touchdown');
     if (!narrow) {
       expect(await cardAudit(page, 'stage'), `${vp.name} touchdown`).toEqual([]);
+      // on the live provider the story comes first ("Got it" leads to the close); elsewhere the close is the first card
+      if (MODE === 'live') await click(page, 'Got it');
       await expect(page.getByRole('button', { name: "What's real here?" })).toBeVisible();
       await click(page, "What's real here?");
       await expect(card).toContainText("I'm made up, and so is Ostora-1.");

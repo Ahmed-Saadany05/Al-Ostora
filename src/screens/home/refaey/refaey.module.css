@@ -220,7 +220,9 @@
   .cardStage {
     bottom: calc(var(--space-7) + var(--space-4)); /* 64 px */
   }
-  /* the compass letters ride the horizon just above the card's zone: one size down keeps the card clear of them */
+}
+/* The compass letters and the "Nearby" tab bound the card's zone from above: on narrow or short screens the live card (three lines of talk) goes one size down to stay clear of them. */
+@media (max-width: 1199px), (max-height: 780px) {
   .cardStage .cardText,
   .cardStage .cardAction {
     font-size: var(--text-xs);
