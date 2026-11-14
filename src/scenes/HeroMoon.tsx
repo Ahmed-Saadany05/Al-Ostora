@@ -30,6 +30,7 @@ import { createMoonLight } from './globe/moonShading';
 import { STEP1_NIGHT_FLOOR } from './globe/pickerTypes';
 import { OPENING_VIEW, pickerDisc, preloadPickerGlobe, setMoonHandoff, type Rect } from './globe/moonHandoff';
 import { latLonToVec } from './lib/moonFrame';
+import { PARK_BOB_PX, PARK_EXPOSURE, PARK_NIGHT_FLOOR, PARK_SECONDS, PARK_SPIN, PARK_SUN, REWIND_DIAMETER_PER_HEIGHT, REWIND_SECONDS, REWIND_SPIN_MAX, parkedDisc, UNPARK_SECONDS } from './parkMath';
 
 export interface HeroMoonPin {
   id: string;
@@ -58,6 +59,12 @@ export interface HeroMoonHandle {
   playLightSweep(seconds: number): void;
   /** Fly the Moon into Step 1 and open it ("Begin the journey"). */
   enterStep1(): void;
+  /** Zoom out to the whole sphere and glide it to the bottom-right corner, where it floats. `dy` compensates a page-level vertical shift of this canvas. Resolves when settled. */
+  park(dy?: number): Promise<void>;
+  /** Float stops; the Moon glides back to exactly its Home framing. Resolves when done. */
+  unpark(): Promise<void>;
+  /** From parked: the whole Moon glides to the centre and grows while spinning backwards, faster and faster. Does not unpark and asks for no new tiles. */
+  rewind(): Promise<void>;
 }
 
 /** Where the top of the dome sits, as a fraction of the canvas height measured from the top. */
@@ -128,6 +135,9 @@ type Controls = {
   dive: () => void;
   sweep: (sec: number) => void;
   fly: (target: { x: number; y: number; radius: number; distance: number }, done: (snapshot: string | null) => void) => void;
+  park: (dy: number, instant: boolean) => Promise<void>;
+  unpark: (instant: boolean) => Promise<void>;
+  rewind: () => Promise<void>;
 };
 
 function Scene({
@@ -151,6 +161,8 @@ function Scene({
   const tmp = useMemo(() => new Vector3(), []);
   const sweep = useRef({ p: startDark ? 0 : 1 });
   const spinAngle = useRef(0);
+  // Parking: p 0 = Home framing (exactly), 1 = parked. Home's own state is never touched, so p back at 0 is the Home frame again.
+  const park = useRef({ p: 0, dy: 0, spin: 0, floating: false, t: 0, rw: 0, rate: PARK_SPIN });
   const light = useMemo(createMoonLight, []);
   const ready = useRef(false);
   const flight = useRef<{
@@ -189,6 +201,18 @@ function Scene({
     (camera as PerspectiveCamera & { manual?: boolean }).manual = true;
   }, [camera]);
 
+  if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__moonState = () => ({
+      sun: light.uSun.value.toArray().map((v) => +v.toFixed(5)),
+      exposure: +light.uExposure.value.toFixed(5),
+      floor: +light.uNightFloor.value.toFixed(5),
+      cam: [camera.position.x, camera.position.y, camera.position.z].map((v) => +v.toFixed(4)),
+      fov: +camera.fov.toFixed(5),
+      zoom: camera.zoom,
+      view: camera.view ? [camera.view.offsetX, camera.view.offsetY].map((v) => +v.toFixed(3)) : null,
+      park: { p: park.current.p, spin: +park.current.spin.toFixed(5) },
+      homeSpin: +(spinAngle.current).toFixed(5),
+    });
   controls.current = {
     dive: () => {
       gsap.to(camera, {
@@ -204,6 +228,43 @@ function Scene({
       if (sec <= 0) sweep.current.p = 1;
       else gsap.to(sweep.current, { p: 1, duration: sec, ease: 'power2.inOut' });
     },
+    park: (dy, instant) =>
+      new Promise<void>((resolve) => {
+        const pk = park.current;
+        gsap.killTweensOf(pk);
+        pk.dy = dy;
+        pk.floating = false;
+        const done = () => {
+          pk.p = 1;
+          pk.floating = !instant;
+          resolve();
+        };
+        if (instant) return done();
+        gsap.to(pk, { p: 1, duration: PARK_SECONDS, ease: 'power2.inOut', onComplete: done });
+      }),
+    unpark: (instant) =>
+      new Promise<void>((resolve) => {
+        const pk = park.current;
+        gsap.killTweensOf(pk);
+        pk.floating = false;
+        const turn = ((((pk.spin + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI; // the way back round, never more than half a turn
+        const done = () => {
+          pk.p = 0;
+          pk.spin = 0;
+          resolve();
+        };
+        if (instant) return done();
+        pk.spin = turn;
+        gsap.to(pk, { p: 0, spin: 0, duration: UNPARK_SECONDS, ease: 'power2.inOut', onComplete: done });
+      }),
+    rewind: () =>
+      new Promise<void>((resolve) => {
+        const pk = park.current;
+        gsap.killTweensOf(pk);
+        pk.floating = false;
+        // angular velocity: from the parked rate (forwards) to 180°/s backwards, ease-in
+        gsap.to(pk, { rw: 1, rate: -REWIND_SPIN_MAX, duration: REWIND_SECONDS, ease: 'power2.in', onComplete: () => resolve() });
+      }),
     fly: (target, done) => {
       if (flight.current || !orient.current) return;
       gsap.killTweensOf(sweep.current);
@@ -263,14 +324,36 @@ function Scene({
     }
 
     // Home pose: dome lean, south pole at the crest, slow spin.
+    const pk = park.current;
     if (autoRotate) spinAngle.current += dt * SPIN_RATE;
+    // Parked: it turns slowly on its own axis (2°/s); on the way back the extra turn is wound away to exactly zero.
+    if (pk.floating) pk.spin += dt * PARK_SPIN;
+    else if (pk.rw > 0) pk.spin += dt * pk.rate;
     if (o) {
       q.lean.setFromEuler(q.e.set(LEAN_TOWARD_VIEWER, 0, 0));
       q.tilt.setFromEuler(q.e.set(0, 0, tiltTowardSouthPole ? Math.PI : 0));
-      q.spin.setFromEuler(q.e.set(0, spinAngle.current, 0));
+      q.spin.setFromEuler(q.e.set(0, spinAngle.current + pk.spin, 0));
       o.quaternion.copy(q.lean).multiply(q.tilt).multiply(q.spin);
     }
-    if (camera.zoom === 1 || !gsap.isTweening(camera)) applyView(camera, homeView(), width, height);
+    if (camera.zoom === 1 || !gsap.isTweening(camera)) {
+      const home = homeView();
+      if (pk.p <= 0) applyView(camera, home, width, height);
+      else {
+        // Between Home and parked: size and distance on a log scale (the Moon recedes), the centre slides. Re-placed every frame, so a resize is instant.
+        const disc = parkedDisc(width, height);
+        if (pk.floating) pk.t += dt;
+        const bob = pk.floating && pk.p >= 1 ? PARK_BOB_PX * Math.sin((2 * Math.PI * pk.t) / 5) : 0;
+        const to: View = { d: home.d, r: disc.r, cx: disc.cx, cy: disc.cy - pk.dy + bob };
+        const e = pk.p;
+        const parkedView: View = { d: home.d, r: home.r * Math.pow(to.r / home.r, e), cx: home.cx + (to.cx - home.cx) * e, cy: home.cy + (to.cy - home.cy) * e };
+        if (pk.rw > 0) {
+          // rewind: from the parked spot to the centre of the screen, growing; the whole sphere stays in view
+          const rr = (REWIND_DIAMETER_PER_HEIGHT * height) / 2;
+          const k = pk.rw;
+          applyView(camera, { d: home.d, r: parkedView.r * Math.pow(rr / parkedView.r, k), cx: parkedView.cx + (width / 2 - parkedView.cx) * k, cy: parkedView.cy + (height / 2 - pk.dy - parkedView.cy) * k }, width, height);
+        } else applyView(camera, parkedView, width, height);
+      }
+    }
 
     // World-space light direction for the airless shading, plus the intro fade-in.
     const sp = sweep.current.p;
@@ -281,6 +364,12 @@ function Scene({
     const lit = Math.min(1, sp * 1.5);
     light.uExposure.value = EXPOSURE * (RISE_EXPOSURE + (1 - RISE_EXPOSURE) * lit);
     light.uNightFloor.value = RISE_FLOOR + (0.035 - RISE_FLOOR) * lit;
+    if (pk.p > 0) {
+      // Parked: a bright, three-quarter-lit sphere (light toward the camera side + a soft fill). Home's light is blended back out by the same p, so p = 0 is exactly Home's.
+      light.uSun.value.lerp(tmp.set(PARK_SUN.x, PARK_SUN.y, PARK_SUN.z).normalize(), pk.p).normalize();
+      light.uExposure.value += (PARK_EXPOSURE - light.uExposure.value) * pk.p;
+      light.uNightFloor.value += (PARK_NIGHT_FLOOR - light.uNightFloor.value) * pk.p;
+    }
 
     // Project the pin to CSS pixels so the page can draw it as real, focusable DOM.
     if (pinAnchor.current && onPinScreen) {
@@ -310,6 +399,7 @@ function Scene({
         <mesh
           onClick={(e) => {
             e.stopPropagation();
+            if (park.current.p > 0) return; // parked: the Moon is scenery while Refaey talks
             onMoonClick();
           }}
           onPointerOver={() => (gl.domElement.style.cursor = 'pointer')}
@@ -322,6 +412,8 @@ function Scene({
     </group>
   );
 }
+
+const osReduced = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: string }>(function HeroMoon({ label, ...props }, ref) {
   const controls = useRef<Controls | null>(null);
@@ -368,6 +460,9 @@ export const HeroMoon = forwardRef<HeroMoonHandle, HeroMoonProps & { label: stri
       diveToSouthPole: () => controls.current?.dive(),
       playLightSweep: (sec) => controls.current?.sweep(sec),
       enterStep1: enter,
+      park: (dy = 0) => controls.current?.park(dy, !motion || osReduced()) ?? Promise.resolve(),
+      unpark: () => controls.current?.unpark(!motion || osReduced()) ?? Promise.resolve(),
+      rewind: () => controls.current?.rewind() ?? Promise.resolve(),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [motion],
