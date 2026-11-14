@@ -75,6 +75,21 @@ The lines he says when poked ("Low gravity. Everything's a trampoline.", "That t
 
 ## Art and AI use (for `/about`)
 
-Refaey, the animated astronaut (idle, walking, hop) and the busts, are 3D renders of an original character: **"Refaey's 3D renders were generated with [TOOL — fill in before 13:00] (original character)."** The frames were cleaned and cut into animation strips with `refaey/art/tools/make_sprites.py` (sources in `refaey/art/source/`; WhatsApp-compressed contact sheets, so the edges were re-feathered and the colour fringe replaced; measurements in `art/tools/last-run.json`). The older flat illustrations (Claude Design) are no longer used anywhere.
+Refaey, the animated astronaut (idle, walking, hop) and the busts, are 3D renders of an original character: **"Refaey's 3D renders were generated with GPT-6 Astra (original character)."** The frames were cleaned and cut into animation strips with `refaey/art/tools/make_sprites.py` (sources in `refaey/art/source/`; WhatsApp-compressed contact sheets, so the edges were re-feathered and the colour fringe replaced; measurements in `art/tools/last-run.json`). The older flat illustrations (Claude Design) are no longer used anywhere.
 
 His lines were drafted with Claude and then checked by the team against the sources listed above.
+
+## Past-missions card photos (`src/screens/journey/photos.ts`, files in `public/mission-photos/`)
+
+Each page was opened and the image, mission and credit line checked. Images are cropped to 16:10 and re-encoded as WebP (472 KB in all); nothing is tinted.
+
+| Mission | Image | Credit | Page it was confirmed on |
+|---|---|---|---|
+| Apollo 11 | AS11-40-5878, a bootprint in the lunar soil (20 July 1969) | NASA | https://www.nasa.gov/image-detail/amf-as11-40-5878/ (image from images-assets.nasa.gov) |
+| Apollo 15 | AS15-88-11901, "Rover alone looking north", Mount Hadley at the upper right | NASA | https://stars.library.ucf.edu/nasa-photographs-volume-2/70 (catalogued by UCF STARS; the image file is NASA's, from images-assets.nasa.gov) |
+| Lunokhod 1 | LROC NAC M175502049RE: the rover in its final parking place, Mare Imbrium, with its tracks (cropped to the rover; the lander is outside the crop) | NASA/GSFC/Arizona State University | https://lroc.im-ldi.com/images/402 |
+| Chang'e 4 | The lander imaged by the Yutu-2 rover (3 January 2019 landing) | CNSA/CLEP/NAOC | https://www.dlr.de/en/images/2020/3/chang-e-4-lunar-lander-imaged-by-the-yutu-2-rover |
+| Chandrayaan-3 | Vikram as seen by Pragyan's Navigation Camera, 30 August 2023 (black and white as released) | ISRO | https://www.isro.gov.in/chandrayaan3_gallery.html (file `R_img4`; ISRO's X post was not needed) |
+| Athena (IM-2) | The lander on its side in a crater, captured 6 March 2025 | Intuitive Machines (via NASA) | https://www.nasa.gov/?p=831743 |
+
+Substitutions and limits: the Apollo 15 page is a UCF library record, not a nasa.gov page, so the file came from NASA's image library under the same id. The LROC page's picture is 1000 px, so that card's photo is 620 px wide (cropped, not enlarged). The Athena page's caption says the PRIME-1 drill suite is what sits between the two legs; it does not mention Earth. Earth is visible in the picture itself (a small bright dot above the horizon), so the alt text says only "Earth in the background".
