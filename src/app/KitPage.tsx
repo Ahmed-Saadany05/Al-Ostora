@@ -69,7 +69,7 @@ export function KitPage() {
             A little closer to the
           </DisplayHeading>
           <p>
-            Body text in DM Sans. Numbers always in mono: <span className="num">+1.88°</span>,{' '}
+            Body text in Saira. Numbers always in mono: <span className="num">+1.88°</span>,{' '}
             <span className="num">29.53 d</span>.
           </p>
         </div>

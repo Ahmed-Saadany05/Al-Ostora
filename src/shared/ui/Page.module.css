@@ -18,6 +18,7 @@
 
 .note {
   padding: var(--space-3) var(--space-4);
+  font-stretch: var(--stretch-body); /* a sentence or two of body text */
   border: 1px dashed var(--color-line-strong);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);

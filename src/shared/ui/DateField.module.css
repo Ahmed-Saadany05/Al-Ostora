@@ -6,7 +6,6 @@
 .label {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
@@ -43,5 +42,6 @@
 
 .hint {
   font-size: var(--text-xs);
+  font-stretch: var(--stretch-body);
   color: var(--color-text-faint);
 }

@@ -21,6 +21,7 @@
 }
 
 .panel {
+  font-stretch: var(--stretch-body); /* explainer text is body text: normal width */
   position: absolute;
   top: calc(100% + 8px);
   left: 0;

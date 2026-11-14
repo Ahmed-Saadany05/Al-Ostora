@@ -2,12 +2,14 @@
   font-size: var(--text-2xs);
   font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+  font-stretch: var(--stretch-ui); /* a <p>, but a label, not body text */
   color: var(--color-text-muted);
   line-height: 1.4;
 }
 
 .display {
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-ui);
   font-weight: var(--weight-heading);
   letter-spacing: var(--tracking-display);
   line-height: var(--leading-tight);
@@ -25,12 +27,11 @@
 }
 
 .accent {
+  /* One family now: the accent is the same weight, size and tracking as the heading around it. */
   font-family: var(--font-display);
   font-style: normal;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  /* Instrument Serif runs small next to the sans — nudge it up. */
-  font-size: 1.08em;
+  font-weight: inherit;
+  letter-spacing: inherit;
 }
 
 .center {

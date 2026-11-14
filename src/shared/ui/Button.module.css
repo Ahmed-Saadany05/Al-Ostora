@@ -7,7 +7,7 @@
   border: 1px solid transparent;
   background: transparent;
   font-weight: var(--weight-medium);
-  letter-spacing: -0.005em;
+  letter-spacing: var(--tracking-label);
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
@@ -40,17 +40,16 @@
   gap: var(--space-5);
 }
 
-/* Primary: outline pill on black, fills white on hover (as in the hero). */
+/* Primary: solid text-primary with near-black text. Hover steps down to text-secondary. */
 .primary {
-  border-color: var(--color-line-strong);
-  color: var(--color-text);
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: var(--blur-glass);
+  border-color: var(--color-text);
+  color: var(--color-text-inverse);
+  background: var(--color-text);
 }
 .primary:hover:not(:disabled) {
-  background: var(--color-text);
+  background: var(--color-text-muted);
+  border-color: var(--color-text-muted);
   color: var(--color-text-inverse);
-  border-color: var(--color-text);
 }
 
 .secondary {

@@ -58,14 +58,13 @@
 }
 .name {
   font-size: 1.75rem;
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.04em;
+  font-weight: var(--weight-heading);
+  letter-spacing: var(--tracking-display);
   line-height: 1;
 }
 .tagline {
   font-size: 0.625rem;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
 }
 
@@ -137,7 +136,6 @@
   font-size: var(--text-2xs);
   font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-muted);
 }
 .status::before {

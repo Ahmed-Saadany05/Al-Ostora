@@ -94,8 +94,7 @@
   left: var(--space-4);
   top: var(--space-3);
   font-size: var(--text-2xs);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-faint);
   pointer-events: none;
 }
@@ -187,7 +186,6 @@
 .bodyTag b {
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   font-weight: var(--weight-medium);
 }
 .sun .bodyTag b {
@@ -209,7 +207,7 @@
   bottom: var(--space-3);
   transform: translateX(-50%);
   font-size: var(--text-2xs);
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
   pointer-events: none;
 }
@@ -220,7 +218,6 @@
   transform: translateX(-50%);
   font-size: var(--text-2xs);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-faint);
   pointer-events: none;
 }
