@@ -21,6 +21,7 @@ import {
   StepHeader,
   SkyTimeline,
 } from '@/shared/ui';
+import { RefaeyMoment } from '@/screens/home/refaey';
 import { useLunarDay } from './useLunarDay';
 import s from './flow.module.css';
 
@@ -193,6 +194,7 @@ export function ComparePage() {
         }
       />
       {byDates && <p className={s.cmpHint}>Pick a lunar day: “Stand here” opens its best moment, or click any point on a timeline.</p>}
+      {byDates && <RefaeyMoment id="moment-compare" placement="row" />}
 
       <div className={s.cmpGrid}>
         {candidates.map((c, i) => (
