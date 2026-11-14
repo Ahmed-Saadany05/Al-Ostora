@@ -94,8 +94,8 @@ const AI_USE: { who: string; tool: string; uses: string }[] = [
   },
   {
     who: 'Hady (Home, explainers, Refaey)',
-    tool: 'Claude Code (Sonnet 5.5, Opus 5.5 as advisor); Claude (Opus 5.5, chat); Claude Design; an AI 3D image tool (name to be confirmed)',
-    uses: "Claude Code: writing the Home page, Refaey's conversations, the past-missions page, his animations and the tests. Claude chat: planning, writing the Claude Code prompts, fact-checking against NASA/JPL sources, and drafting Refaey's lines (checked against the sources). Refaey's images are AI-made: his flat drawings with Claude Design, his 3D renders and animation frames with an AI 3D image tool (original character, not based on anyone); they carry an 'AI' label in the app. Not AI: every mission fact and number (JPL Horizons, NASA and agency pages) and the mission card photos (real NASA/agency photos, credited on each card).",
+    tool: 'Claude Code (Sonnet 5.5, Opus 5.5 as advisor); Claude (Opus 5.5, chat); Claude Design; GPT-6 Astra',
+    uses: "Claude Code: writing the Home page, Refaey's conversations, the past-missions page, his animations and the tests. Claude chat: planning, writing the Claude Code prompts, fact-checking against NASA/JPL sources, and drafting Refaey's lines (checked against the sources). Refaey's images are AI-made: his flat drawings with Claude Design, his 3D renders and animation frames with GPT-6 Astra (original character, not based on anyone); they carry an 'AI' label in the app. Not AI: every mission fact and number (JPL Horizons, NASA and agency pages) and the mission card photos (real NASA/agency photos, credited on each card).",
   },
 ];
 
