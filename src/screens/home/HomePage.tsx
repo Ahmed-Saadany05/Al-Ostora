@@ -20,7 +20,7 @@ import { shouldPlayIntro, useIntro } from './useIntro';
 import s from './HomePage.module.css';
 
 /** The Shackleton pin on the crest (hover/focus card, Demo label). It stays inert until the intro reveals it. */
-const SHOW_SITE_PIN = true;
+const SHOW_SITE_PIN = false;
 
 /** Clear space between the buttons and the Moon's lit edge (the brief asks for at least 32 px; the pin label sits in it). */
 const MOON_GAP_PX = 48;
