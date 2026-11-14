@@ -82,7 +82,7 @@ export function RefaeyActor({ height, walkIn = false, clickable = false }: { hei
     const ro = new ResizeObserver(start);
     ro.observe(b);
     return () => ro.disconnect();
-  }, [draw, willWalkIn]);
+  }, [draw, willWalkIn, motionOn]); // turning motion off puts him back on idle frame 1
 
   useEffect(() => {
     if (!motionOn || !visible) return; // frozen on whatever frame is showing (idle frame 1 when motion is off)
