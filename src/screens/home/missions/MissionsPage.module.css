@@ -231,3 +231,20 @@
   font-weight: var(--weight-medium);
   color: var(--color-text);
 }
+
+/* What he says when poked replaces the line in his text area for two seconds. */
+.quipHost {
+  position: relative;
+}
+.quipHost[data-quip='true'] > :not(.quipLine) {
+  visibility: hidden;
+}
+.quipLine {
+  position: absolute;
+  inset: 0 auto auto 0;
+  margin: 0;
+  max-width: min(100%, 44em);
+  font-size: var(--say);
+  line-height: 1.35;
+  color: var(--color-text);
+}

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useApp } from '@/shared/store/app';
-import { RefaeyActor } from './RefaeyActor';
+import { RefaeyActor, useQuip } from './RefaeyActor';
 import { DialogueText } from './DialogueText';
 import { REFAEY_COPY } from './copy';
 import { advance, isSideNode } from './conversation';
@@ -32,6 +32,7 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
   const root = useRef<HTMLDivElement>(null);
   const [trail, setTrail] = useState<string[]>([firstId]);
   const [leaving, setLeaving] = useState(false);
+  const quip = useQuip();
   const nodeId = trail[trail.length - 1];
   const backTo = trail[trail.length - 2];
 
@@ -70,7 +71,14 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
       <div className={s.briefingActor}>
         <RefaeyActor height="var(--actor-h)" walkIn clickable />
       </div>
-      <DialogueText className={s.briefingText} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
+      <div className={[s.briefingText, s.quipHost].join(' ')} data-quip={quip !== null}>
+        <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
+        {quip && (
+          <p className={s.quipLine} role="status" style={{ '--say': 'clamp(var(--text-lg), 1.875vw, var(--text-2xl))' } as React.CSSProperties}>
+            {quip}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

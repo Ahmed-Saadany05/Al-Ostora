@@ -45,6 +45,7 @@
   padding-bottom: var(--space-4);
 }
 .briefingText {
+  --say: clamp(var(--text-lg), 1.875vw, var(--text-2xl));
   align-self: end;
   /* the block's bottom sits level with his chest and it grows upward, so a long beat never runs off the screen */
   margin-bottom: calc(var(--actor-h) * 0.36);
@@ -281,15 +282,21 @@
   will-change: transform;
   pointer-events: none;
 }
-/* What he says when poked: two seconds, above his head, no box. */
-.quip {
+/* What he says when poked: two seconds, in his text area, in place of the line that is there (which keeps its space). */
+.quipHost {
+  position: relative;
+}
+.quipHost[data-quip='true'] > :not(.quipLine) {
+  visibility: hidden;
+}
+.quipLine {
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin: 0 0 var(--space-2);
-  width: max-content;
-  max-width: 24em;
-  font-size: var(--text-md);
+  inset: 0 auto auto 0;
+  margin: 0;
+  font-size: var(--say);
   line-height: 1.35;
-  color: var(--color-text-muted);
+  color: var(--color-text);
+}
+.talkFill {
+  width: 100%;
 }

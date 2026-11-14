@@ -45,6 +45,13 @@ function useMayAnimate() {
  * under lunar gravity. Motion off (the app's toggle or the system setting) shows the first idle frame, still.
  * The box takes its height from `height` (any CSS length) and is aria-hidden: everything it means is in the text.
  */
+/** What he is saying because he was poked (null most of the time): a page shows it in his text area for two seconds. */
+export function useQuip() {
+  const [line, setLine] = useState<string | null>(null);
+  useEffect(() => refaeyActor.onSay(setLine), []);
+  return line;
+}
+
 export function RefaeyActor({ height, walkIn = false, clickable = false }: { height: string; walkIn?: boolean; clickable?: boolean }) {
   const { motionOn, visible } = useMayAnimate();
   const walkedIn = useRefaey((st) => st.walkedIn);
@@ -53,7 +60,6 @@ export function RefaeyActor({ height, walkIn = false, clickable = false }: { hei
   const stage = useRef<HTMLDivElement>(null);
   const hopRequested = useRef(false);
   const lastHop = useRef(0);
-  const [quip, setQuip] = useState<string | null>(null);
   const quipIndex = useRef(0);
   const willWalkIn = walkIn && !walkedIn && motionOn;
 
@@ -153,17 +159,12 @@ export function RefaeyActor({ height, walkIn = false, clickable = false }: { hei
     if (now - lastHop.current < HOP_COOLDOWN_MS) return;
     lastHop.current = now;
     refaeyActor.hop();
-    setQuip(QUIPS[quipIndex.current++ % QUIPS.length]);
-    window.setTimeout(() => setQuip(null), QUIP_MS);
+    refaeyActor.say(QUIPS[quipIndex.current++ % QUIPS.length]);
+    window.setTimeout(() => refaeyActor.say(null), QUIP_MS);
   };
 
   return (
     <div className={s.actorWrap}>
-      {quip && (
-        <p className={s.quip} role="status">
-          {quip}
-        </p>
-      )}
       <div
         ref={box}
         className={[s.actor, clickable && s.actorClickable].filter(Boolean).join(' ')}

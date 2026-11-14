@@ -11,7 +11,7 @@ import { useApp } from '@/shared/store/app';
 import { Button, Card, DisplayHeading, Icon, Lead } from '@/shared/ui';
 import { RefaeyBust } from '../refaey';
 import { refaeyActor } from '../refaey/actorBus';
-import { RefaeyActor } from '../refaey/RefaeyActor';
+import { RefaeyActor, useQuip } from '../refaey/RefaeyActor';
 import { FactsBadge } from '../refaey/FactsBadge';
 import { athenaVerdict, recordedTokens } from '../refaey/facts/display';
 import { REFAEY_COPY } from '../refaey/copy';
@@ -50,6 +50,7 @@ export function MissionsPage() {
   const callsign = useRefaey((st) => st.callsign);
   const lessons = useRefaey((st) => st.lessons);
   const learn = useRefaey((st) => st.learn);
+  const quip = useQuip();
   const context = useMemo(() => baseContext(callsign), [callsign]);
   const say = (text: string) => text.replaceAll('{callsign}', callsign);
   const mission = MISSIONS.find((m) => m.id === params.get('story')) ?? null;
@@ -168,7 +169,14 @@ export function MissionsPage() {
             </div>
             <div className={s.listBody}>
             <div className={s.idle}>
-              <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
+              <div className={s.quipHost} data-quip={quip !== null}>
+                <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
+                {quip && (
+                  <p className={s.quipLine} role="status">
+                    {quip}
+                  </p>
+                )}
+              </div>
               {allLearned && (
                 <Button variant="primary" size="md" to={missionUrl.chooseSite()}>
                   {say(HUB.plan)}
@@ -228,7 +236,12 @@ export function MissionsPage() {
                 <RefaeyBust mood={current?.mood ?? 'neutral'} size="var(--bust-inline)" />
               </div>
               <div className={s.say}>
-                <div ref={beat} tabIndex={-1} className={s.beat} aria-live="polite">
+                <div ref={beat} tabIndex={-1} className={[s.beat, s.quipHost].join(' ')} aria-live="polite" data-quip={quip !== null}>
+                  {quip && (
+                    <p className={s.quipLine} role="status">
+                      {quip}
+                    </p>
+                  )}
                   {current?.title && <p className={s.beatTitle}>{current.title}</p>}
                   {current?.lines.map((l) => (
                     <p key={l} className={s.beatText}>
