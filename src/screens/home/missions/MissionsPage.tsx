@@ -9,7 +9,9 @@ import { getProvider, useSites } from '@/shared/data';
 import { missionUrl } from '@/shared/mission';
 import { useApp } from '@/shared/store/app';
 import { Button, Card, DisplayHeading, Icon, Lead } from '@/shared/ui';
-import { ART, RefaeyBust } from '../refaey';
+import { RefaeyBust } from '../refaey';
+import { refaeyActor } from '../refaey/actorBus';
+import { RefaeyActor } from '../refaey/RefaeyActor';
 import { FactsBadge } from '../refaey/FactsBadge';
 import { athenaVerdict, recordedTokens } from '../refaey/facts/display';
 import { REFAEY_COPY } from '../refaey/copy';
@@ -120,7 +122,9 @@ export function MissionsPage() {
   // Finishing a story puts its lesson in the notebook.
   const finished = current?.learns && mission ? mission.lessonKey : null;
   useEffect(() => {
-    if (finished) learn(finished);
+    if (!finished) return;
+    learn(finished);
+    refaeyActor.hop(); // a lesson learned: he hops (only if he may move)
   }, [finished, learn]);
 
   const onReply = (rep: Reply) => {
@@ -159,8 +163,8 @@ export function MissionsPage() {
       <div ref={area} className={s.area}>
         {!mission ? (
           <div className={[s.grid, s.list].join(' ')}>
-            <div className={s.figure} aria-hidden>
-              <RefaeyBust mood="neutral" size="var(--fig-bust)" />
+            <div className={s.figure}>
+              <RefaeyActor height="var(--actor-h)" clickable />
             </div>
             <div className={s.listBody}>
             <div className={s.idle}>
@@ -216,8 +220,8 @@ export function MissionsPage() {
                 ))}
               </div>
             )}
-            <div className={s.figure} aria-hidden>
-              <img className={s.half} src={ART.pointing} width={596} height={560} alt="" draggable={false} />
+            <div className={s.figure}>
+              <RefaeyActor height="var(--actor-h)" clickable />
             </div>
             <div className={s.current}>
               <div className={s.inlineBust} aria-hidden>

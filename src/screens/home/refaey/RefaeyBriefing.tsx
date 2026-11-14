@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useApp } from '@/shared/store/app';
-import { RefaeyHalf } from './Refaey';
+import { RefaeyActor } from './RefaeyActor';
 import { DialogueText } from './DialogueText';
 import { REFAEY_COPY } from './copy';
 import { advance, isSideNode } from './conversation';
@@ -67,8 +67,8 @@ export function RefaeyBriefing({ onDone, firstId = 'b1' }: { onDone: (to: Briefi
   const skip = AT_END.has(nodeId) || isSideNode(nodeId) ? undefined : { label: 'Skip', onClick: () => setTrail([END]) };
   return (
     <div ref={root} className={s.briefing} inert={leaving}>
-      <div className={s.briefingArt} aria-hidden>
-        <RefaeyHalf />
+      <div className={s.briefingActor}>
+        <RefaeyActor height="var(--actor-h)" walkIn clickable />
       </div>
       <DialogueText className={s.briefingText} content={content} onReply={onReply} onCollapse={() => finish('step1')} skip={skip} />
     </div>

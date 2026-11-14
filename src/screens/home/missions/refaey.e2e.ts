@@ -45,7 +45,7 @@ for (const vp of VIEWPORTS.slice(0, 3)) {
       await shot(page, vp.name, `briefing-${beat.id}`);
       const g = await page.evaluate(() => {
         const R = (e: Element) => e.getBoundingClientRect();
-        const art = R(document.querySelector('[class*="_briefing_"] img')!);
+        const art = R(document.querySelector('[class*="_briefing_"] [class*="_actor_"]')!);
         const text = document.querySelector('section[role=dialog]')!;
         const t = R(text);
         const lines = [...text.querySelectorAll('[class*="_fade_"] [class*="_line_"]')].reduce((n, p) => n + Math.round(R(p).height / parseFloat(getComputedStyle(p).lineHeight)), 0);

@@ -1,9 +1,7 @@
 /* /missions. Kit tokens only. No new motion: the only animation is the opacity dissolve done in MissionsPage.tsx. */
 
 .root {
-  --fig: clamp(180px, 18vw, 260px); /* the half-body's column */
-  --fig-h: calc(var(--fig) * 560 / 596);
-  --fig-bust: calc(var(--fig) * 0.6);
+  --actor-h: clamp(220px, 34vh, 340px); /* the full-body sprite's height; its box reserves the width */
   --bust-inline: calc(var(--space-5) + var(--space-4)); /* 40 px */
   --say: clamp(var(--text-lg), 1.6vw, var(--text-xl));
   --say-lh: calc(var(--say) * 1.35);
@@ -175,7 +173,7 @@
 /* ---------------------------------------------------------------- desktop: the figure gets its own column */
 @media (min-width: 900px) {
   .grid {
-    grid-template-columns: var(--fig) minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr);
     column-gap: var(--space-6);
   }
   .list {
@@ -188,27 +186,17 @@
   .figure {
     display: block;
     grid-area: fig;
-    align-self: start;
+    align-self: end;
   }
   .list .figure {
-    display: grid;
-    justify-items: center;
-    padding-top: var(--space-2);
-  }
-  .half {
-    display: block;
-    width: var(--fig);
-    height: var(--fig-h);
-    /* cut flat at the waist: fade the cut away instead of showing a hard edge */
-    mask-image: linear-gradient(to bottom, var(--color-bg) 80%, transparent);
+    align-self: end;
   }
   .cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .current {
     grid-template-columns: minmax(0, 1fr);
-    /* the first line of the beat sits level with his fingertip (45% down the figure) */
-    padding-top: max(0px, calc(var(--fig-h) * 0.45 - var(--say-lh) / 2));
+    align-self: center;
   }
   .inlineBust {
     display: none;

@@ -29,6 +29,8 @@ interface RefaeyState {
   callsign: string;
   /** Which real landings Refaey has finished studying this session. */
   lessons: Partial<Record<Lesson, true>>;
+  /** He has walked in on the briefing's first beat (it happens once per session). */
+  walkedIn: boolean;
   /** The short introduction on a planner screen (for a visitor who skipped the briefing) has been shown. */
   introduced: boolean;
   /** Moments already shown this session, so they never repeat. */
@@ -37,6 +39,7 @@ interface RefaeyState {
   setCallsign: (callsign: string) => void;
   learn: (lesson: Lesson) => void;
   markIntroduced: () => void;
+  markWalkedIn: () => void;
   markSeen: (id: string) => void;
 }
 
@@ -47,13 +50,15 @@ export const useRefaey = create<RefaeyState>()(
       callsign: DEFAULT_CALLSIGN,
       lessons: {},
       introduced: false,
+      walkedIn: false,
       seen: {},
       markBriefed: () => set({ briefed: true }),
       setCallsign: (callsign) => set({ callsign }),
       learn: (lesson) => set((s) => ({ lessons: { ...s.lessons, [lesson]: true } })),
       markIntroduced: () => set({ introduced: true }),
+      markWalkedIn: () => set({ walkedIn: true }),
       markSeen: (id) => set((s) => ({ seen: { ...s.seen, [id]: true } })),
     }),
-    { name: 'refaey-seen', storage: createJSONStorage(storage), partialize: (s) => ({ seen: s.seen, briefed: s.briefed, callsign: s.callsign, lessons: s.lessons, introduced: s.introduced }) },
+    { name: 'refaey-seen', storage: createJSONStorage(storage), partialize: (s) => ({ seen: s.seen, briefed: s.briefed, callsign: s.callsign, lessons: s.lessons, introduced: s.introduced, walkedIn: s.walkedIn }) },
   ),
 );

@@ -49,7 +49,7 @@ export async function audit(page: Page): Promise<Failure[]> {
       return new DOMRect(Math.max(r.left, area.left), Math.max(r.top, area.top), Math.max(0, Math.min(r.right, area.right) - Math.max(r.left, area.left)), Math.max(0, Math.min(r.bottom, area.bottom) - Math.max(r.top, area.top)));
     };
     const add = (group: string, els: Element[]) => els.filter(visible).forEach((el, i) => boxes.push({ group, label: `${group}${els.length > 1 ? i : ''}: ${(el.textContent ?? '').trim().slice(0, 24)}`, el, r: shown(el) }));
-    add('figure', cls('figure').flatMap((f) => [...f.querySelectorAll('img, span')].slice(0, 1)));
+    add('figure', cls('actor'));
     add('title', [...document.querySelectorAll('h1')]);
     add('lead', cls('lead'));
     add('cards', [...document.querySelectorAll('li[data-story] button')]);

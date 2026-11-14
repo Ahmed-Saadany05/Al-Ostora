@@ -27,40 +27,29 @@
 
 /* ---------------------------------------------------------------- the briefing */
 .briefing {
-  /* the half-body is 596 x 560; its fingertip is ~95% across and ~45% down */
-  --art-h: 58vh;
-  --art-w: calc(var(--art-h) * 596 / 560);
-  --hand-x: calc(var(--art-w) * 0.95);
-  --hand-y: calc(100vh - var(--art-h) * 0.55);
+  --actor-h: min(58vh, 520px);
   position: fixed;
   inset: 0;
   z-index: var(--z-toast);
   background: var(--color-bg);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-7);
+  align-items: end;
+  padding: 0 var(--gutter);
   animation: fade var(--duration-slow) var(--ease-out) backwards;
 }
-.briefingArt {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: var(--art-w);
-  height: var(--art-h);
-  pointer-events: none;
-  animation: rise var(--duration-slow) var(--ease-out) var(--duration-base) backwards;
-}
-.half {
-  display: block;
-  width: 100%;
-  height: 100%;
+/* his own cell, feet on the bottom of the screen; the text sits to his right, never over him */
+.briefingActor {
+  align-self: end;
+  padding-bottom: var(--space-4);
 }
 .briefingText {
-  position: absolute;
-  left: calc(var(--hand-x) + var(--space-5));
-  /* the block is centred on his hand, so a long beat grows up and down and never runs off the bottom of the screen */
-  top: var(--hand-y);
-  transform: translateY(-50%);
+  align-self: end;
+  /* the block's bottom sits level with his chest and it grows upward, so a long beat never runs off the screen */
+  margin-bottom: calc(var(--actor-h) * 0.36);
   /* about 36 characters of the speech type per line, whatever the screen: 18 em of the 24–32 px speech size */
-  width: min(calc(var(--say) * 18), calc(100vw - var(--hand-x) - var(--space-5) - var(--gutter)));
-  max-height: calc(100vh - var(--space-5));
+  width: min(calc(var(--say) * 18), 100%);
   animation: fade var(--duration-base) var(--ease-out) var(--duration-base) backwards;
 }
 @keyframes rise {
@@ -269,4 +258,38 @@
 .skip {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- the sprite */
+.actorWrap {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+.actor {
+  position: relative;
+  display: block;
+  overflow: visible;
+}
+.actorClickable {
+  cursor: pointer;
+}
+.actorStage {
+  position: absolute;
+  bottom: 0;
+  background-repeat: no-repeat;
+  will-change: transform;
+  pointer-events: none;
+}
+/* What he says when poked: two seconds, above his head, no box. */
+.quip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin: 0 0 var(--space-2);
+  width: max-content;
+  max-width: 24em;
+  font-size: var(--text-md);
+  line-height: 1.35;
+  color: var(--color-text-muted);
 }
