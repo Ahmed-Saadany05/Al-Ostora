@@ -14,21 +14,34 @@ export type MomentContext = Pick<ResolveContext, 'horizons' | 'values' | 'flags'
 const NO_DATA: MomentContext = { horizons: false, values: {}, flags: {} };
 const FACTS = recordedTokens();
 
-export function MomentCard({ id, placement, context = NO_DATA }: { id: string; placement: CardPlacement; context?: MomentContext }) {
+export function MomentCard({
+  id,
+  placement,
+  context = NO_DATA,
+  onAction,
+  once = true,
+}: {
+  id: string;
+  placement: CardPlacement;
+  context?: MomentContext;
+  onAction?: (a: Reply['action']) => boolean;
+  /** Shown once per session (moments), or every time it is mounted (the touchdown card: every landing is a new story). */
+  once?: boolean;
+}) {
   const navigate = useNavigate();
   const begun = useRefaey((st) => st.begun);
   const alreadySeen = useRefaey((st) => st.seen[id]);
   const markSeen = useRefaey((st) => st.markSeen);
   // Decided once on arrival, so the card stays while it is on screen and never returns after it has been shown.
-  const [eligible] = useState(() => begun && !alreadySeen);
+  const [eligible] = useState(() => begun && (!once || !alreadySeen));
   const [trail, setTrail] = useState<string[]>([id]);
   const [dismissed, setDismissed] = useState(false);
   const nodeId = trail[trail.length - 1];
   const backTo = trail[trail.length - 2];
 
   useEffect(() => {
-    if (eligible) markSeen(id);
-  }, [eligible, id, markSeen]);
+    if (eligible && once) markSeen(id);
+  }, [eligible, once, id, markSeen]);
 
   const ctx: ResolveContext = useMemo(() => ({ ...context, facts: FACTS, terminalLabel: REFAEY_COPY.ok, hasExplainer }), [context]);
   const resolved = useMemo(() => {
@@ -41,6 +54,7 @@ export function MomentCard({ id, placement, context = NO_DATA }: { id: string; p
   const act = (r: Reply) => () => {
     if (r.next) return setTrail((t) => (r.next === backTo ? t.slice(0, -1) : [...t, r.next as string]));
     const a = r.action;
+    if (onAction?.(a)) return;
     if (a?.type === 'openExplainer') return setTrail((t) => [...t, EXPLAIN_PREFIX + a.id]);
     if (a?.type === 'navigate') return navigate(a.to);
     // "OK" on an explainer goes back to the card; "OK" on the card closes it.

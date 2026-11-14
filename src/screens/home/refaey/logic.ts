@@ -18,6 +18,7 @@ export type Token =
   | 'sunHours'
   | 'earthHours'
   | 'altSite'
+  | 'altDate'
   | 'altGain';
 
 export type TokenValues = Partial<Record<Token, string>>;
@@ -26,7 +27,7 @@ export interface ResolveContext {
   /** True only when the numbers come from Horizons (not the demo provider). */
   horizons: boolean;
   values: TokenValues;
-  flags: { horizonLola?: boolean; altBetter?: boolean; altNone?: boolean; athenaSunlit?: boolean; athenaHidden?: boolean };
+  flags: { horizonLola?: boolean; altBetter?: boolean; altBetterDate?: boolean; athenaSunlit?: boolean; athenaHidden?: boolean };
   /**
    * Recorded JPL Horizons facts (facts/facts.json), already formatted. Unlike `values` they are not live: they fill on every
    * provider, because they are history (a landing in 1969), not a prediction.

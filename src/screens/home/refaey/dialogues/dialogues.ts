@@ -13,6 +13,7 @@ export type DialogueAction =
   | { type: 'navigate'; to: string }
   | { type: 'openExplainer'; id: string }
   | { type: 'openPlanner'; siteId: string; at?: string } // `at` = ISO UTC moment; only passed on the live provider
+  | { type: 'compareAlternative' } // the touchdown card: open the compare step with the suggested alternative
   | { type: 'collapse' };
 
 /** `demoLabel`: what the reply says on the demo provider, where it opens the site without `at` (it must not claim to show the landing day). */
@@ -23,7 +24,7 @@ export type DialogueNode = {
   mood?: RefaeyMood;
   lines: string[];
   replies: Reply[];
-  when?: 'horizonLola' | 'altBetter' | 'altNone' | 'athenaSunlit' | 'athenaHidden';
+  when?: 'horizonLola' | 'altBetter' | 'altBetterDate' | 'athenaSunlit' | 'athenaHidden';
 };
 
 /* ------------------------------------------------------------------ */
@@ -332,4 +333,44 @@ export const MOMENTS: DialogueNode[] = [
 /* 4. What would happen to your lander: the touchdown screen (live).    */
 /* Tokens: {siteName} {landingDate} {sunHours} {earthHours} {altSite} {altGain} */
 /* ------------------------------------------------------------------ */
-export const OUTCOME: DialogueNode[] = [];
+export const OUTCOME: DialogueNode[] = [
+  {
+    id: 'outcome-play',
+    mood: 'neutral',
+    lines: ['Landing at {siteName} on {landingDate}. In its first lunar day the Sun is up for {sunHours} and Earth is in view for {earthHours}.'],
+    replies: [
+      { label: 'Could I do better?', next: 'outcome-alt' },
+      { label: 'Could I do better?', next: 'outcome-alt-date' },
+      { label: 'Got it', next: 'outcome-close' },
+    ],
+  },
+  {
+    id: 'outcome-alt',
+    mood: 'pointing',
+    when: 'altBetter',
+    lines: ['Try {altSite}: it adds {altGain} of sunlight in that first lunar day, and Earth stays in view at least as long.'],
+    replies: [
+      { label: 'Compare them', action: { type: 'compareAlternative' } },
+      { label: 'Got it', next: 'outcome-close' },
+    ],
+  },
+  {
+    id: 'outcome-alt-date',
+    mood: 'pointing',
+    when: 'altBetterDate',
+    lines: ['Landing on {altDate} adds {altGain} of sunlight in that first lunar day, and Earth stays in view at least as long.'],
+    replies: [
+      { label: 'Compare the dates', action: { type: 'compareAlternative' } },
+      { label: 'Got it', next: 'outcome-close' },
+    ],
+  },
+  {
+    id: 'outcome-close',
+    mood: 'smile',
+    lines: ['That is what the data says for this place and day. Change the site or the date to see how it moves.'],
+    replies: [
+      { label: 'Plan another', action: { type: 'navigate', to: '/mission' } },
+      { label: 'Past missions', action: { type: 'navigate', to: '/missions' } },
+    ],
+  },
+];

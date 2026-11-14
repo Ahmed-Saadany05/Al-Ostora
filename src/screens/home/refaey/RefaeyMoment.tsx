@@ -1,5 +1,6 @@
 import type { CardPlacement } from './RefaeyCard';
 import { MomentCard } from './MomentCard';
+import { OutcomeMoment } from './OutcomeMoment';
 import { StandMoment } from './StandMoment';
 
 /**
@@ -8,5 +9,7 @@ import { StandMoment } from './StandMoment';
  * Live numbers fill only from the screen's own Horizons values (StandMoment reads them); otherwise those lines are skipped.
  */
 export function RefaeyMoment({ id, placement = 'card' }: { id: string; placement?: CardPlacement }) {
-  return id === 'moment-stand' ? <StandMoment placement={placement} /> : <MomentCard id={id} placement={placement} />;
+  if (id === 'moment-stand') return <StandMoment placement={placement} />;
+  if (id === 'moment-outcome') return <OutcomeMoment placement={placement} />;
+  return <MomentCard id={id} placement={placement} />;
 }

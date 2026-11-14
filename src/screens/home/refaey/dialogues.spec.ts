@@ -1,7 +1,7 @@
 // Run: npx vitest run src/screens/home
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { INTRO, MISSIONS, MISSIONS_HUB, MOMENTS, type DialogueNode } from './dialogues/dialogues';
+import { INTRO, MISSIONS, MISSIONS_HUB, MOMENTS, OUTCOME, type DialogueNode } from './dialogues/dialogues';
 import { athenaVerdict, recordedTokens } from './facts/display';
 import { resolveNode, type ResolveContext } from './logic';
 
@@ -103,7 +103,7 @@ describe('the three stories', () => {
 });
 
 describe('what Refaey may say', () => {
-  const nodes = [...INTRO, ...MOMENTS, MISSIONS_HUB, ...MISSIONS.flatMap((m) => m.story)];
+  const nodes = [...INTRO, ...MOMENTS, ...OUTCOME, MISSIONS_HUB, ...MISSIONS.flatMap((m) => m.story)];
   const raw = (n: DialogueNode) => [...n.lines, ...n.replies.map((r) => r.label)].join(' ');
 
   it('every digit is a recorded-fact token, a date, or a sourced constant', () => {
@@ -119,7 +119,7 @@ describe('what Refaey may say', () => {
   });
 
   it('banned wording never appears', () => {
-    const banned = [/radio contact/i, /just after (local )?sunrise/i, /early lunar morning/i, /would have saved/i, /as it is today/i, /real terrain shadows/i, /at the south pole/i, /chandrayaan/i, /\bSLIM\b/, /!/];
+    const banned = [/radio contact/i, /just after (local )?sunrise/i, /early lunar morning/i, /would have saved/i, /as it is today/i, /real terrain shadows/i, /at the south pole/i, /chandrayaan/i, /\bSLIM\b/, /!/, /nothing nearby/i, /nothing beats/i, /nicely planned/i];
     for (const n of nodes) for (const b of banned) expect(raw(n), `${b} in ${n.id}`).not.toMatch(b);
     // "lunar day" is the full ~29.5-day cycle, never the sunlit part
     for (const n of nodes) expect(raw(n)).not.toMatch(/lunar day of (sun|day)light/i);
@@ -137,3 +137,33 @@ describe('what Refaey may say', () => {
 
 /** Where the briefing's own sourced constants come from (1.5° and the little finger). */
 const INTRO_SOURCES = ['https://science.nasa.gov/resource/shadows-near-the-moons-south-pole/', 'https://science.nasa.gov/skywatching/faq/'];
+
+describe('the touchdown card (live provider only)', () => {
+  const live: ResolveContext = {
+    horizons: true,
+    values: { siteName: 'Site', landingDate: '27 Nov 2026', sunHours: '25 days', earthHours: '14 days', altSite: 'Other', altGain: '3 hours', altDate: '1 Dec 2026' },
+    flags: { altBetter: true },
+    facts,
+    terminalLabel: 'OK',
+    hasExplainer: () => true,
+  };
+  const byId = (id: string) => OUTCOME.find((n) => n.id === id)!;
+  it('every number comes from a token; nothing is claimed when the engine returns nothing', () => {
+    for (const n of OUTCOME) expect(raw(n)).not.toMatch(/\d/);
+    const r = (id: string, c: ResolveContext) => resolveNode(byId(id), c, (x) => byId(x));
+    expect(r('outcome-play', live)!.lines[0]).toMatch(/25 days.*14 days/);
+    expect(r('outcome-alt', live)).not.toBeNull();
+    expect(r('outcome-alt', { ...live, flags: {} })).toBeNull(); // no alternative → the beat is never shown
+    expect(r('outcome-alt-date', live)).toBeNull();
+    // no alternative: the only way on from the numbers is the neutral closing line
+    expect(r('outcome-play', { ...live, flags: {} })!.replies.map((x) => x.next)).toEqual(['outcome-close']);
+  });
+  it('on the demo provider the numbers beat is skipped entirely', () => {
+    expect(resolveNode(byId('outcome-play'), { ...live, horizons: false, values: {} }, (x) => byId(x))).toBeNull();
+    expect(resolveNode(byId('outcome-close'), { ...live, horizons: false, values: {} }, (x) => byId(x))).not.toBeNull();
+  });
+});
+
+function raw(n: DialogueNode) {
+  return [...n.lines, ...n.replies.map((r) => r.label)].join(' ').replace(/\{\w+\}/g, '');
+}

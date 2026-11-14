@@ -9,7 +9,7 @@ import { MomentCard, type MomentContext } from './MomentCard';
 
 /**
  * The "stand on site" card. It reads the same values the screen itself shows (useSky + the lunar day's samples) and only
- * fills its live line when the Sun and Earth positions are Horizons values; the skyline line shows only for the LOLA horizon.
+ * fills its live line when the numbers come from the live engine (not the demo provider); the skyline line shows only for the LOLA horizon.
  */
 export function StandMoment({ placement }: { placement: CardPlacement }) {
   const { site } = useMission();
@@ -19,7 +19,8 @@ export function StandMoment({ placement }: { placement: CardPlacement }) {
   const { data: report } = useDayReport(site, from, LUNAR.synodicDays);
 
   const context: MomentContext = useMemo(() => {
-    const live = sky?.source === 'horizons';
+    // The live engine labels its answers 'computed' (from Horizons positions + the LOLA skyline); the demo provider says 'demo'.
+    const live = !!sky && sky.source !== 'demo';
     const ahead = report?.samples.filter((x) => x.time >= time) ?? [];
     const sunset = sky?.sunVisible ? nextTransition(ahead, (x) => x.sunVisible, true) : null;
     return {
