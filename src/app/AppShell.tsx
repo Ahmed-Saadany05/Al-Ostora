@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useMatches } from 'react-router-dom';
-import { getProvider } from '@/shared/data';
 import { useApp } from '@/shared/store/app';
 import { TimeTicker } from '@/shared/store/time';
 import { Divider, Icon, Starfield } from '@/shared/ui';
@@ -23,7 +22,6 @@ export function AppShell() {
     | RouteHandle
     | undefined;
   const minimalChrome = matches.some((m) => (m.handle as RouteHandle | undefined)?.minimalChrome);
-  const provider = getProvider();
 
   useEffect(() => {
     document.documentElement.dataset.motion = motion ? 'on' : 'off';
@@ -59,9 +57,6 @@ export function AppShell() {
                 {n.label}
               </NavLink>
             ))}
-            <NavLink to="/about" className={({ isActive }) => [s.navLink, isActive && s.active].filter(Boolean).join(' ')}>
-              The project <Icon name="arrowUpRight" size={13} />
-            </NavLink>
           </nav>
 
           <div className={s.headerEnd} />
@@ -77,11 +72,6 @@ export function AppShell() {
           <div className={s.statusGroup}>
             <Icon name="plus" size={16} className={s.plus} />
             <span>{handle?.caption ?? 'Refaey on the Moon'}</span>
-            <Divider vertical />
-            <span className={provider.id === 'demo' ? s.demo : s.live} title={provider.id === 'demo' ? 'Numbers are placeholders' : 'Numbers from JPL Horizons + NASA LOLA'}>
-              <Icon name={provider.id === 'demo' ? 'beaker' : 'orbit'} size={13} />
-              {provider.id === 'demo' ? 'Demo data' : 'Live NASA data'}
-            </span>
           </div>
           <div className={s.statusGroup}>
             <button type="button" className={s.toggle} onClick={() => setMotion(!motion)} aria-pressed={motion}>
