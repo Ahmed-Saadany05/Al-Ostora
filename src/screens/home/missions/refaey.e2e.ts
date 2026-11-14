@@ -1,7 +1,8 @@
 /**
  * Refaey on the planner screens and in the briefing. Run: npm run test:e2e   (modes: see e2e-helpers.ts)
  * - the briefing: four beats, both exits, Esc, Skip
- * - compare dates: one slim row; stand: a compact card in a free zone; touchdown: the outcome card
+ * - stand: a compact card in a free zone; touchdown: the outcome card. Both without the briefing having played (cards do not depend on Begin).
+ *   (The Compare dates row was removed: no one-line, 44 px row fits that header without moving the cards.)
  */
 import { expect, test } from '@playwright/test';
 import { cardAudit, LIVE, MODE, newPage, settle, shot, VIEWPORTS } from './e2e-helpers';
@@ -65,23 +66,8 @@ for (const vp of VIEWPORTS.slice(0, 3)) {
 }
 
 for (const vp of VIEWPORTS) {
-  test(`planner cards at ${vp.name} [${MODE}]: compare dates, stand, touchdown`, async ({ browser }) => {
-    const { ctx, page, errors } = await newPage(browser, vp, { reduced: true, begun: true });
-
-    // compare dates: one slim row
-    await page.goto(`/mission/compare?sites=${SITE}&by=dates`);
-    await page.waitForSelector(CARD, { timeout: 30_000 });
-    await expect(page.locator(CARD)).toContainText('Same place, different months');
-    await settle(page);
-    await shot(page, vp.name, 'compare-dates');
-    expect(await cardAudit(page, 'row'), `${vp.name} compare dates`).toEqual([]);
-    const rowH = await page.locator(CARD).evaluate((e) => e.getBoundingClientRect().height);
-    expect(rowH, 'the row is slim').toBeLessThanOrEqual(vp.width < 700 ? 140 : 70);
-    await page.getByRole('button', { name: 'What is the best window?' }).click();
-    await expect(page.locator(CARD)).toContainText('best');
-    await page.getByRole('button', { name: 'OK', exact: true }).click(); // back to the card
-    await page.getByRole('button', { name: 'OK', exact: true }).click(); // dismiss
-    await expect(page.locator(CARD)).toHaveCount(0);
+  test(`planner cards at ${vp.name} [${MODE}]: stand and touchdown, with no briefing played`, async ({ browser }) => {
+    const { ctx, page, errors } = await newPage(browser, vp, { reduced: true });
 
     // stand: a compact card in a free zone
     await page.goto(`/mission/stand?site=${SITE}`);
@@ -101,6 +87,11 @@ for (const vp of VIEWPORTS) {
       else await expect(card).not.toContainText('The Sun is');
       await shot(page, vp.name, 'stand');
       expect(await cardAudit(page, 'stage'), `${vp.name} stand`).toEqual([]);
+      // once per session: leaving and coming back does not show it again; dismissing works
+      await page.goto('/missions');
+      await page.goto(`/mission/stand?site=${SITE}`);
+      await page.waitForTimeout(6000);
+      await expect(card).toHaveCount(0);
     }
 
     // touchdown: tap the Moon to land

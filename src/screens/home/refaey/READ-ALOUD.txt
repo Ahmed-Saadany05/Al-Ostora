@@ -43,7 +43,10 @@ With the Sun too high, shadows wash out and the ground looks flat.
 So the target window was roughly 5° to 14°.
    (replies: "Did the numbers hold?")
 
-JPL Horizons agrees: Apollo 12 landed at 5.1°, Apollo 17 at 13.3°, Apollo 16 at 14.8°.
+JPL Horizons agrees: Apollo 12 landed at 5.1°, Apollo 17 at 13.3°.
+Apollo 16, landing about six hours late, came down at 14.8°, right at the edge.
+   (replies: "And our engine?")
+
 Our engine matches the published angles within 0.1°.
    (replies: "And at the pole?")
 
@@ -111,9 +114,6 @@ The last few metres still decide.
 
 3. ON THE PLANNING SCREENS (each card shows once per session)
 ---------------------------------------------------
-Same place, different months. Watch the “Both” ring: that's power and Earth in view at the same time.
-   (replies: "What is the best window?" · "OK")
-
 This skyline is real, traced from NASA's laser maps.
 The Sun is [sunElev] up and sets in [sunsetIn]. Earth: [earthStatus].
    (replies: "Why is the Sun so low?" · "OK")

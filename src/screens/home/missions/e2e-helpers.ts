@@ -19,8 +19,8 @@ export const VIEWPORTS = [
   { name: '768x1024', width: 768, height: 1024 },
   { name: '390x844', width: 390, height: 844 },
 ];
-/** Refaey has been "begun": the briefing was played (or skipped), so the planner cards may show. */
-export const BEGUN = JSON.stringify({ state: { seen: {}, begun: true, briefed: true }, version: 0 });
+/** The briefing was already played this session (so a test that needs the Home → briefing path starts fresh without it). */
+export const BRIEFED = JSON.stringify({ state: { seen: {}, briefed: true }, version: 0 });
 
 export type Failure = string;
 
@@ -202,15 +202,15 @@ export async function check(page: Page, vp: string, state: string, errors: strin
   expect(errors, `console errors at ${vp} / ${state}`).toEqual([]);
 }
 
-export async function newPage(browser: Browser, vp: { width: number; height: number }, opts: { reduced?: boolean; begun?: boolean } = {}) {
-  const { reduced = false, begun = false } = opts;
+export async function newPage(browser: Browser, vp: { width: number; height: number }, opts: { reduced?: boolean; briefed?: boolean } = {}) {
+  const { reduced = false, briefed = false } = opts;
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, reducedMotion: reduced ? 'reduce' : 'no-preference' });
   await ctx.addInitScript(
-    ([store, isBegun]) => {
+    ([store, isBriefed]) => {
       sessionStorage.setItem('refaey-home-intro-seen', '1');
-      if (isBegun) sessionStorage.setItem('refaey-seen', store as string);
+      if (isBriefed) sessionStorage.setItem('refaey-seen', store as string);
     },
-    [BEGUN, begun] as const,
+    [BRIEFED, briefed] as const,
   );
   // Blocked mode: the live provider cannot reach /api/horizons. Refaey must show no live numbers and nothing may crash.
   if (MODE === 'blocked') await ctx.route('**/api/horizons**', (r) => r.abort());

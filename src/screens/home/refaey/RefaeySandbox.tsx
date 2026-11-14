@@ -10,18 +10,17 @@ import { MomentCard, type MomentContext } from './MomentCard';
 import { useRefaey } from './store';
 
 const FAKE = { sunElev: '1.7°', sunsetIn: '3d 04h', earthStatus: 'below the horizon', siteName: 'Shackleton Crater Rim', landingDate: '14 Nov 2026' };
-const MOMENTS = ['moment-compare', 'moment-stand'];
+const MOMENTS = ['moment-stand'];
 
 export function RefaeySandbox() {
   const [horizons, setHorizons] = useState(false);
   const [lola, setLola] = useState(false);
   const [briefing, setBriefing] = useState(false);
   const [round, setRound] = useState(0);
-  const begun = useRefaey((st) => st.begun);
   const seen = useRefaey((st) => st.seen);
   const context: MomentContext = useMemo(() => ({ horizons, values: horizons ? FAKE : {}, flags: { horizonLola: lola } }), [horizons, lola]);
   const reset = () => {
-    useRefaey.setState({ seen: {}, begun: true });
+    useRefaey.setState({ seen: {} });
     setRound((r) => r + 1);
   };
   return (
@@ -36,9 +35,6 @@ export function RefaeySandbox() {
         </label>
         <label>
           <input type="checkbox" checked={lola} onChange={(e) => setLola(e.target.checked)} /> LOLA horizon
-        </label>
-        <label>
-          <input type="checkbox" checked={begun} onChange={(e) => useRefaey.setState({ begun: e.target.checked })} /> Begin used once
         </label>
         <Button variant="secondary" size="md" icon={null} onClick={() => setBriefing(true)}>
           Play the briefing

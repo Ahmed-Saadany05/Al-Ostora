@@ -29,11 +29,10 @@ export function MomentCard({
   once?: boolean;
 }) {
   const navigate = useNavigate();
-  const begun = useRefaey((st) => st.begun);
   const alreadySeen = useRefaey((st) => st.seen[id]);
   const markSeen = useRefaey((st) => st.markSeen);
   // Decided once on arrival, so the card stays while it is on screen and never returns after it has been shown.
-  const [eligible] = useState(() => begun && (!once || !alreadySeen));
+  const [eligible] = useState(() => !once || !alreadySeen);
   const [trail, setTrail] = useState<string[]>([id]);
   const [dismissed, setDismissed] = useState(false);
   const nodeId = trail[trail.length - 1];

@@ -40,7 +40,6 @@ const HeroMoon = lazy(() => import('./HeroMoon').then((m) => ({ default: m.HeroM
 
 export function HomePage() {
   const navigate = useNavigate();
-  const begin = useRefaey((st) => st.begin);
   const briefed = useRefaey((st) => st.briefed);
   const markBriefed = useRefaey((st) => st.markBriefed);
   const motion = useApp((st) => st.motion);
@@ -118,14 +117,13 @@ export function HomePage() {
     if (leaving) return;
     setLeaving(true);
     journey.current = true;
-    begin();
     const fade = [copy.current, pins.current].flatMap((el) =>
       el ? [el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: LEAVE_MS, easing: 'ease-out', fill: 'forwards' }).finished] : [],
     );
     // With motion the flight starts at once (it fades the hero itself); without it, wait for the cross-fade, then change view.
     if (motion) handle.current?.enterStep1();
     else void Promise.all(fade).then(() => handle.current?.enterStep1());
-  }, [leaving, begin, motion]);
+  }, [leaving, motion]);
 
   const endBriefing = useCallback(
     (to: BriefingDestination) => {

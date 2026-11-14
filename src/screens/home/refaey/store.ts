@@ -20,13 +20,10 @@ const storage = (): StateStorage => {
 };
 
 interface RefaeyState {
-  /** Has the visitor pressed Begin on Home this session? Until then no inline card shows anywhere. */
-  begun: boolean;
   /** Has the briefing played this session? It plays once. */
   briefed: boolean;
   /** Moments already shown this session, so they never repeat. */
   seen: Record<string, true>;
-  begin: () => void;
   markBriefed: () => void;
   markSeen: (id: string) => void;
 }
@@ -34,13 +31,11 @@ interface RefaeyState {
 export const useRefaey = create<RefaeyState>()(
   persist(
     (set) => ({
-      begun: false,
       briefed: false,
       seen: {},
-      begin: () => set({ begun: true }),
       markBriefed: () => set({ briefed: true }),
       markSeen: (id) => set((s) => ({ seen: { ...s.seen, [id]: true } })),
     }),
-    { name: 'refaey-seen', storage: createJSONStorage(storage), partialize: (s) => ({ seen: s.seen, begun: s.begun, briefed: s.briefed }) },
+    { name: 'refaey-seen', storage: createJSONStorage(storage), partialize: (s) => ({ seen: s.seen, briefed: s.briefed }) },
   ),
 );

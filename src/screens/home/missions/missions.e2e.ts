@@ -12,7 +12,7 @@ import { audit, check, LIVE, MODE, newPage, settle, shot, VIEWPORTS } from './e2
 const STORIES = [
   {
     id: 'apollo',
-    replies: ['So what did Armstrong do?', 'Was the light planned?', 'What was the rule?', 'Did the numbers hold?', 'And at the pole?', 'So what changes?'],
+    replies: ['So what did Armstrong do?', 'Was the light planned?', 'What was the rule?', 'Did the numbers hold?', 'And our engine?', 'And at the pole?', 'So what changes?'],
     facts: [3, 5], // beats (1-based) that use recorded Horizons facts and so carry the label
   },
   {
@@ -73,7 +73,7 @@ for (const vp of VIEWPORTS) {
 
     // An explainer opens inside the story and "OK" returns to the beat it came from.
     await page.locator('li[data-story="apollo"] button').click();
-    for (const label of STORIES[0].replies.slice(0, 4)) await page.getByRole('button', { name: label, exact: true }).click();
+    for (const label of STORIES[0].replies.slice(0, 5)) await page.getByRole('button', { name: label, exact: true }).click();
     await page.getByRole('button', { name: 'And at the pole?', exact: true }).click();
     await page.getByRole('button', { name: 'Why is the Sun so low?', exact: true }).click();
     await check(page, vp.name, 'apollo-explainer', errors);

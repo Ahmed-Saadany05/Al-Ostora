@@ -118,6 +118,8 @@ export const MISSIONS: Mission[] = [
     sources: [
       'https://apollojournals.org/alsj/a11/a11.landing.html',
       'https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11a_Summary.htm',
+      'https://www.nasa.gov/missions/apollo/apollo-16-mission-details/',
+      'https://www.nasa.gov/history/50-years-ago-apollo-16-on-the-moon-at-descartes/',
       'https://ntrs.nasa.gov/api/citations/20230006313/downloads/IAASS%202023%20Paper_Final_24apr23.pdf',
       '/about#methods',
     ],
@@ -149,7 +151,13 @@ export const MISSIONS: Mission[] = [
       {
         id: 'apollo-5',
         mood: 'smile',
-        lines: ['JPL Horizons agrees: Apollo 12 landed at {a12Sun}, Apollo 17 at {a17Sun}, Apollo 16 at {a16Sun}.', 'Our engine matches the published angles within 0.1°.'],
+        lines: ['JPL Horizons agrees: Apollo 12 landed at {a12Sun}, Apollo 17 at {a17Sun}.', 'Apollo 16, landing about six hours late, came down at {a16Sun}, right at the edge.'],
+        replies: [{ label: 'And our engine?', next: 'apollo-5b' }],
+      },
+      {
+        id: 'apollo-5b',
+        mood: 'neutral',
+        lines: ['Our engine matches the published angles within 0.1°.'],
         replies: [{ label: 'And at the pole?', next: 'apollo-6' }],
       },
       {
@@ -308,15 +316,6 @@ export const MISSIONS: Mission[] = [
 /* 3. Plan moments: <RefaeyMoment id="…"/> placed by Aser per step.    */
 /* ------------------------------------------------------------------ */
 export const MOMENTS: DialogueNode[] = [
-  {
-    id: 'moment-compare',
-    mood: 'smile',
-    lines: ["Same place, different months. Watch the “Both” ring: that's power and Earth in view at the same time."],
-    replies: [
-      { label: 'What is the best window?', action: { type: 'openExplainer', id: 'best-window' } },
-      { label: 'OK', action: { type: 'collapse' } },
-    ],
-  },
   {
     id: 'moment-stand',
     mood: 'neutral',

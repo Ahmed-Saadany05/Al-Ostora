@@ -2,7 +2,7 @@
 
 For Goda's `/about` page. Every claim below was checked against the page it cites on **2026-11-14** (the day the facts were recorded). A claim that no opened page confirmed was cut from the script; those are listed at the end.
 
-Line ids refer to `dialogues/dialogues.ts`. `READ-ALOUD.txt` has every line in play order.
+Line ids refer to `dialogues/dialogues.ts`. Cards on the planner screens show once per session, whether or not the briefing was played; the Compare dates card was dropped because no one-line card fits that header without moving the comparison cards. `READ-ALOUD.txt` has every line in play order.
 
 ## Recorded facts (JPL Horizons, recorded 2026-11-14)
 
@@ -46,6 +46,7 @@ Athena, from the engine's LOLA skyline `src/data/horizons-lola/im-2-athena.json`
 | A NASA drill (PRIME-1) to look for ice and other volatiles; a hopper (Grace); small rovers; solar powered | athena-2 | NASA PRIME-1 page; Space Flight Now | TRIDENT drill and MSOLO spectrometer for "subsurface volatiles" (water and ice named as examples); "Grace hopper" and "two small rovers"; the lander "will only be able to operate for about 10 days before the sun sets". |
 | Landed a few hundred metres from its target, in a crater, on its side | athena-3 | SpacePolicyOnline; NASA news release | The company says about 250 m, NASA says "more than 1,300 feet (400 meters)": the line says "a few hundred metres". "is in a crater where sunlight could not reach the solar cells"; "on its side". |
 | Sunlight could not reach the solar cells, so the batteries could not recharge; the mission ended less than a day after landing | athena-5 | SpacePolicyOnline; NASA news release | Mission ended at 12:15 a.m. CST Friday, about 12 h 45 min after landing; batteries "could not be recharged because of the lighting in the crater". |
+| Apollo 16's landing was about six hours late, so it came down at 14.8°, just past the 14° edge of the window | apollo-5 | [NASA, Apollo 16 mission details](https://www.nasa.gov/missions/apollo/apollo-16-mission-details/); [NASA, 50 Years Ago: Apollo 16 on the Moon at Descartes](https://www.nasa.gov/history/50-years-ago-apollo-16-on-the-moon-at-descartes/) | "about 9:24 p.m. EST April 20, about five hours, 43 minutes late." and "Because the landing occurred six hours later than planned". The 14.8° is the recorded Horizons value (`a16Sun`). (The ALSJ [Sun Angles](https://apollojournals.org/alsj/alsj-sunangles.html) page, on apollojournals.org, says "delayed by a bit less than 6 hours".) |
 | Our terrain map resolves only 10 m near the lander | athena-6a | `src/data/horizons-lola/im-2-athena.json` | `dem.layers[0]`: 10 m, 0–3 km. |
 
 ## Claims that were cut
