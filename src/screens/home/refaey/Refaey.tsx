@@ -1,36 +1,22 @@
 import { REFAEY_COPY } from './copy';
 import type { RefaeyMood } from './dialogues/dialogues';
-import bustNeutral from './art/refaey-bust-neutral.svg';
-import bustSmile from './art/refaey-bust-smile.svg';
-import halfPointing from './art/refaey-half-pointing.svg';
+import bust80 from './art/bust-80.webp';
+import bust160 from './art/bust-160.webp';
 import s from './refaey.module.css';
 
 /**
- * Refaey's art, one SVG per mood. The busts are square crops and the half-body is cut flat at the waist, so they are
- * never shown raw: busts go in a circle (RefaeyBust), the half-body is anchored to the bottom edge of the screen
- * (RefaeyStage). To swap the art, replace the files in ./art (or the entries below).
+ * Refaey's head and shoulders in a circle: the same 3D render as the full-body sprite (cropped from its first idle frame),
+ * for every mood. 80 px for the small cards (2× of 40), 160 px for anything larger. Decorative: the control around it is named.
+ * `size` is any CSS length; the bust is square and round, so the crop's corners are never shown.
  */
-export const ART: Record<RefaeyMood, string> = {
-  neutral: bustNeutral,
-  smile: bustSmile,
-  pointing: halfPointing,
-};
-
-/** The circular bust for a mood. The half-body has no bust, so "pointing" uses the smiling one. */
-const BUST: Record<RefaeyMood, string> = { neutral: bustNeutral, smile: bustSmile, pointing: bustSmile };
-
-/** Refaey's head and shoulders in a circle (the square crop's corners are never shown). Decorative: the control around it is named. */
-export function RefaeyBust({ mood = 'smile', size }: { mood?: RefaeyMood; size: string }) {
+export function RefaeyBust({ size }: { mood?: RefaeyMood; size: string }) {
+  const small = /^(\d+(?:\.\d+)?)px$/.exec(size)?.[1];
+  const useSmall = small ? Number(small) <= 56 : size.includes('bust-card') || size.includes('bust-inline');
   return (
     <span className={s.bust} style={{ width: size, height: size }}>
-      <img src={BUST[mood]} alt="" width={256} height={256} draggable={false} />
+      <img src={useSmall ? bust80 : bust160} alt="" width={useSmall ? 80 : 160} height={useSmall ? 80 : 160} draggable={false} />
     </span>
   );
-}
-
-/** The half-body pointing pose, anchored to the bottom edge of the screen by its parent. */
-export function RefaeyHalf() {
-  return <img className={s.half} src={ART.pointing} alt="" draggable={false} />;
 }
 
 export const refaeyName = REFAEY_COPY.name;

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from '@/shared/ui';
 import { RefaeyBust } from './Refaey';
+import { SourceLink } from './SourceLink';
 import { REFAEY_COPY } from './copy';
 import type { RefaeyMood } from './dialogues/dialogues';
 import s from './refaey.module.css';
@@ -24,6 +25,7 @@ export function RefaeyCard({
   id,
   placement = 'card',
   badge,
+  link,
 }: {
   title?: string;
   mood?: RefaeyMood;
@@ -34,6 +36,8 @@ export function RefaeyCard({
   placement?: CardPlacement;
   /** e.g. the "JPL Horizons · recorded" label, when a line uses a recorded fact. */
   badge?: ReactNode;
+  /** A source card's link. */
+  link?: { label: string; href: string };
 }) {
   return (
     <aside id={id} className={[s.card, (placement === 'stage' || placement === 'stage-high') && s.cardStage, placement === 'stage-high' && s.cardStageHigh].filter(Boolean).join(' ')} aria-label={REFAEY_COPY.explains}>
@@ -47,6 +51,7 @@ export function RefaeyCard({
           </p>
         ))}
         {badge}
+        {link && <SourceLink link={link} />}
         {actions.length > 0 && (
           <div className={s.cardActions}>
             {actions.map((a) => (

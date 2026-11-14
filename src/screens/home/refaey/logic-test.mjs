@@ -88,3 +88,15 @@ test('a site missing from the catalogue becomes the panels explainer, never a li
   assert.equal(r.label, 'How panels catch a low Sun');
   assert.deepEqual(r.action, { type: 'openExplainer', id: 'upright-panels' });
 });
+
+// ---- story tokens ({callsign}) are not data: they fill on every provider; live tokens still skip on demo
+test('{callsign} fills on the demo provider; a live token on the same line still skips it', () => {
+  const story = { callsign: 'Shams' };
+  assert.equal(fill("{callsign} needs a landing.", { horizons: false, values: {}, story }), 'Shams needs a landing.');
+  assert.equal(fill('{callsign}: Sun {sunElev}.', { horizons: false, values: { sunElev: '+1.5°' }, story }), null);
+  assert.equal(fill('{callsign}: Sun {sunElev}.', { horizons: true, values: { sunElev: '+1.5°' }, story }), 'Shams: Sun +1.5°.');
+});
+test('a story token is not a recorded fact (no Horizons label)', () => {
+  const ctx = { ...base, horizons: false, story: { callsign: 'Shams' }, facts: {} };
+  assert.equal(resolveNode(node({ lines: ['{callsign} is ready.'] }), ctx, () => undefined).usesFacts, false);
+});

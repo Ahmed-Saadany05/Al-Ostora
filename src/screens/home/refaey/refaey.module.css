@@ -27,40 +27,30 @@
 
 /* ---------------------------------------------------------------- the briefing */
 .briefing {
-  /* the half-body is 596 x 560; its fingertip is ~95% across and ~45% down */
-  --art-h: 58vh;
-  --art-w: calc(var(--art-h) * 596 / 560);
-  --hand-x: calc(var(--art-w) * 0.95);
-  --hand-y: calc(100vh - var(--art-h) * 0.55);
+  --actor-h: min(58vh, 520px);
   position: fixed;
   inset: 0;
   z-index: var(--z-toast);
   background: var(--color-bg);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-7);
+  align-items: end;
+  padding: 0 var(--gutter);
   animation: fade var(--duration-slow) var(--ease-out) backwards;
 }
-.briefingArt {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: var(--art-w);
-  height: var(--art-h);
-  pointer-events: none;
-  animation: rise var(--duration-slow) var(--ease-out) var(--duration-base) backwards;
-}
-.half {
-  display: block;
-  width: 100%;
-  height: 100%;
+/* his own cell, feet on the bottom of the screen; the text sits to his right, never over him */
+.briefingActor {
+  align-self: end;
+  padding-bottom: var(--space-4);
 }
 .briefingText {
-  position: absolute;
-  left: calc(var(--hand-x) + var(--space-5));
-  /* the block is centred on his hand, so a long beat grows up and down and never runs off the bottom of the screen */
-  top: var(--hand-y);
-  transform: translateY(-50%);
+  --say: clamp(var(--text-lg), 1.875vw, var(--text-2xl));
+  align-self: end;
+  /* the block's bottom sits level with his chest and it grows upward, so a long beat never runs off the screen */
+  margin-bottom: calc(var(--actor-h) * 0.36);
   /* about 36 characters of the speech type per line, whatever the screen: 18 em of the 24–32 px speech size */
-  width: min(calc(var(--say) * 18), calc(100vw - var(--hand-x) - var(--space-5) - var(--gutter)));
-  max-height: calc(100vh - var(--space-5));
+  width: min(calc(var(--say) * 18), 100%);
   animation: fade var(--duration-base) var(--ease-out) var(--duration-base) backwards;
 }
 @keyframes rise {
@@ -210,13 +200,16 @@
   position: absolute;
   z-index: 2;
   left: var(--gutter);
-  bottom: calc(var(--space-6) + var(--space-2)); /* 40 px: above the terrain note */
+  bottom: calc(var(--space-5) + var(--space-2)); /* 32 px: just above the terrain note */
   width: min(360px, calc(100% - 2 * var(--gutter)));
   padding: var(--space-3);
   gap: var(--space-2);
 }
 .cardStage .cardBody {
   gap: var(--space-1);
+}
+.cardStage .cardText {
+  line-height: 1.45;
 }
 .cardStage .cardLabel {
   display: none; /* the bust says who is speaking (and the card is named for screen readers); the room is needed for the text */
@@ -226,6 +219,13 @@
 @media (max-width: 1199px) {
   .cardStage {
     bottom: calc(var(--space-7) + var(--space-4)); /* 64 px */
+  }
+}
+/* The compass letters and the "Nearby" tab bound the card's zone from above: on narrow or short screens the live card (three lines of talk) goes one size down to stay clear of them. */
+@media (max-width: 1199px), (max-height: 780px) {
+  .cardStage .cardText,
+  .cardStage .cardAction {
+    font-size: var(--text-xs);
   }
 }
 
@@ -242,4 +242,152 @@
   .cardStageHigh {
     bottom: calc(var(--space-9) + var(--space-3));
   }
+}
+
+/* "How do you know?": the link on a source card, and the briefing's Skip. */
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+.sourceLink:hover {
+  color: var(--color-text-muted);
+}
+.skip {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- the sprite */
+.actorWrap {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+.actor {
+  position: relative;
+  display: block;
+  overflow: visible;
+}
+.actorClickable {
+  cursor: pointer;
+}
+.actorStage {
+  position: absolute;
+  bottom: 0;
+  background-repeat: no-repeat;
+  will-change: transform;
+  pointer-events: none;
+}
+/* What he says when poked: two seconds, in his text area, in place of the line that is there (which keeps its space). */
+.quipHost {
+  position: relative;
+}
+.quipHost[data-quip='true'] > :not(.quipLine) {
+  visibility: hidden;
+}
+.quipLine {
+  position: absolute;
+  inset: 0 auto auto 0;
+  margin: 0;
+  font-size: var(--say);
+  line-height: 1.35;
+  color: var(--color-text);
+}
+.talkFill {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- Refaey in the screen: figure + one speech balloon */
+.stageLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none; /* only the figure and the balloon take clicks */
+}
+.stageFigure {
+  position: absolute;
+  pointer-events: auto;
+}
+/* A soft ellipse under his feet when he stands on a surface. */
+.contactShadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--space-1) / -2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  pointer-events: none;
+}
+/* The balloon: kit surface, border and radius; the tail points at his helmet from whichever side it is on. */
+.balloon {
+  --say: var(--text-md);
+  position: absolute;
+  max-width: 340px;
+  box-sizing: border-box;
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  pointer-events: auto;
+  font-stretch: var(--stretch-body);
+}
+.balloon::before {
+  content: '';
+  position: absolute;
+  width: var(--space-3);
+  height: var(--space-3);
+  background: var(--color-surface-raised);
+  border: var(--border);
+  transform: rotate(45deg);
+}
+.balloon[data-side='right']::before {
+  left: calc(var(--space-3) / -2 - 1px);
+  top: var(--tail-y, var(--space-5));
+  border-right: 0;
+  border-top: 0;
+}
+.balloon[data-side='left']::before {
+  right: calc(var(--space-3) / -2 - 1px);
+  top: var(--tail-y, var(--space-5));
+  border-left: 0;
+  border-bottom: 0;
+}
+.balloon[data-side='above']::before {
+  left: 50%;
+  margin-left: calc(var(--space-3) / -2);
+  bottom: calc(var(--space-3) / -2 - 1px);
+  border-left: 0;
+  border-top: 0;
+}
+.balloon .talk {
+  --say: var(--text-md);
+  gap: var(--space-2);
+}
+.balloon .line {
+  font-size: var(--say);
+  line-height: 1.45;
+}
+.balloon .reply {
+  font-size: var(--text-sm);
+}
+.balloon .quipLine {
+  inset: 0 auto auto 0;
+  font-size: var(--say);
+  line-height: 1.45;
+}
+.balloonTalk {
+  width: 100%;
+}
+
+/* When he is placed in the screen, the plain layout is hidden (and not read out): there is one dialog, the balloon. */
+[data-stage='on'] [data-refaey-fallback] {
+  display: none;
 }

@@ -1,13 +1,15 @@
 import { EXPLAINERS } from '../explainers';
-import { INTRO, MISSIONS, MISSIONS_HUB, MOMENTS, OUTCOME, type DialogueNode, type Reply } from './dialogues/dialogues';
+import { INTRO, MISSIONS, MOMENTS, OUTCOME, type DialogueNode, type Reply } from './dialogues/dialogues';
+import { isInternal, SOURCE_CARDS } from './dialogues/sourceCards';
 import { REFAEY_COPY } from './copy';
 
-export type RuntimeNode = DialogueNode & { title?: string };
+export type RuntimeNode = DialogueNode & { title?: string; link?: { label: string; href: string } };
 
-const all: DialogueNode[] = [...INTRO, MISSIONS_HUB, ...MISSIONS.flatMap((m) => m.story), ...MOMENTS, ...OUTCOME];
+const all: DialogueNode[] = [...INTRO, ...MISSIONS.flatMap((m) => m.story), ...MOMENTS, ...OUTCOME];
 const NODES: Record<string, RuntimeNode> = Object.fromEntries(all.map((n) => [n.id, n]));
 
 export const EXPLAIN_PREFIX = 'explain:';
+export const SOURCE_PREFIX = 'source:';
 
 export const hasExplainer = (id: string) => id in EXPLAINERS;
 
@@ -21,8 +23,24 @@ function explainerNode(id: string, backTo?: string): RuntimeNode | undefined {
   return { id: EXPLAIN_PREFIX + id, mood: 'pointing', title: e.title, lines: [e.body], replies };
 }
 
-/** Look a node up by id: dialogue nodes, or `explain:<id>` for an explainer. */
+/** A source card shown as a node ("How do you know?"): the source's title, one line on what it says, a link, and Back. */
+function sourceNode(id: string, backTo?: string): RuntimeNode | undefined {
+  const c = SOURCE_CARDS[id];
+  if (!c) return undefined;
+  const replies: Reply[] = [{ label: REFAEY_COPY.back, next: backTo ?? '' }];
+  return {
+    id: SOURCE_PREFIX + id,
+    mood: 'neutral',
+    title: c.title,
+    lines: [c.says],
+    replies,
+    link: { label: isInternal(c.href) ? 'Open on About' : 'Open the source', href: c.href },
+  };
+}
+
+/** Look a node up by id: dialogue nodes, `explain:<id>` for an explainer, `source:<id>` for a source card. */
 export function getNode(id: string, backTo?: string): RuntimeNode | undefined {
   if (id.startsWith(EXPLAIN_PREFIX)) return explainerNode(id.slice(EXPLAIN_PREFIX.length), backTo);
+  if (id.startsWith(SOURCE_PREFIX)) return sourceNode(id.slice(SOURCE_PREFIX.length), backTo);
   return NODES[id];
 }

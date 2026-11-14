@@ -1,0 +1,360 @@
+/* Past missions: the hub (cards) and the story (stand on the site with Refaey). Kit tokens only. */
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------- hub */
+.hub {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter) var(--space-8);
+  display: grid;
+  gap: var(--space-6);
+}
+.hubHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+.hubTitle {
+  margin: var(--space-2) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  max-width: 34ch;
+}
+.hubLead {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+.card {
+  display: grid;
+  height: 100%;
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: border-color var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
+}
+.card:hover,
+.card:focus-visible {
+  border-color: var(--color-line-strong);
+  transform: translateY(-2px);
+}
+.cardArt {
+  display: block;
+  aspect-ratio: 16 / 10;
+  /* the renders sit on a flat grey studio background */
+  background: #2b2b2b;
+  overflow: hidden;
+}
+.cardArt img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 55%;
+  transform: scale(1.15);
+}
+.cardBody {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.partial {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warn-soft);
+  color: var(--color-warn);
+}
+.cardName {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+}
+.cardLine {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.cardSky {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.cardSky > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.cardSkyNote {
+  font-family: var(--font-sans);
+  color: var(--color-text-faint);
+}
+.hubFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+  border-top: var(--border);
+  color: var(--color-text-muted);
+}
+.hubFoot p {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- story */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height));
+  overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+}
+.storyTitle {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-5);
+  left: var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  pointer-events: none;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+}
+.storyTitle > * {
+  pointer-events: auto;
+}
+.storyTitle .eyebrow {
+  margin-top: var(--space-2);
+}
+.storyName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+.readouts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.readout {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass);
+  backdrop-filter: var(--blur-glass);
+  color: var(--color-text);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.readout small {
+  font-family: var(--font-sans);
+  color: var(--color-text-muted);
+}
+.readout:hover {
+  border-color: var(--color-line-strong);
+}
+.recorded {
+  font-size: var(--text-2xs);
+  color: var(--color-text-faint);
+}
+
+/* Refaey, bottom-left: he leads the story. */
+.guide {
+  position: absolute;
+  z-index: 4;
+  left: var(--gutter);
+  bottom: var(--space-6);
+  width: min(440px, calc(100% - 2 * var(--gutter)));
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-overlay);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+}
+.guideBody {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.beats {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.beats li {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-line-strong);
+}
+.beats .beatDone {
+  background: var(--color-text-muted);
+}
+.beats .beatOn {
+  width: 30px;
+  background: var(--color-sun);
+}
+.guideLabel {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+.say {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+.sayMuted {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+.options {
+  display: grid;
+  gap: var(--space-2);
+}
+.option {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.option:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-hover);
+}
+.option:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.option.optionRight {
+  opacity: 1;
+  border-color: var(--color-good);
+  background: var(--color-good-soft);
+}
+.option.optionWrong {
+  opacity: 1;
+  border-color: var(--color-bad);
+  background: var(--color-bad-soft);
+}
+.guideActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* A clicked piece of hardware: its one fact, top-right. */
+.factCard {
+  position: absolute;
+  z-index: 4;
+  top: var(--space-5);
+  right: var(--gutter);
+  width: min(320px, calc(100% - 2 * var(--gutter)));
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-overlay);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+}
+.factTitle {
+  margin: 0 var(--space-5) var(--space-2) 0;
+  font-weight: var(--weight-medium);
+}
+.factText {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+.factClose {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.factClose:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+@media (max-width: 760px) {
+  .storyName {
+    font-size: var(--text-2xl);
+  }
+  .guide {
+    bottom: var(--space-4);
+  }
+  .factCard {
+    top: auto;
+    bottom: calc(var(--space-4) + 260px);
+  }
+}

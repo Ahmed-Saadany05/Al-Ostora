@@ -5,10 +5,13 @@ import { ComparePage } from './ComparePage';
 import { DatePage } from './DatePage';
 import { LaunchPage } from './LaunchPage';
 import { StandPage } from './StandPage';
+import { PlannerLayout } from '@/screens/journey/PlannerGuide';
 
 export const plannerRoutes: OwnerRoutes = [
   {
     path: 'mission',
+    // Refaey leads every step (the guide floats over the page).
+    element: <PlannerLayout />,
     children: [
       { index: true, element: <ChooseSitePage />, handle: { title: 'Choose your site', caption: 'Step 01 — Choose your site' } },
       { path: 'stand', element: <StandPage />, handle: { title: 'Stand on site', caption: 'Step 02 — Read the sky' } },

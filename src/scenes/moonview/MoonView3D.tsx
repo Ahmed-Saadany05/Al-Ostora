@@ -22,6 +22,7 @@ import { color } from '@/shared/theme/tokens';
 import type { HorizonProfile, SkyState } from '@/shared/types';
 import { azElToLocal, skyPathSegments, type Vec3Tuple } from './skyMath';
 import { type TerrainSource } from './terrain';
+import { ObjectLabelProjector, SceneObjects, type SceneObject } from './SceneObjects';
 import { detailSeed, NEAR_HALF, NEAR_HOLE, rockField, surfaceDetail, type SurfaceDetail } from './nearDetail';
 import v from './moonview.module.css';
 
@@ -57,6 +58,14 @@ export interface MoonView3DProps {
   earthLabel?: BodyLabel;
   /** Compact chrome for side-by-side use. */
   dense?: boolean;
+  /** Hardware standing around you (past missions), with clickable labels. */
+  objects?: SceneObject[];
+  onObject?: (id: string) => void;
+  selectedObject?: string;
+  /** Open looking this way (degrees azimuth) instead of toward the Sun. */
+  initialYawDeg?: number;
+  /** Turn smoothly to look this way. Change `key` to repeat the same direction. */
+  aim?: { azDeg: number; elDeg: number; key: number };
 }
 
 // ---------------------------------------------------------------- textures
@@ -644,7 +653,7 @@ const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2
  * between them: the altitude grows geometrically (slow lift-off, then a fast climb), so it feels
  * like taking off rather than a zoom.
  */
-function CameraRig({ look, mode, terrain }: { look: MutableRefObject<Look>; mode: 'stand' | 'above'; terrain: TerrainSource }) {
+function CameraRig({ look, mode, terrain, target }: { look: MutableRefObject<Look>; mode: 'stand' | 'above'; terrain: TerrainSource; target?: MutableRefObject<Look | null> }) {
   const camera = useThree((s) => s.camera);
   const eye = useMemo(() => terrain.heightAt(0, 0) + EYE_HEIGHT, [terrain]);
   const k = useRef(mode === 'above' ? 1 : 0);
@@ -656,6 +665,15 @@ function CameraRig({ look, mode, terrain }: { look: MutableRefObject<Look>; mode
     const step = Math.min(dt, 0.05) / FLY_S;
     k.current = goal > k.current ? Math.min(goal, k.current + step) : Math.max(goal, k.current - step);
     const e = ease(k.current);
+    const want = target?.current;
+    if (want) {
+      // Shortest way round, eased (about a second).
+      const dy = Math.atan2(Math.sin(want.yaw - look.current.yaw), Math.cos(want.yaw - look.current.yaw));
+      const f = 1 - Math.exp(-Math.min(dt, 0.05) * 4);
+      look.current.yaw += dy * f;
+      look.current.pitch += (want.pitch - look.current.pitch) * f;
+      if (Math.abs(dy) < 0.002 && Math.abs(want.pitch - look.current.pitch) < 0.002 && target) target.current = null;
+    }
     const { yaw, pitch } = look.current;
     const yawDeg = (yaw * 180) / Math.PI;
 
@@ -698,11 +716,19 @@ function LabelProjector({ anchors, els }: { anchors: Anchor[]; els: MutableRefOb
 
 // ---------------------------------------------------------------- component
 
-export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense }: MoonView3DProps) {
+export default function MoonView3D({ sky, site, samples, terrain, horizon, mode, sunLabel, earthLabel, dense, objects, onObject, selectedObject, initialYawDeg, aim }: MoonView3DProps) {
   // Open looking toward the Sun (or Earth if the Sun is down), slightly above the horizon.
-  const initialYaw = sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
+  const initialYaw =
+    initialYawDeg !== undefined ? (initialYawDeg * Math.PI) / 180 : sky ? ((sky.sunVisible || !sky.earthVisible ? sky.sun.azDeg : sky.earth.azDeg) * Math.PI) / 180 : 0;
   const look = useRef<Look>({ yaw: initialYaw, pitch: (4 * Math.PI) / 180 });
-  const aimed = useRef(Boolean(sky));
+  const aimed = useRef(Boolean(sky) || initialYawDeg !== undefined);
+  // A requested turn: eased in CameraRig, dropped as soon as the user drags.
+  const target = useRef<Look | null>(null);
+  useEffect(() => {
+    if (!aim) return;
+    target.current = { yaw: (aim.azDeg * Math.PI) / 180, pitch: THREE.MathUtils.clamp((aim.elDeg * Math.PI) / 180, -0.5, 1.2) };
+  }, [aim]);
+  const tops = useRef(new Map<string, THREE.Vector3>());
   useEffect(() => {
     if (aimed.current || !sky) return;
     aimed.current = true;
@@ -714,6 +740,7 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
   const [grabbing, setGrabbing] = useState(false);
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     drag.current = { x: e.clientX, y: e.clientY };
+    target.current = null;
     setGrabbing(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -731,6 +758,11 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
   };
 
   const els = useRef(new Map<string, HTMLElement>());
+  const objEls = useRef(new Map<string, HTMLElement>());
+  const bindObj = (id: string) => (el: HTMLElement | null) => {
+    if (el) objEls.current.set(id, el);
+    else objEls.current.delete(id);
+  };
   const bind = (id: string) => (el: HTMLElement | null) => {
     if (el) els.current.set(id, el);
     else els.current.delete(id);
@@ -789,7 +821,13 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
         {site && <GlobeUnderSite lat={site.lat} lon={site.lon} sky={sky} topY={globeTop} />}
         <Terrain terrain={terrain} sky={sky} seed={detailSeed(site?.lat, site?.lon)} />
         {horizon && mode === 'stand' && <HorizonRing horizon={horizon} terrain={terrain} />}
-        <CameraRig look={look} mode={mode} terrain={terrain} />
+        <CameraRig look={look} mode={mode} terrain={terrain} target={target} />
+        {objects && objects.length > 0 && (
+          <>
+            <SceneObjects objects={objects} terrain={terrain} tops={tops} />
+            <ObjectLabelProjector tops={tops} els={objEls} />
+          </>
+        )}
         <LabelProjector anchors={anchors} els={els} />
       </Canvas>
 
@@ -828,6 +866,25 @@ export default function MoonView3D({ sky, site, samples, terrain, horizon, mode,
           </div>
         ))}
       </div>
+
+      {objects && objects.length > 0 && mode === 'stand' && (
+        <div className={v.objLayer}>
+          {objects.map((o) => (
+            <div key={o.id} ref={bindObj(o.id)} className={v.anchor} data-hidden="true">
+              <button
+                type="button"
+                className={[v.objTag, selectedObject === o.id && v.objTagOn].filter(Boolean).join(' ')}
+                aria-pressed={selectedObject === o.id}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onObject?.(o.id)}
+              >
+                <i aria-hidden />
+                {o.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!dense && (
         <span className={v.hint}>

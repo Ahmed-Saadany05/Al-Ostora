@@ -1,23 +1,34 @@
 /**
  * Owner: Hady — Refaey's scripted conversations (choice replies, no AI, no grading).
- * Rules: one idea per beat, ≤ 160 characters per beat, ≤ 3 replies, sentence case, no exclamation marks.
- * Tokens like {sunsetIn} come ONLY from engine values (useSky / useMetrics): on the demo provider a line with one is skipped.
- * Tokens like {a11Sun} come from facts/facts.json: JPL Horizons values recorded once (history, not a forecast), shown on every
- * provider with a "JPL Horizons · recorded" label. Every sourced claim is listed in SOURCES.md.
- * `when` = optional condition the UI checks before showing a node.
+ *
+ * The story: Refaey is an astronaut whose launch slipped and whose landing window closed. The user becomes his mission
+ * planner. He studies three real landings (Apollo, Chang'e 4, Athena); each teaches him what his own lander, {callsign},
+ * must do differently. The planner screens are where the user picks the new site and date; the touchdown screen is his landing.
+ * FICTION: Refaey, his lander, his delay and the callsign. REAL AND SOURCED: every mission, date and number (SOURCES.md).
+ *
+ * Rules: one idea per beat, ≤ 160 characters per beat, ≤ 3 replies, sentence case, no exclamation marks. A beat with a single
+ * reply is a `transition` (at most one per path). Branches rejoin within one or two beats.
+ * Tokens: {callsign} is story (fills on every provider). {a11Sun} … come from facts/facts.json (JPL Horizons, recorded; fill on every
+ * provider, shown with a label). {sunElev} {sunsetIn} {earthStatus} {siteName} … are LIVE engine values: on the demo provider a
+ * line with one is skipped.
  */
 
 export type RefaeyMood = 'neutral' | 'smile' | 'pointing';
+export type Lesson = 'apollo' | 'change4' | 'athena';
 
 export type DialogueAction =
   | { type: 'navigate'; to: string }
   | { type: 'openExplainer'; id: string }
+  | { type: 'showSource'; id: string } // "How do you know?": a small source card inside the conversation, then Back
   | { type: 'openPlanner'; siteId: string; at?: string } // `at` = ISO UTC moment; only passed on the live provider
   | { type: 'compareAlternative' } // the touchdown card: open the compare step with the suggested alternative
   | { type: 'collapse' };
 
-/** `demoLabel`: what the reply says on the demo provider, where it opens the site without `at` (it must not claim to show the landing day). */
-export type Reply = { label: string; next?: string; action?: DialogueAction; demoLabel?: string };
+/**
+ * `demoLabel`: what the reply says on the demo provider, where it opens the site without `at` (it must not claim to show the landing day).
+ * `callsign`: choosing this reply sets the lander's callsign.
+ */
+export type Reply = { label: string; next?: string; action?: DialogueAction; demoLabel?: string; callsign?: string };
 
 export type DialogueNode = {
   id: string;
@@ -25,43 +36,65 @@ export type DialogueNode = {
   lines: string[];
   replies: Reply[];
   when?: 'horizonLola' | 'altBetter' | 'altBetterDate' | 'athenaSunlit' | 'athenaHidden';
+  /** A pure "go on" beat (one reply). At most one per path. */
+  transition?: true;
+  /** Reaching this beat finishes the story: the lesson goes in the notebook. */
+  learns?: true;
 };
 
 /* ------------------------------------------------------------------ */
 /* 1. The briefing: plays once, after the flight to Step 1.             */
+/* Every beat but b7 also has a "Skip" (outside the three replies) that jumps to b7 with the default callsign. */
 /* ------------------------------------------------------------------ */
+export const DEFAULT_CALLSIGN = 'Ostora-1';
+export const CALLSIGNS = ['Shams', 'Ostora-1', 'Horus'] as const;
+
 export const INTRO: DialogueNode[] = [
   {
-    id: 'intro-hello',
+    id: 'b1',
     mood: 'smile',
-    lines: [
-      "Hi, I'm Refaey. Welcome to the Moon's south pole.",
-      'Two things keep a lander alive here: sunlight for power, and a clear line to Earth for radio.',
-    ],
+    lines: ["Oh good, you're here. I'm Refaey. My launch slipped, my landing window closed, and I need a new plan."],
     replies: [
-      { label: 'Go on', next: 'intro-sun' },
-      { label: 'Skip', next: 'intro-choice' },
+      { label: 'What decides a landing?', next: 'b5' },
+      { label: 'Who are you, exactly?', next: 'b1a' },
     ],
   },
   {
-    id: 'intro-sun',
+    id: 'b1a',
+    mood: 'smile',
+    lines: ['Astronaut. Part-time optimist. Full-time survivor of Cairo traffic. Today, also a man without a landing date.'],
+    replies: [{ label: 'So what decides a landing?', next: 'b5' }],
+    transition: true,
+  },
+  {
+    id: 'b5',
     mood: 'pointing',
-    lines: ['At the pole the Sun never climbs more than about 1.5° above the horizon.', "Hold your little finger out at arm's length: that's about 1°."],
-    replies: [{ label: 'And Earth?', next: 'intro-earth' }],
-  },
-  {
-    id: 'intro-earth',
-    mood: 'neutral',
-    lines: ['Earth hangs just as low, and it shifts a little in the sky over each month.', 'One ridge in the wrong place hides either of them.'],
-    replies: [{ label: 'So what do I do?', next: 'intro-choice' }],
-  },
-  {
-    id: 'intro-choice',
-    mood: 'smile',
-    lines: ['So it all comes down to where you stand, and when.', 'See how three real landings learned that, or plan your own?'],
+    lines: [
+      'The Sun powers my lander. Earth must be up in the sky so I can talk home.',
+      'Both move, and hills hide them. Where and when I land decide everything.',
+    ],
     replies: [
-      { label: 'Three real landings', action: { type: 'navigate', to: '/missions' } },
-      { label: 'Plan my own', action: { type: 'navigate', to: '/mission' } },
+      { label: 'Got it.', next: 'b7' },
+      { label: 'Why do they sit so low?', action: { type: 'openExplainer', id: 'low-sun' } },
+    ],
+  },
+  {
+    id: 'b7',
+    mood: 'smile',
+    lines: ['Want to see how real missions picked their place and time, or help me plan mine straight away?'],
+    replies: [
+      { label: 'Explore past missions', action: { type: 'navigate', to: '/missions' } },
+      { label: 'Plan a future mission', action: { type: 'navigate', to: '/mission' } },
+      { label: "What's real here?", next: 'b7r' },
+    ],
+  },
+  {
+    id: 'b7r',
+    mood: 'neutral',
+    lines: ["Good question. I'm made up. Every landing, date and number I quote is real, with sources on the About page."],
+    replies: [
+      { label: 'Back', next: 'b7' },
+      { label: 'Open the sources', action: { type: 'navigate', to: '/about' } },
     ],
   },
 ];
@@ -71,6 +104,7 @@ export const INTRO: DialogueNode[] = [
 /* ------------------------------------------------------------------ */
 export type Mission = {
   id: string;
+  lessonKey: Lesson;
   name: string; // card title
   agency: string;
   /** Shown after the agency on the card. Defaults to the year of `landed`. */
@@ -83,6 +117,16 @@ export type Mission = {
   story: DialogueNode[];
 };
 
+/** The /missions page copy. */
+export const HUB = {
+  title: 'Three landings, three lessons',
+  subtitle: "Refaey's homework before {callsign} flies. Refaey is fiction; the missions and numbers are real.",
+  idle: "I've studied these three a hundred times. Pick one, and I'll tell you what {callsign} does differently.",
+  allLearned: 'Three lessons in the notebook. {callsign} is ready for a site. Are you?',
+  plan: "Plan {callsign}'s landing",
+  learned: 'Lesson learned',
+} as const;
+
 /** The three replies every story ends with. "See it" passes the touchdown moment on the live provider only. */
 const finale = (siteId: string, landed: string): Reply[] => [
   {
@@ -91,23 +135,13 @@ const finale = (siteId: string, landed: string): Reply[] => [
     action: { type: 'openPlanner', siteId, at: landed },
   },
   { label: 'Another story', next: 'missions-hub' },
-  { label: 'Plan my own landing', action: { type: 'navigate', to: '/mission' } },
+  { label: "Plan {callsign}'s landing", action: { type: 'navigate', to: '/mission' } },
 ];
-
-export const MISSIONS_HUB: DialogueNode = {
-  id: 'missions-hub',
-  mood: 'smile',
-  lines: ['Three landings, three lessons. Each one taught us something about timing, Earth in view or power.', 'Pick one.'],
-  replies: [
-    { label: 'Apollo landings (1969–1972)', next: 'apollo-1' },
-    { label: "Chang'e 4 (2019)", next: 'ce4-1' },
-    { label: 'Athena (2025)', next: 'athena-1' },
-  ],
-};
 
 export const MISSIONS: Mission[] = [
   {
     id: 'apollo',
+    lessonKey: 'apollo',
     name: 'Apollo landings',
     agency: 'NASA',
     years: '1969–1972',
@@ -116,7 +150,6 @@ export const MISSIONS: Mission[] = [
     outcome: 'Why every crew landed with the Sun low in the sky.',
     siteId: 'apollo-11',
     sources: [
-      'https://apollojournals.org/alsj/a11/a11.landing.html',
       'https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11a_Summary.htm',
       'https://www.nasa.gov/missions/apollo/apollo-16-mission-details/',
       'https://www.nasa.gov/history/50-years-ago-apollo-16-on-the-moon-at-descartes/',
@@ -125,60 +158,100 @@ export const MISSIONS: Mission[] = [
     ],
     story: [
       {
-        id: 'apollo-1',
+        id: 'a1',
         mood: 'smile',
-        lines: ['20 July 1969. Eagle is on its way down, and its computer is steering toward a crater ringed with boulders.'],
-        replies: [{ label: 'So what did Armstrong do?', next: 'apollo-2' }],
+        lines: ['20 July 1969. Eagle is coming down over the Sea of Tranquillity. Guess where NASA wanted the Sun at touchdown.'],
+        replies: [
+          { label: 'High overhead', next: 'a2h' },
+          { label: 'Low in the sky', next: 'a2l' },
+          { label: 'Below the horizon', next: 'a2d' },
+        ],
       },
       {
-        id: 'apollo-2',
-        mood: 'neutral',
-        lines: ['Armstrong took over and flew past them.', 'NASA wanted visible shadows for moments like this: they help a crew recognise craters and rocks.'],
-        replies: [{ label: 'Was the light planned?', next: 'apollo-3' }],
+        id: 'a2h',
+        mood: 'smile',
+        lines: ['Logical, and wrong. With the Sun too high, shadows wash out and the ground looks flat.'],
+        replies: [
+          { label: 'So, low?', next: 'a3' },
+          { label: 'Why does flat matter?', next: 'a3' },
+        ],
       },
       {
-        id: 'apollo-3',
+        id: 'a2l',
+        mood: 'smile',
+        lines: ['Exactly. Long shadows help a crew recognise craters and rocks on the way down.'],
+        replies: [
+          { label: 'How low?', next: 'a3' },
+          { label: 'Nice.', next: 'a3' },
+        ],
+      },
+      {
+        id: 'a2d',
+        mood: 'smile',
+        lines: ['Bold. But Eagle needed light, and its crew needed shadows to read the ground.'],
+        replies: [
+          { label: 'Fine. How low?', next: 'a3' },
+          { label: 'Fair point.', next: 'a3' },
+        ],
+      },
+      {
+        id: 'a3',
         mood: 'pointing',
-        lines: ['Yes. The landing time was chosen for the light.', 'At touchdown the Sun stood only {a11Sun} above the horizon.'],
-        replies: [{ label: 'What was the rule?', next: 'apollo-4' }],
+        lines: ['Low, but not too low. The target window was roughly 5° to 14°. At touchdown the Sun stood {a11Sun} above the horizon.'],
+        replies: [
+          { label: 'Did they always hit it?', next: 'a4' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'apollo-window' } },
+        ],
       },
       {
-        id: 'apollo-4',
-        mood: 'neutral',
-        lines: ['With the Sun too high, shadows wash out and the ground looks flat.', 'So the target window was roughly 5° to 14°.'],
-        replies: [{ label: 'Did the numbers hold?', next: 'apollo-5' }],
-      },
-      {
-        id: 'apollo-5',
+        id: 'a4',
         mood: 'smile',
-        lines: ['JPL Horizons agrees: Apollo 12 landed at {a12Sun}, Apollo 17 at {a17Sun}.', 'Apollo 16, landing about six hours late, came down at {a16Sun}, right at the edge.'],
-        replies: [{ label: 'And our engine?', next: 'apollo-5b' }],
+        lines: ['We asked JPL Horizons: Apollo 12 landed at {a12Sun}, Apollo 17 at {a17Sun}.', 'Apollo 16, landing about six hours late, came down at {a16Sun}, right at the edge.'],
+        replies: [
+          { label: 'And our engine?', next: 'a4b' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'apollo-a16' } },
+        ],
       },
       {
-        id: 'apollo-5b',
+        id: 'a4b',
         mood: 'neutral',
         lines: ['Our engine matches the published angles within 0.1°.'],
-        replies: [{ label: 'And at the pole?', next: 'apollo-6' }],
+        replies: [
+          { label: 'And at the pole?', next: 'a5' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'engine-validation' } },
+        ],
       },
       {
-        id: 'apollo-6',
+        id: 'a5',
         mood: 'pointing',
-        lines: ['Now the twist. At the south-pole sites NASA is studying, the Sun never gets above about 7°, and mostly sits at 1° or 2°.'],
+        lines: ["That's my problem. At the south-pole sites NASA is studying, the Sun never gets above about 7°, and mostly sits at 1° or 2°."],
         replies: [
-          { label: 'So what changes?', next: 'apollo-7' },
+          { label: "So you can't pick the angle.", next: 'a6' },
+          { label: 'Why not land somewhere easier?', next: 'a5b' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'poles-7' } },
+        ],
+      },
+      {
+        id: 'a5b',
+        mood: 'smile',
+        lines: ["Easier is boring. Also, I've already packed the warm socks."],
+        replies: [
+          { label: 'Fair.', next: 'a6' },
           { label: 'Why is the Sun so low?', action: { type: 'openExplainer', id: 'low-sun' } },
         ],
       },
       {
-        id: 'apollo-7',
+        id: 'a6',
         mood: 'smile',
-        lines: ["So there you can't choose the Sun's height.", 'You choose the hours when it clears the ridge in front of you. Finding those hours is this tool’s job.'],
+        learns: true,
+        lines: ["Apollo picked the Sun's height. {callsign} can't. I have to pick the hours when the Sun clears the ridge in front of me."],
         replies: finale('apollo-11', '1969-07-20T20:17:40Z'),
       },
     ],
   },
   {
     id: 'change-4',
+    lessonKey: 'change4',
     name: "Chang'e 4",
     agency: 'CNSA (China)',
     landed: '2019-01-03T02:26:00Z',
@@ -189,51 +262,104 @@ export const MISSIONS: Mission[] = [
       'https://www.guinnessworldrecords.de/world-records/553714-first-landing-on-the-far-side-of-the-moon',
       'https://english.cas.cn/newsroom/news/201901/t20190107_203642.shtml',
       'https://science.nasa.gov/moon/viewing-tips/',
+      'https://ntrs.nasa.gov/api/citations/20050232849/downloads/20050232849.pdf',
     ],
     story: [
       {
-        id: 'ce4-1',
+        id: 'c1',
         mood: 'smile',
-        lines: ["3 January 2019. Chang'e 4 touches down in Von Kármán crater, on the side of the Moon that never turns toward us."],
-        replies: [{ label: 'So where is Earth?', next: 'ce4-2' }],
-      },
-      {
-        id: 'ce4-2',
-        mood: 'neutral',
-        lines: ['Not in its sky. At touchdown Earth sat {ce4EarthBelow} below the horizon, and in three weeks of Horizons rows it never rose.'],
-        replies: [{ label: 'So how did it phone home?', next: 'ce4-3' }],
-      },
-      {
-        id: 'ce4-3',
-        mood: 'pointing',
-        lines: ['China sent the answer ahead. In May 2018 a relay satellite, Queqiao, flew to a spot beyond the Moon where it sees the far side and Earth at once.'],
-        replies: [{ label: 'And the messages?', next: 'ce4-4' }],
-      },
-      {
-        id: 'ce4-4',
-        mood: 'neutral',
-        lines: ['Every command and every photo took the long way round: lander to Queqiao, Queqiao to Earth.'],
-        replies: [{ label: 'And the Sun?', next: 'ce4-5' }],
-      },
-      {
-        id: 'ce4-5',
-        mood: 'smile',
-        lines: ['It had sunlight to spare. At touchdown the Sun stood {ce4Sun} up, {ce4SinceSunrise} after sunrise, with {ce4DaylightLeft} of daylight still to come.'],
+        lines: ["3 January 2019. Chang'e 4 lands in Von Kármán crater, on the Moon's far side. Guess how often Earth rises there."],
         replies: [
-          { label: 'What about the pole?', next: 'ce4-6' },
+          { label: 'Once a month', next: 'c2w' },
+          { label: 'Never', next: 'c2r' },
+          { label: 'Every morning', next: 'c2w' },
+        ],
+      },
+      {
+        id: 'c2r',
+        mood: 'smile',
+        lines: ['Correct, and slightly creepy. At touchdown Earth sat {ce4EarthBelow} below the horizon, and in three weeks of Horizons rows it never rose.'],
+        replies: [
+          { label: 'So how did it phone home?', next: 'c3' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'ce4-earth' } },
+        ],
+      },
+      {
+        id: 'c2w',
+        mood: 'smile',
+        lines: ['Sadly, never. At touchdown Earth sat {ce4EarthBelow} below the horizon, and in three weeks of Horizons rows it never rose.'],
+        replies: [
+          { label: 'So how did it phone home?', next: 'c3' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'ce4-earth' } },
+        ],
+      },
+      {
+        id: 'c3',
+        mood: 'pointing',
+        lines: ['China launched a relay first. In May 2018, Queqiao flew to the Earth–Moon L2 point, beyond the Moon, where it sees both sides.'],
+        replies: [
+          { label: 'Clever.', next: 'c4' },
+          { label: "What's L2?", next: 'c3b' },
+        ],
+      },
+      {
+        id: 'c3b',
+        mood: 'neutral',
+        lines: ['A balance point beyond the Moon, seen from Earth. A satellite circling there can see the far side and Earth at once.'],
+        replies: [
+          { label: 'Got it.', next: 'c4' },
+          { label: 'Neat.', next: 'c4' },
+        ],
+      },
+      {
+        id: 'c4',
+        mood: 'neutral',
+        lines: ['Every command and photo took the long way round: lander to Queqiao, Queqiao to Earth.'],
+        replies: [
+          { label: 'And power?', next: 'c5' },
+          { label: 'Slow, but it works.', next: 'c5' },
+        ],
+      },
+      {
+        id: 'c5',
+        mood: 'smile',
+        lines: ['Power was easy. The Sun was {ce4Sun} up, {ce4SinceSunrise} after sunrise, with {ce4DaylightLeft} of daylight still ahead.'],
+        replies: [
+          { label: 'Lucky them.', next: 'c6' },
+          { label: 'Why did that matter?', next: 'c5b' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'ce4-sun' } },
+        ],
+      },
+      {
+        id: 'c5b',
+        mood: 'neutral',
+        lines: ['More daylight ahead means more time to work before the long lunar night.'],
+        replies: [
+          { label: 'Makes sense.', next: 'c6' },
+          { label: 'Fair enough.', next: 'c6' },
+        ],
+      },
+      {
+        id: 'c6',
+        mood: 'pointing',
+        lines: ["{callsign} has no Queqiao. If Earth isn't in my sky, I'm talking to myself. Near the pole Earth skims the horizon, so one ridge can hide it."],
+        replies: [
+          { label: 'So what will you do?', next: 'c7' },
           { label: "Why can't the far side see Earth?", action: { type: 'openExplainer', id: 'farside' } },
         ],
       },
       {
-        id: 'ce4-6',
-        mood: 'pointing',
-        lines: ['At the pole the puzzle flips. Earth is in your sky, but so low that one ridge can hide it for days.', 'The “Earth up” row on the timeline shows when it is in view.'],
+        id: 'c7',
+        mood: 'smile',
+        learns: true,
+        lines: ["I'll watch the “Earth up” row on the timeline as closely as the Sun. No Earth, no voice."],
         replies: finale('change-4', '2019-01-03T02:26:00Z'),
       },
     ],
   },
   {
     id: 'im-2-athena',
+    lessonKey: 'athena',
     name: 'Athena (IM-2)',
     agency: 'Intuitive Machines / NASA',
     landed: '2025-03-06T17:30:00Z', // about 12:30 pm EST (SpacePolicyOnline, Space Flight Now); NASA: about 11:30 a.m. CST
@@ -250,62 +376,98 @@ export const MISSIONS: Mission[] = [
     ],
     story: [
       {
-        id: 'athena-1',
+        id: 't1',
         mood: 'neutral',
-        lines: ['6 March 2025. Athena comes down on Mons Mouton, closer to the south pole than any lander before it.'],
-        replies: [{ label: 'What was it carrying?', next: 'athena-2' }],
-      },
-      {
-        id: 'athena-2',
-        mood: 'neutral',
-        lines: ['A NASA drill to look for ice and other volatiles, a hopper and small rovers.', 'All of it ran on sunlight.'],
-        replies: [{ label: 'How did it land?', next: 'athena-3' }],
-      },
-      {
-        id: 'athena-3',
-        mood: 'neutral',
-        lines: ['It landed a few hundred metres from its target, in a crater, and ended up on its side.'],
-        replies: [{ label: 'What was the Sun doing?', next: 'athena-4' }],
-      },
-      {
-        id: 'athena-4',
-        mood: 'pointing',
-        lines: ['Look at the Sun that day: {athenaSun} above the horizon.', 'That low, a crater wall is enough to keep you in shade.'],
-        replies: [{ label: 'What happened next?', next: 'athena-5' }],
-      },
-      {
-        id: 'athena-5',
-        mood: 'neutral',
-        lines: ['Sunlight could not reach its solar cells, so the batteries could not recharge.', 'Intuitive Machines ended the mission less than a day after landing.'],
+        lines: ['6 March 2025. Athena lands on Mons Mouton, closer to the south pole than any lander before it.'],
         replies: [
-          { label: 'What does our map say?', next: 'athena-6a' },
-          { label: 'What does our map say?', next: 'athena-6b' },
+          { label: 'What was it there for?', next: 't2' },
+          { label: 'Did it work?', next: 't3' },
         ],
       },
       {
-        id: 'athena-6a',
+        id: 't2',
+        mood: 'neutral',
+        lines: ['Ice hunting. It carried a NASA drill to look for ice and other volatiles, a hopper and small rovers.'],
+        replies: [
+          { label: 'And then?', next: 't3' },
+          { label: 'Go on.', next: 't3' },
+        ],
+      },
+      {
+        id: 't3',
+        mood: 'neutral',
+        lines: ['It came down a few hundred metres from its target, in a crater, and ended up on its side.'],
+        replies: [
+          { label: 'Could it still get sunlight?', next: 't4' },
+          { label: 'Ouch.', next: 't4' },
+        ],
+      },
+      {
+        id: 't4',
+        mood: 'pointing',
+        lines: ['Guess how high the Sun stood over Athena at touchdown.'],
+        replies: [
+          { label: 'About 2°', next: 't5r' },
+          { label: 'About 20°', next: 't5' },
+          { label: 'About 45°', next: 't5' },
+        ],
+      },
+      {
+        id: 't5r',
+        mood: 'neutral',
+        lines: ["You've been paying attention. {athenaSun}. That low, a crater wall can keep you in shade."],
+        replies: [
+          { label: 'What happened?', next: 't6' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'athena-sun' } },
+        ],
+      },
+      {
+        id: 't5',
+        mood: 'neutral',
+        lines: ['Lower. Just {athenaSun}. That low, a crater wall can keep you in shade.'],
+        replies: [
+          { label: 'What happened?', next: 't6' },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'athena-sun' } },
+        ],
+      },
+      {
+        id: 't6',
+        mood: 'neutral',
+        lines: ['Sunlight could not reach its solar cells, so the batteries could not recharge. Intuitive Machines ended the mission less than a day after landing.'],
+        replies: [
+          { label: "That's harsh.", next: 't7a' },
+          { label: "That's harsh.", next: 't7b' },
+          { label: 'Would your map have seen it?', next: 't7a' },
+          { label: 'Would your map have seen it?', next: 't7b' },
+        ],
+      },
+      {
+        id: 't7a',
         mood: 'neutral',
         when: 'athenaSunlit',
-        lines: ['One honest note: on our terrain map this spot looks sunlit.', 'Near the lander the map resolves only {athenaDemRes} metres, so smaller shadows can hide from it.'],
+        lines: ['Honest answer: our terrain map says that spot was sunlit. Near the lander it only resolves {athenaDemRes} metres, so smaller shadows can hide.'],
         replies: [
-          { label: 'So what should I take from it?', next: 'athena-7' },
-          { label: 'What is the best window?', action: { type: 'openExplainer', id: 'best-window' } },
+          { label: 'So what will you do?', next: 't8' },
+          { label: 'How do panels catch a low Sun?', action: { type: 'openExplainer', id: 'upright-panels' } },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'athena-res' } },
         ],
       },
       {
-        id: 'athena-6b',
+        id: 't7b',
         mood: 'neutral',
         when: 'athenaHidden',
-        lines: ['Our terrain map agrees: at that hour the skyline toward the Sun stood higher than the Sun itself.'],
+        lines: ['Honest answer: yes. Our terrain map says that at that hour the skyline toward the Sun stood higher than the Sun itself.'],
         replies: [
-          { label: 'So what should I take from it?', next: 'athena-7' },
-          { label: 'What is the best window?', action: { type: 'openExplainer', id: 'best-window' } },
+          { label: 'So what will you do?', next: 't8' },
+          { label: 'How do panels catch a low Sun?', action: { type: 'openExplainer', id: 'upright-panels' } },
+          { label: 'How do you know?', action: { type: 'showSource', id: 'athena-res' } },
         ],
       },
       {
-        id: 'athena-7',
-        mood: 'smile',
-        lines: ['So read any sunlight forecast, ours included, as the best case for the area.', 'The last few metres still decide.'],
+        id: 't8',
+        mood: 'neutral',
+        learns: true,
+        lines: ['{callsign} lands on a ridge, not in a crater, and I read every forecast as the best case. The last few metres still decide.'],
         replies: finale('im-2-athena', '2025-03-06T17:30:00Z'),
       },
     ],
@@ -314,29 +476,72 @@ export const MISSIONS: Mission[] = [
 
 /* ------------------------------------------------------------------ */
 /* 3. Plan moments: <RefaeyMoment id="…"/> placed by Aser per step.    */
+/* The first moment someone sees without the briefing gets a short introduction. */
 /* ------------------------------------------------------------------ */
 export const MOMENTS: DialogueNode[] = [
   {
-    id: 'moment-stand',
-    mood: 'neutral',
-    when: 'horizonLola',
-    lines: ["This skyline is real, traced from NASA's laser maps.", 'The Sun is {sunElev} up and sets in {sunsetIn}. Earth: {earthStatus}.'],
+    id: 'moment-intro',
+    mood: 'smile',
+    lines: ["I'm Refaey. My launch slipped, and I need a new landing. Help me pick one?"],
     replies: [
-      { label: 'Why is the Sun so low?', action: { type: 'openExplainer', id: 'low-sun' } },
-      { label: 'OK', action: { type: 'collapse' } },
+      { label: 'Sure', action: { type: 'collapse' } },
+      { label: 'Who are you?', next: 'moment-intro-who' },
+    ],
+  },
+  {
+    id: 'moment-intro-who',
+    mood: 'smile',
+    lines: ['Astronaut, part-time optimist, full-time survivor of Cairo traffic. Made up, by the way. The Moon is real.'],
+    replies: [
+      { label: 'Okay, I will help.', action: { type: 'collapse' } },
+      { label: 'Fair enough.', action: { type: 'collapse' } },
     ],
   },
 ];
 
+/**
+ * The stand card (stage placement). Lines are assembled from what is true at that moment:
+ *  - always: where he is ("My old window is gone." first when the visitor arrives from Compare dates);
+ *  - the LOLA horizon only: the skyline line;
+ *  - live provider only: the live line, or one of two variants when the live sky says the Sun or Earth is down.
+ */
+export const STAND = {
+  hatch: "This is the view from {callsign}'s hatch.",
+  fromCompare: "My old window is gone. This is the view from {callsign}'s hatch.",
+  skyline: "The skyline is traced from NASA's laser maps.",
+  live: 'Sun {sunElev} up, sets in {sunsetIn}. Earth: {earthStatus}.',
+  dark: "I'd be in the dark here. Try dragging the timeline.",
+  noEarth: "Nice light, but I can't call home from here. Watch the Earth row.",
+} as const;
+export function standNode(o: { fromCompare: boolean; lola: boolean; live: boolean; sunUp: boolean; earthUp: boolean }): DialogueNode {
+  const lines: string[] = [o.fromCompare ? STAND.fromCompare : STAND.hatch];
+  if (o.lola) lines.push(STAND.skyline);
+  if (o.live) lines.push(!o.sunUp ? STAND.dark : !o.earthUp ? STAND.noEarth : STAND.live);
+  return {
+    id: 'moment-stand',
+    mood: 'neutral',
+    lines,
+    replies: [
+      { label: 'Why is the Sun so low?', action: { type: 'openExplainer', id: 'low-sun' } },
+      { label: 'Looks good', action: { type: 'collapse' } },
+    ],
+  };
+}
+
 /* ------------------------------------------------------------------ */
-/* 4. What would happen to your lander: the touchdown screen (live).    */
-/* Tokens: {siteName} {landingDate} {sunHours} {earthHours} {altSite} {altGain} */
+/* 4. Touchdown: the ending (the stage card on the touchdown screen).   */
+/* Tokens: {siteName} {landingDate} {sunHours} {earthHours} {altSite} {altDate} {altGain} */
 /* ------------------------------------------------------------------ */
+const END_REPLIES: Reply[] = [
+  { label: 'Plan another landing', action: { type: 'navigate', to: '/mission' } },
+  { label: 'Back to the missions', action: { type: 'navigate', to: '/missions' } },
+  { label: "What's real here?", next: 'end-real' },
+];
 export const OUTCOME: DialogueNode[] = [
   {
     id: 'outcome-play',
-    mood: 'neutral',
-    lines: ['Landing at {siteName} on {landingDate}. In its first lunar day the Sun is up for {sunHours} and Earth is in view for {earthHours}.'],
+    mood: 'smile',
+    lines: ['{callsign} is down at {siteName}, {landingDate}.', 'First daytime: {sunHours} of sunlight, Earth in view for {earthHours}.'],
     replies: [
       { label: 'Could I do better?', next: 'outcome-alt' },
       { label: 'Could I do better?', next: 'outcome-alt-date' },
@@ -347,29 +552,41 @@ export const OUTCOME: DialogueNode[] = [
     id: 'outcome-alt',
     mood: 'pointing',
     when: 'altBetter',
-    lines: ['Try {altSite}: it adds {altGain} of sunlight in that first lunar day, and Earth stays in view at least as long.'],
+    lines: ['One thing: {altSite} nearby would have given me {altGain} more. Want to look?'],
     replies: [
-      { label: 'Compare them', action: { type: 'compareAlternative' } },
-      { label: 'Got it', next: 'outcome-close' },
+      { label: 'Show me', action: { type: 'compareAlternative' } },
+      { label: "I'm happy here", next: 'outcome-close' },
     ],
   },
   {
     id: 'outcome-alt-date',
     mood: 'pointing',
     when: 'altBetterDate',
-    lines: ['Landing on {altDate} adds {altGain} of sunlight in that first lunar day, and Earth stays in view at least as long.'],
+    lines: ['One thing: landing on {altDate} would have given me {altGain} more. Want to look?'],
     replies: [
-      { label: 'Compare the dates', action: { type: 'compareAlternative' } },
-      { label: 'Got it', next: 'outcome-close' },
+      { label: 'Show me', action: { type: 'compareAlternative' } },
+      { label: "I'm happy here", next: 'outcome-close' },
     ],
   },
   {
     id: 'outcome-close',
     mood: 'smile',
-    lines: ['That is what the data says for this place and day. Change the site or the date to see how it moves.'],
+    lines: ["That's my landing. Thank you for planning it with me."],
+    replies: END_REPLIES,
+  },
+  {
+    id: 'outcome-demo',
+    mood: 'neutral',
+    lines: ["Those numbers need live NASA data, so I'll keep quiet rather than guess."],
+    replies: END_REPLIES,
+  },
+  {
+    id: 'end-real',
+    mood: 'neutral',
+    lines: ["I'm made up, and so is {callsign}. Every landing, date and number I quote is real, with sources on the About page."],
     replies: [
-      { label: 'Plan another', action: { type: 'navigate', to: '/mission' } },
-      { label: 'Past missions', action: { type: 'navigate', to: '/missions' } },
+      { label: 'Back', next: 'outcome-close' },
+      { label: 'Open the sources', action: { type: 'navigate', to: '/about' } },
     ],
   },
 ];

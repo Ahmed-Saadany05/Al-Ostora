@@ -1,0 +1,90 @@
+/* Refaey guiding the planner: his face plus one speech bubble, floating over the step. */
+.guide {
+  position: fixed;
+  z-index: var(--z-chrome);
+  left: var(--gutter);
+  bottom: calc(var(--statusbar-height) + var(--space-6));
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  max-width: min(360px, calc(100vw - 2 * var(--gutter)));
+  pointer-events: none;
+  animation: guideIn var(--duration-slow) var(--ease-out) backwards;
+}
+.guide > * {
+  pointer-events: auto;
+}
+/* Step 1: the left column under Back is free; the bottom-left has the globe caption. */
+.at_site {
+  bottom: auto;
+  top: calc(var(--header-height) + 110px);
+  align-items: flex-start;
+}
+.face {
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 var(--color-sun-soft);
+  transition: box-shadow var(--duration-base) var(--ease-out);
+}
+.face:hover,
+.face:focus-visible {
+  box-shadow: 0 0 0 6px var(--color-sun-soft);
+}
+.bubble {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6) var(--space-3) var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-overlay);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-panel);
+}
+.step {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-sun);
+}
+.line {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+.line + .line {
+  color: var(--color-text-muted);
+}
+.close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.close:hover {
+  color: var(--color-text);
+}
+@keyframes guideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide {
+    animation: none;
+  }
+}
