@@ -191,6 +191,9 @@ export function HomePage() {
             <Button variant="ghost" to="/about">
               {HOME_COPY.about}
             </Button>
+            <Button variant="ghost" to="/missions">
+              {HOME_COPY.pastMissions}
+            </Button>
           </div>
         </div>
       </div>

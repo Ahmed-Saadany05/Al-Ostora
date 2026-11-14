@@ -12,6 +12,7 @@ export const HOME_COPY = {
   line: 'See where the Sun can power you and Earth can hear you.',
   begin: 'Begin the journey',
   about: 'About the data',
+  pastMissions: 'Past missions',
   pinLabel: 'Shackleton Crater Rim',
   moonLabel: 'The Moon, south pole at the crest',
 } as const;
