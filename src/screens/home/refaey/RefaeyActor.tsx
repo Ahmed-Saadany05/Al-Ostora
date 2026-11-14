@@ -259,6 +259,8 @@ export function RefaeyActor({
       >
         <div ref={stage} className={s.actorStage} />
       </div>
+      {/* Space Apps rule: AI-generated images carry a visible label. */}
+      <span className={s.aiTag}>AI-generated</span>
     </div>
   );
 }

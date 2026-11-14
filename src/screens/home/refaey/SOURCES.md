@@ -75,7 +75,7 @@ The lines he says when poked ("Low gravity. Everything's a trampoline.", "That t
 
 ## Art and AI use (for `/about`)
 
-Refaey, the animated astronaut (idle, walking, hop) and the busts, are 3D renders of an original character: **"Refaey's 3D renders were generated with [TOOL — fill in before 13:00] (original character)."** The frames were cleaned and cut into animation strips with `refaey/art/tools/make_sprites.py` (sources in `refaey/art/source/`; WhatsApp-compressed contact sheets, so the edges were re-feathered and the colour fringe replaced; measurements in `art/tools/last-run.json`). The older flat illustrations (Claude Design) are no longer used anywhere.
+Refaey, the animated astronaut (idle, walking, hop) and the busts, are 3D renders of an original character: **"Refaey's 3D renders were generated with GPT-6 Astra (original character)."** The frames were cleaned and cut into animation strips with `refaey/art/tools/make_sprites.py` (sources in `refaey/art/source/`; WhatsApp-compressed contact sheets, so the edges were re-feathered and the colour fringe replaced; measurements in `art/tools/last-run.json`). The older flat illustrations (Claude Design) are no longer used anywhere.
 
 His lines were drafted with Claude and then checked by the team against the sources listed above.
 

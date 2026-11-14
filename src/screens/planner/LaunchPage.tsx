@@ -409,7 +409,7 @@ export function LaunchPage() {
         </Button>
       </div>
       <p className={s.trajCredit}>
-        {plan.assumption} · {IMAGE_CREDIT}
+        {plan.assumption} · {IMAGE_CREDIT} · 3-D Earth: three.js example texture (MIT), source not stated
       </p>
 
       <RefaeyMoment id="moment-outcome" placement="stage" />

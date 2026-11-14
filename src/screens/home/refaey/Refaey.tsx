@@ -13,8 +13,12 @@ export function RefaeyBust({ size }: { mood?: RefaeyMood; size: string }) {
   const small = /^(\d+(?:\.\d+)?)px$/.exec(size)?.[1];
   const useSmall = small ? Number(small) <= 56 : size.includes('bust-card') || size.includes('bust-inline');
   return (
-    <span className={s.bust} style={{ width: size, height: size }}>
-      <img src={useSmall ? bust80 : bust160} alt="" width={useSmall ? 80 : 160} height={useSmall ? 80 : 160} draggable={false} />
+    <span className={s.bustWrap}>
+      <span className={s.bust} style={{ width: size, height: size }}>
+        <img src={useSmall ? bust80 : bust160} alt="" width={useSmall ? 80 : 160} height={useSmall ? 80 : 160} draggable={false} />
+      </span>
+      {/* Space Apps rule: AI-generated images carry a visible label. */}
+      <span className={s.aiBadge} title="AI-generated image">AI</span>
     </span>
   );
 }
