@@ -65,6 +65,16 @@ Not confirmed by a page that could be opened:
 - *Could not confirm this pass*: "That's where NASA is heading next" as the reason for the south pole (a5b keeps only the joke: only search snippets, no opened NASA page, and NASA's current Artemis plan has moved); "Armstrong took manual control and flew past the boulders" is no longer in the script (it was confirmed on the ALSJ landing page but the new story does not use it).
 - *Could not open*: AMNH "Skylight: Apollo Mission Landings and Lunar Phases" (HTTP 403); Space.com's Queqiao article (only the headline loaded); Intuitive Machines' investor release (HTTP 403); NASA NSSDC Chang'e 4 record (error page); NASA Ames "thumb" page (connection refused).
 
+## The animation (not a claim about the Moon, but it uses one number)
+
+| What | Where | Source |
+|---|---|---|
+| Lunar surface gravity 1.62 m/s², used for how long a hop hangs in the air (a 0.4 m hop: about 1.4 s) | `refaey/spriteMath.ts` (`LUNAR_G`), the hop in `RefaeyActor.tsx` | [NASA NSSDC, Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html): "Surface gravity (m/s2) 1.62 9.80 0.165" (Moon, Earth, ratio). The 0.4 m hop height and the 1.8 m suit height are choices, not data. |
+
+The lines he says when poked ("Low gravity. Everything's a trampoline.", "That tickles. Probably. The suit is thick.", "Still no launch date. Still optimistic.", "In Cairo, this hop would hit a balcony.") are jokes, not facts.
+
 ## Art and AI use (for `/about`)
 
-Refaey's art was generated with Claude Design as an original character. His lines were drafted with Claude and then checked by the team against the sources listed above. (The 3D renders for the animated Refaey are added here when they ship.)
+Refaey, the animated astronaut (idle, walking, hop) and the busts, are 3D renders of an original character: **"Refaey's 3D renders were generated with [TOOL — fill in before 13:00] (original character)."** The frames were cleaned and cut into animation strips with `refaey/art/tools/make_sprites.py` (sources in `refaey/art/source/`; WhatsApp-compressed contact sheets, so the edges were re-feathered and the colour fringe replaced; measurements in `art/tools/last-run.json`). The older flat illustrations (Claude Design) are no longer used anywhere.
+
+His lines were drafted with Claude and then checked by the team against the sources listed above.

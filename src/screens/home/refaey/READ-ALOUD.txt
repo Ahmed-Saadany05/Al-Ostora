@@ -262,7 +262,16 @@ Those numbers need live NASA data, so I'll keep quiet rather than guess.
 I'm made up, and so is Ostora-1. Every landing, date and number I quote is real, with sources on the About page.
    replies: [Back] → outcome-close  [Open the sources] → /about
 
-5. EXPLAINERS REFAEY CAN OPEN (existing text)
+5. WHEN YOU POKE HIM (on the briefing and /missions; one hop, one of these for two seconds, once every three seconds)
+---------------------------------------------------
+Low gravity. Everything's a trampoline.
+That tickles. Probably. The suit is thick.
+Still no launch date. Still optimistic.
+In Cairo, this hop would hit a balcony.
+
+He also hops when a story ends and its lesson is learned. On the briefing's first beat he walks in from the left (once per session). With the Motion toggle off (or reduced motion) he stands still.
+
+6. EXPLAINERS REFAEY CAN OPEN (existing text)
 ---------------------------------------------------
 low-sun: Why is the Sun so low? The Moon's axis is tilted only about 1.5°, so near the south pole the Sun never climbs much higher than that. It circles the horizon instead of rising overhead, and a nearby ridge can hide it completely.
 
