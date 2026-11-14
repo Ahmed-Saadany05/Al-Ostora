@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { interpolateSky, SitePanorama } from '@/scenes';
 import { Explain } from '@/screens/home/Explain';
+import { RefaeyMoment } from '@/screens/home/refaey';
 import { nextTransition, useDayReport, useHorizon, useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatLatLon, formatNumber, formatUtc } from '@/shared/format';
 import { missionUrl, useMission } from '@/shared/mission';
@@ -274,6 +275,8 @@ export function StandPage() {
           Launch
         </Button>
       </div>
+
+      {!partner && <RefaeyMoment id="moment-stand" placement="stage" />}
 
       <VerifyDrawer site={site} time={time} open={verify} onClose={() => setVerify(false)} />
     </section>
