@@ -63,3 +63,27 @@ export function hopLiftPx(tMs: number, spriteHeightPx: number, count: number) {
   const t = (tMs - takeoffMs) / 1000;
   return heightAt(t) * (spriteHeightPx / SUIT_HEIGHT_M);
 }
+
+/**
+ * Float: the airborne frames of the hop sheet with relaxed limbs (arms out, knees bent). Their helmet tops sit within 3 px
+ * of each other (29, 31 and 32 px in a 451 px frame), so the loop does not pump; the weightless feel comes from the drift.
+ */
+export const FLOAT_FRAMES = [3, 7, 8];
+export const FLOAT_FRAME_MS = 250; // about 4 frames per second
+export const FLOAT_DRIFT_PX = 4;
+export const FLOAT_TILT_DEG = 1.5;
+export const FLOAT_PERIOD_MS = 4000;
+/** Ping-pong order over the float frames (no seam). */
+export const floatCycle = () => idleCycle(FLOAT_FRAMES.length).map((i) => FLOAT_FRAMES[i]);
+/** The slow, eased bob and tilt of a floating figure `tMs` into the loop: translateY ±4 px and rotate ±1.5° over about 4 s. */
+export function floatDrift(tMs: number) {
+  const a = (2 * Math.PI * tMs) / FLOAT_PERIOD_MS;
+  return { y: FLOAT_DRIFT_PX * Math.sin(a), rot: FLOAT_TILT_DEG * Math.sin(a - Math.PI / 3) };
+}
+/** Entrance by drifting in from beyond the left edge: at most 1.2 s, eased out. Returns the share of the way travelled (0..1). */
+export const DRIFT_IN_MS = 1200;
+export const driftInProgress = (tMs: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, tMs / DRIFT_IN_MS)), 3);
+/** A gentle push away and back (floating click): 12 px over 600 ms. */
+export const PUSH_PX = 12;
+export const PUSH_MS = 600;
+export const pushOffset = (tMs: number) => (tMs <= 0 || tMs >= PUSH_MS ? 0 : PUSH_PX * Math.sin((Math.PI * tMs) / PUSH_MS));

@@ -302,3 +302,92 @@
 .talkFill {
   width: 100%;
 }
+
+/* ---------------------------------------------------------------- Refaey in the screen: figure + one speech balloon */
+.stageLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none; /* only the figure and the balloon take clicks */
+}
+.stageFigure {
+  position: absolute;
+  pointer-events: auto;
+}
+/* A soft ellipse under his feet when he stands on a surface. */
+.contactShadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--space-1) / -2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  pointer-events: none;
+}
+/* The balloon: kit surface, border and radius; the tail points at his helmet from whichever side it is on. */
+.balloon {
+  --say: var(--text-md);
+  position: absolute;
+  max-width: 340px;
+  box-sizing: border-box;
+  padding: var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  pointer-events: auto;
+  font-stretch: var(--stretch-body);
+}
+.balloon::before {
+  content: '';
+  position: absolute;
+  width: var(--space-3);
+  height: var(--space-3);
+  background: var(--color-surface-raised);
+  border: var(--border);
+  transform: rotate(45deg);
+}
+.balloon[data-side='right']::before {
+  left: calc(var(--space-3) / -2 - 1px);
+  top: var(--tail-y, var(--space-5));
+  border-right: 0;
+  border-top: 0;
+}
+.balloon[data-side='left']::before {
+  right: calc(var(--space-3) / -2 - 1px);
+  top: var(--tail-y, var(--space-5));
+  border-left: 0;
+  border-bottom: 0;
+}
+.balloon[data-side='above']::before {
+  left: 50%;
+  margin-left: calc(var(--space-3) / -2);
+  bottom: calc(var(--space-3) / -2 - 1px);
+  border-left: 0;
+  border-top: 0;
+}
+.balloon .talk {
+  --say: var(--text-md);
+  gap: var(--space-2);
+}
+.balloon .line {
+  font-size: var(--say);
+  line-height: 1.45;
+}
+.balloon .reply {
+  font-size: var(--text-sm);
+}
+.balloon .quipLine {
+  inset: 0 auto auto 0;
+  font-size: var(--say);
+  line-height: 1.45;
+}
+.balloonTalk {
+  width: 100%;
+}
+
+/* When he is placed in the screen, the plain layout is hidden (and not read out): there is one dialog, the balloon. */
+[data-stage='on'] [data-refaey-fallback] {
+  display: none;
+}

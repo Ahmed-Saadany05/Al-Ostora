@@ -12,6 +12,8 @@ import { Button, Card, DisplayHeading, Icon, Lead } from '@/shared/ui';
 import { RefaeyBust } from '../refaey';
 import { refaeyActor } from '../refaey/actorBus';
 import { RefaeyActor, useQuip } from '../refaey/RefaeyActor';
+import { RefaeyStage } from '../refaey/RefaeyStage';
+import { MISSIONS_LIST_SLOTS, MISSIONS_STORY_SLOTS } from '../refaey/slots';
 import { FactsBadge } from '../refaey/FactsBadge';
 import { athenaVerdict, recordedTokens } from '../refaey/facts/display';
 import { REFAEY_COPY } from '../refaey/copy';
@@ -21,6 +23,7 @@ import { SourceLink } from '../refaey/SourceLink';
 import { useRefaey } from '../refaey/store';
 import { adaptReplies, resolveNode, type ResolveContext, type ResolvedNode } from '../refaey/logic';
 import { getNode, hasExplainer } from '../refaey/registry';
+import type { PanelContent } from '../refaey/DialogueText';
 import { MISSIONS_COPY } from './copy';
 import s from './MissionsPage.module.css';
 import r from '../refaey/refaey.module.css';
@@ -63,6 +66,12 @@ export function MissionsPage() {
   );
 
   const area = useRef<HTMLDivElement>(null);
+  const pageRoot = useRef<HTMLDivElement>(null);
+  // 'on' while he is being placed in the screen; 'off' when no slot fits and the plain layout shows. Reset when the list/story changes.
+  const [placed, setPlaced] = useState<{ view: string; ok: boolean; pose: string | null }>({ view: '', ok: true, pose: null });
+  const view = mission ? `story:${mission.id}` : 'list';
+  const stage = placed.view !== view || placed.ok ? 'on' : 'off';
+  const pendingHop = useRef(false);
   const beat = useRef<HTMLDivElement>(null);
   const history = useRef<HTMLDivElement>(null);
   const cameFrom = useRef<string | null>(null);
@@ -125,8 +134,17 @@ export function MissionsPage() {
   useEffect(() => {
     if (!finished) return;
     learn(finished);
-    refaeyActor.hop(); // a lesson learned: he hops (only if he may move)
+    pendingHop.current = true; // back on the list he hops once if he is standing; in the plain layout he hops now
+    if (stage === 'off') refaeyActor.hop(); // a lesson learned: he hops (only if he may move)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished, learn]);
+  useEffect(() => {
+    if (mission || !pendingHop.current || placed.view !== 'list' || !placed.ok) return;
+    pendingHop.current = false;
+    if (placed.pose !== 'stand') return;
+    const t = window.setTimeout(() => refaeyActor.hop(), 1400);
+    return () => window.clearTimeout(t);
+  }, [mission, placed]);
 
   const onReply = (rep: Reply) => {
     if (!mission) return;
@@ -143,11 +161,16 @@ export function MissionsPage() {
   const allLearned = MISSIONS.every((m) => lessons[m.lessonKey]);
   const replies = current ? adaptReplies(current.replies, siteExists, getProvider().id === 'live') : [];
 
+  const stageContent: PanelContent = mission && current
+    ? { key: current.id, title: current.title, lines: current.lines, replies, link: current.link }
+    : { key: 'hub', lines: [say(allLearned ? HUB.allLearned : HUB.idle)], replies: [] };
+
   return (
     <div
+      ref={pageRoot}
       className={s.root}
       onKeyDown={(e) => {
-        if (e.key === 'Escape' && mission) {
+        if (e.key === 'Escape' && mission && stage === 'off') {
           e.preventDefault();
           closeStory();
         }
@@ -164,12 +187,12 @@ export function MissionsPage() {
       <div ref={area} className={s.area}>
         {!mission ? (
           <div className={[s.grid, s.list].join(' ')}>
-            <div className={s.figure}>
+            <div className={s.figure} data-refaey-fallback>
               <RefaeyActor height="var(--actor-h)" clickable />
             </div>
             <div className={s.listBody}>
             <div className={s.idle}>
-              <div className={s.quipHost} data-quip={quip !== null}>
+              <div className={s.quipHost} data-quip={quip !== null} data-refaey-fallback>
                 <p className={s.idleText}>{say(allLearned ? HUB.allLearned : HUB.idle)}</p>
                 {quip && (
                   <p className={s.quipLine} role="status">
@@ -183,7 +206,7 @@ export function MissionsPage() {
                 </Button>
               )}
             </div>
-            <ul className={s.cards}>
+            <ul className={s.cards} data-refaey-anchor="cards">
               {MISSIONS.map((m) => (
                 <li key={m.id} data-story={m.id} className={s.cardItem}>
                   <Card onSelect={() => openStory(m)} padding="md" className={s.card}>
@@ -209,13 +232,13 @@ export function MissionsPage() {
           </div>
         ) : (
           <div className={[s.grid, s.story].join(' ')}>
-            <div className={s.back}>
+            <div className={s.back} data-refaey-anchor="back">
               <Button variant="ghost" size="md" icon={null} onClick={closeStory}>
                 ← {MISSIONS_COPY.all}
               </Button>
             </div>
             {earlier.length > 0 && (
-              <div ref={history} className={s.history} role="region" aria-label={MISSIONS_COPY.earlier} tabIndex={0}>
+              <div ref={history} data-refaey-fallback className={s.history} role="region" aria-label={MISSIONS_COPY.earlier} tabIndex={0}>
                 {earlier.map((n, i) => (
                   <div key={`${n.id}:${i}`} className={s.earlier}>
                     {n.title && <p className={s.beatTitle}>{n.title}</p>}
@@ -228,10 +251,10 @@ export function MissionsPage() {
                 ))}
               </div>
             )}
-            <div className={s.figure}>
+            <div className={s.figure} data-refaey-fallback>
               <RefaeyActor height="var(--actor-h)" clickable />
             </div>
-            <div className={s.current}>
+            <div className={s.current} data-refaey-fallback>
               <div className={s.inlineBust} aria-hidden>
                 <RefaeyBust mood={current?.mood ?? 'neutral'} size="var(--bust-inline)" />
               </div>
@@ -269,6 +292,16 @@ export function MissionsPage() {
           </div>
         )}
       </div>
+      <RefaeyStage
+        key={view}
+        slots={mission ? MISSIONS_STORY_SLOTS : MISSIONS_LIST_SLOTS}
+        scope={pageRoot}
+        content={stageContent}
+        onReply={mission ? onReply : () => undefined}
+        entrance="none"
+        reserveH={mission ? undefined : 120}
+        onPlaced={(ok, slot) => setPlaced((p) => (p.view === view && p.ok === ok && p.pose === (slot?.pose ?? null) ? p : { view, ok, pose: slot?.pose ?? null }))}
+      />
     </div>
   );
 }

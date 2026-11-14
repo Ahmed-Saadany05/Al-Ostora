@@ -248,3 +248,11 @@
   line-height: 1.35;
   color: var(--color-text);
 }
+
+/* With Refaey placed in the screen, the list is only the cards (full width) and a story is only the back link: his figure and balloon carry the rest. */
+.root[data-stage='on'] .list {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'cards';
+  margin-top: auto; /* the cards row sits at the bottom: the space above it is where he stands or floats */
+  padding-bottom: var(--space-5);
+}

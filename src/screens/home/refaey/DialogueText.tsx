@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '@/shared/ui';
 import { REFAEY_COPY } from './copy';
 import type { Reply } from './dialogues/dialogues';
@@ -23,6 +23,8 @@ export function DialogueText({
   onCollapse,
   className,
   skip,
+  bubble = false,
+  footer,
 }: {
   content: PanelContent;
   onReply: (reply: Reply) => void;
@@ -30,6 +32,10 @@ export function DialogueText({
   className?: string;
   /** An extra way out that is not one of the (at most three) replies: the briefing's "Skip". */
   skip?: { label: string; onClick: () => void };
+  /** In his speech balloon: no "Refaey" label (the balloon is his), body-size text. */
+  bubble?: boolean;
+  /** Shown under the lines (the "recorded" label for a line that uses a recorded fact). */
+  footer?: ReactNode;
 }) {
   const root = useRef<HTMLElement>(null);
   const lines = useRef<HTMLDivElement>(null);
@@ -86,7 +92,7 @@ export function DialogueText({
 
   return (
     <section ref={root} className={[s.talk, className].filter(Boolean).join(' ')} role="dialog" aria-label={REFAEY_COPY.name} onKeyDown={onKeyDown}>
-      <p className={s.speaker}>{REFAEY_COPY.speaker}</p>
+      {!bubble && <p className={s.speaker}>{REFAEY_COPY.speaker}</p>}
       {content.title && <p className={s.topic}>{content.title}</p>}
       <div ref={lines} className={s.lines} aria-live="polite">
         {/* Only this part is re-created (and fades in) when the beat or the node changes. */}
@@ -106,6 +112,7 @@ export function DialogueText({
           ))}
         </div>
       </div>
+      {lastBeat && footer}
       <div key={`${content.key}:${beat}:r`} className={[s.replies, s.fade].join(' ')}>
         {lastBeat && content.link && <SourceLink link={content.link} />}
         {lastBeat ? content.replies.map((r) => choice(r.label, () => onReply(r))) : choice(REFAEY_COPY.next, () => setBeat((b) => b + 1))}
