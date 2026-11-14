@@ -1,0 +1,136 @@
+REFAEY: READ ALOUD
+Recorded facts: JPL Horizons · recorded 14 Nov 2026. Tokens in [square brackets] are live engine values: they appear only on the live provider.
+
+1. THE BRIEFING (after the flight, once per session)
+---------------------------------------------------
+Hi, I'm Refaey. Welcome to the Moon's south pole.
+Two things keep a lander alive here: sunlight for power, and a clear line to Earth for radio.
+   (replies: "Go on" · "Skip")
+
+At the pole the Sun never climbs more than about 1.5° above the horizon.
+Hold your little finger out at arm's length: that's about 1°.
+   (replies: "And Earth?")
+
+Earth hangs just as low, and it shifts a little in the sky over each month.
+One ridge in the wrong place hides either of them.
+   (replies: "So what do I do?")
+
+So it all comes down to where you stand, and when.
+See how three real landings learned that, or plan your own?
+   (replies: "Three real landings" · "Plan my own")
+
+2. THREE LANDINGS, THREE LESSONS (the /missions page)
+---------------------------------------------------
+Page: "Three landings, three lessons". "Pick one. Refaey tells it in under a minute."
+Three landings, three lessons. Each one taught us something about timing, Earth in view or power.
+Pick one.
+   (replies: "Apollo landings (1969–1972)" · "Chang'e 4 (2019)" · "Athena (2025)")
+
+APOLLO LANDINGS: Why every crew landed with the Sun low in the sky.
+
+20 July 1969. Eagle is on its way down, and its computer is steering toward a crater ringed with boulders.
+   (replies: "So what did Armstrong do?")
+
+Armstrong took over and flew past them.
+NASA wanted visible shadows for moments like this: they help a crew recognise craters and rocks.
+   (replies: "Was the light planned?")
+
+Yes. The landing time was chosen for the light.
+At touchdown the Sun stood only 10.7° above the horizon.
+   (replies: "What was the rule?")
+
+With the Sun too high, shadows wash out and the ground looks flat.
+So the target window was roughly 5° to 14°.
+   (replies: "Did the numbers hold?")
+
+JPL Horizons agrees: Apollo 12 landed at 5.1°, Apollo 17 at 13.3°, Apollo 16 at 14.8°.
+Our engine matches the published angles within 0.1°.
+   (replies: "And at the pole?")
+
+Now the twist. At the south-pole sites NASA is studying, the Sun never gets above about 7°, and mostly sits at 1° or 2°.
+   (replies: "So what changes?" · "Why is the Sun so low?")
+
+So there you can't choose the Sun's height.
+You choose the hours when it clears the ridge in front of you. Finding those hours is this tool’s job.
+   (replies: "See the sky at touchdown" · "Another story" · "Plan my own landing")
+
+   Final replies on the live provider: "See the sky at touchdown" · on the demo provider: "Open this site in the planner".
+
+CHANG'E 4: First landing on the far side of the Moon.
+
+3 January 2019. Chang'e 4 touches down in Von Kármán crater, on the side of the Moon that never turns toward us.
+   (replies: "So where is Earth?")
+
+Not in its sky. At touchdown Earth sat 39.2° below the horizon, and in three weeks of Horizons rows it never rose.
+   (replies: "So how did it phone home?")
+
+China sent the answer ahead. In May 2018 a relay satellite, Queqiao, flew to a spot beyond the Moon where it sees the far side and Earth at once.
+   (replies: "And the messages?")
+
+Every command and every photo took the long way round: lander to Queqiao, Queqiao to Earth.
+   (replies: "And the Sun?")
+
+It had sunlight to spare. At touchdown the Sun stood 31.5° up, 4 days after sunrise, with 10 days 19 hours of daylight still to come.
+   (replies: "What about the pole?" · "Why can't the far side see Earth?")
+
+At the pole the puzzle flips. Earth is in your sky, but so low that one ridge can hide it for days.
+The “Earth up” row on the timeline shows when it is in view.
+   (replies: "See the sky at touchdown" · "Another story" · "Plan my own landing")
+
+   Final replies on the live provider: "See the sky at touchdown" · on the demo provider: "Open this site in the planner".
+
+ATHENA (IM-2): Landed in a crater, on its side. Sunlight could not reach its panels.
+
+6 March 2025. Athena comes down on Mons Mouton, closer to the south pole than any lander before it.
+   (replies: "What was it carrying?")
+
+A NASA drill to look for ice and other volatiles, a hopper and small rovers.
+All of it ran on sunlight.
+   (replies: "How did it land?")
+
+It landed a few hundred metres from its target, in a crater, and ended up on its side.
+   (replies: "What was the Sun doing?")
+
+Look at the Sun that day: 2.5° above the horizon.
+That low, a crater wall is enough to keep you in shade.
+   (replies: "What happened next?")
+
+Sunlight could not reach its solar cells, so the batteries could not recharge.
+Intuitive Machines ended the mission less than a day after landing.
+   (replies: "What does our map say?" · "What does our map say?")
+
+One honest note: on our terrain map this spot looks sunlit.
+Near the lander the map resolves only 10 metres, so smaller shadows can hide from it.
+   (replies: "So what should I take from it?" · "What is the best window?")
+
+So read any sunlight forecast, ours included, as the best case for the area.
+The last few metres still decide.
+   (replies: "See the sky at touchdown" · "Another story" · "Plan my own landing")
+
+   Final replies on the live provider: "See the sky at touchdown" · on the demo provider: "Open this site in the planner".
+
+3. ON THE PLANNING SCREENS (each card shows once per session)
+---------------------------------------------------
+Same place, different months. Watch the “Both” ring: that's power and Earth in view at the same time.
+   (replies: "What is the best window?" · "OK")
+
+This skyline is real, traced from NASA's laser maps.
+The Sun is [sunElev] up and sets in [sunsetIn]. Earth: [earthStatus].
+   (replies: "Why is the Sun so low?" · "OK")
+
+4. AFTER TOUCHDOWN (live provider only; the numbers come from the engine)
+---------------------------------------------------
+Waiting: "Give me a second…"
+
+Landing at [siteName] on [landingDate]. In its first lunar day the Sun is up for [sunHours] and Earth is in view for [earthHours].
+   (replies: "Could I do better?" · "Could I do better?" · "Got it")
+
+Try [altSite]: it adds [altGain] of sunlight in that first lunar day, and Earth stays in view at least as long.
+   (replies: "Compare them" · "Got it")
+
+Landing on [altDate] adds [altGain] of sunlight in that first lunar day, and Earth stays in view at least as long.
+   (replies: "Compare the dates" · "Got it")
+
+That is what the data says for this place and day. Change the site or the date to see how it moves.
+   (replies: "Plan another" · "Past missions")
+
