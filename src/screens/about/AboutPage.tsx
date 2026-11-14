@@ -79,7 +79,11 @@ const AI_USE: { who: string; tool: string; uses: string }[] = [
     tool: 'Claude (Anthropic), via Claude Code',
     uses: 'Finding and cross-checking sources; writing the science engine and its tests to the team\'s specification; checking the engine against JPL Horizons and NASA\'s long-term sunlight maps; fixing and simplifying screens (site choice, launch date, mission summary); code reviews; drafting this page, the video script and team messages.',
   },
-  // { who: 'Hagras (data, shared code)', tool: '…', uses: '…' },
+  {
+    who: 'Hagras (data, terrain, 3D)',
+    tool: 'Claude Code; Manus AI',
+    uses: 'Claude Code: writing and debugging code (data pipeline, NASA terrain, 3D scenes, UI). Manus AI: generating the 3D hardware models.',
+  },
   // { who: 'Aser (screens)', tool: '…', uses: '…' },
   // { who: 'Pink (3D scenes)', tool: '…', uses: '…' },
   // { who: 'Hady (Home, explainers, Refaey)', tool: '…', uses: '…' },
