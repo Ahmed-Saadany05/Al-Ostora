@@ -3,7 +3,7 @@
  * (the demo video can jump straight to any step).
  *
  *   /mission                              Step 1  choose site(s)
- *   /mission/stand?site=ID                Step 2  stand on one site
+ *   /mission/stand?site=ID[&at=ISO]       Step 2  stand on one site (optionally at a chosen moment)
  *   /mission/compare?sites=A,B,C&by=sites Step 3  compare 2–4 sites (or one site on several dates)
  *   /mission/date?site=ID                 Step 4  pick launch date
  *   /mission/launch?site=ID&launch=ISO    Step 5  launch → landing
@@ -79,8 +79,10 @@ const q = (params: Record<string, string | undefined>) => {
 /** Build links between steps — use these instead of hand-writing URLs. */
 export const missionUrl = {
   chooseSite: (selected: string[] = []) => `/mission${q({ sites: selected.join(',') || undefined })}`,
-  stand: (siteId: string) => `/mission/stand${q({ site: siteId })}`,
+  stand: (siteId: string, at?: IsoTime) => `/mission/stand${q({ site: siteId, at })}`,
   compare: (siteIds: string[], by: 'sites' | 'dates' = 'sites') => `/mission/compare${q({ sites: siteIds.join(','), by })}`,
+  /** One site over several lunar days: where the flow goes after a site is chosen. */
+  dates: (siteId: string) => `/mission/compare${q({ sites: siteId, by: 'dates' })}`,
   date: (siteId: string) => `/mission/date${q({ site: siteId })}`,
   launch: (siteId: string, launch: IsoTime) => `/mission/launch${q({ site: siteId, launch })}`,
 };
