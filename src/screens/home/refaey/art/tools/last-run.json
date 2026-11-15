@@ -6,15 +6,15 @@
   },
   "sheets": {
     "idle": {
-      "frames": 24,
+      "frames": 21,
       "frame_w": 152,
       "frame_h": 302,
-      "strip_kb": 170.3,
-      "halo_literal_pct": 0.08,
+      "strip_kb": 174.0,
+      "halo_literal_pct": 0.05,
       "halo_fringe_pct": 0.0,
-      "helmet_drift_native_px": 3.0,
-      "helmet_drift_display_px": 4.37,
-      "torso_drift_display_px": 5.1,
+      "helmet_drift_native_px": 1.5,
+      "helmet_drift_display_px": 2.19,
+      "torso_drift_display_px": 3.64,
       "halo_ok": true,
       "drift_ok": false,
       "size_ok": true
@@ -52,5 +52,5 @@
     "80": 3.1,
     "160": 6.9
   },
-  "total_kb": 561.0
+  "total_kb": 564.7
 }

@@ -6,7 +6,7 @@ import walkStrip from './art/walk-strip.webp';
 import hopStrip from './art/hop-strip.webp';
 import { refaeyActor } from './actorBus';
 import { QUIPS } from './copy';
-import { DRIFT_IN_MS, driftInProgress, floatCycle, floatDrift, FLOAT_FRAME_MS, frameAt, hopLiftPx, hopTimeline, idleCycle, IDLE_FRAME_MS, PUSH_MS, pushOffset, WALK_FRAME_MS, WALK_IN_MAX_S, type Anim } from './spriteMath';
+import { DRIFT_IN_MS, driftInProgress, floatDrift, FLOAT_FRAME, frameAt, hopLiftPx, hopTimeline, idleCycle, IDLE_FRAME_MS, PUSH_MS, pushOffset, WALK_FRAME_MS, WALK_IN_MAX_S, type Anim } from './spriteMath';
 import { useRefaey } from './store';
 import s from './refaey.module.css';
 
@@ -118,14 +118,14 @@ export function RefaeyActor({
     el.style.transform = `translate(${shiftPx}px, ${-liftPx}px)${rotDeg ? ` rotate(${rotDeg}deg)` : ''}`;
   }, []);
 
-  const restFrame = floating ? () => draw('hop', floatCycle()[0]) : () => draw('idle', 0);
+  const restFrame = floating ? () => draw('hop', FLOAT_FRAME) : () => draw('idle', 0);
 
   // Always show something sensible, including before the loop starts and when motion is off: the first frame of his pose, still.
   useEffect(() => {
     const b = box.current;
     if (!b) return;
     // about to enter: start beyond the left edge, so there is no flash of him standing in place first
-    const start = () => (willEnter ? draw(floating ? 'hop' : 'walk', floating ? floatCycle()[0] : 0, 0, -(b.getBoundingClientRect().right + 12)) : restFrame());
+    const start = () => (willEnter ? draw(floating ? 'hop' : 'walk', floating ? FLOAT_FRAME : 0, 0, -(b.getBoundingClientRect().right + 12)) : restFrame());
     start();
     if (!willEnter) entered.current?.(); // (the parent's handler is idempotent)
     const ro = new ResizeObserver(start);
@@ -144,7 +144,6 @@ export function RefaeyActor({
     let driftT = 0; // drift time only counts while not paused
     let last = t0;
     const cycle = idleCycle(SPEC.idle.count);
-    const fCycle = floatCycle();
     const hop = hopTimeline(SPEC.hop.count);
     const distance = () => b.getBoundingClientRect().right + 12;
     let dist = distance();
@@ -156,7 +155,7 @@ export function RefaeyActor({
       t0 = now;
       lastKey = '';
     };
-    const floatFrame = () => fCycle[Math.floor(driftT / FLOAT_FRAME_MS) % fCycle.length];
+    const floatFrame = () => FLOAT_FRAME;
     const tick = (now: number) => {
       const t = now - t0;
       if (!paused.current) driftT += now - last;

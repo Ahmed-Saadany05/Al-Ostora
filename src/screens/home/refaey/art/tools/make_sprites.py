@@ -6,7 +6,7 @@ Refaey sprite pipeline: three 3D-render contact sheets -> clean animation strips
 
 Input  (art/source/):  idle-sheet.png (24 frames, 6x4), walk-sheet.png (24, 6x4: running), hop-sheet.png (12, 3x4). RGBA, cut out
                        already but WhatsApp-compressed: soft low-alpha white speckle around the suit and colour fringing.
-Output (art/):         idle-strip.webp, walk-strip.webp, hop-strip.webp, bust-80.webp, bust-160.webp, sprites.json,
+Output (art/):         idle-strip.webp (subtle, smoothed), walk-strip.webp, hop-strip.webp, bust-80.webp, bust-160.webp, sprites.json,
                        tools/last-run.json (measurements). Contact sheets go to --preview (outside the repo).
 
 Steps per sheet
@@ -34,6 +34,64 @@ DISPLAY_H = 440                        # CSS px: the tallest the sprite is shown
 FEATHER_SIGMA = 1.3                    # edge softness (px): a ~2 px anti-aliased rim, so the outermost pixels are partly transparent
 WEBP_QUALITY = 85
 MAX_STRIP_KB = 350
+# Smoothing (Pink): in-between frames are cross-fades of neighbouring frames (premultiplied alpha), so poses that differ
+# only a little flow instead of jumping.
+IDLE_KEYS = [0, 1, 2, 3, 4, 5]          # the calm start of the idle sheet: a subtle breath (the full sheet sways ~7 px)
+IDLE_STEPS = 4                         # frames per idle key (1 key + 3 in-betweens)
+
+
+def blend(a, b, w):
+    """Cross-fade two RGBA frames (same size), premultiplied so the edges do not darken or glow."""
+    a = a.astype(np.float32); b = b.astype(np.float32)
+    aa, ba = a[..., 3:] / 255.0, b[..., 3:] / 255.0
+    al = aa * (1 - w) + ba * w
+    rgb = (a[..., :3] * aa * (1 - w) + b[..., :3] * ba * w) / np.maximum(al, 1e-6)
+    return np.dstack([np.clip(rgb, 0, 255), al * 255]).astype(np.uint8)
+
+
+def best_shift(a, b, r=14):
+    """Whole-pixel (dx, dy) that moves b onto a best (alpha masks), so a cross-fade blends limbs, not the whole body."""
+    A = a[..., 3].astype(np.float32) / 255
+    B = b[..., 3].astype(np.float32) / 255
+    best, arg = None, (0, 0)
+    for dy in range(-r, r + 1, 2):
+        for dx in range(-r, r + 1, 2):
+            d = np.abs(A - np.roll(np.roll(B, dy, 0), dx, 1)).sum()
+            if best is None or d < best:
+                best, arg = d, (dx, dy)
+    bx, by = arg
+    for dy in range(by - 1, by + 2):
+        for dx in range(bx - 1, bx + 2):
+            d = np.abs(A - np.roll(np.roll(B, dy, 0), dx, 1)).sum()
+            if d < best:
+                best, arg = d, (dx, dy)
+    return arg
+
+
+def shifted(f, dx, dy):
+    """Sub-pixel shift (bilinear), transparent outside."""
+    return ndi.shift(f.astype(np.float32), (dy, dx, 0), order=1, mode='constant', cval=0).clip(0, 255).astype(np.uint8)
+
+
+def tween(frames, keys, steps, loop):
+    """Frames through `keys` with `steps - 1` eased in-betweens per step (to the next key; wrapping when `loop`). Each
+    in-between slides both poses part of the way toward each other (aligned) and cross-fades them: a cheap morph."""
+    out = []
+    n = len(keys) if loop else len(keys) - 1
+    for k in range(n):
+        a, b = frames[keys[k]], frames[keys[(k + 1) % len(keys)]]
+        dx, dy = best_shift(a, b)  # b moved by (dx, dy) lies on a
+        for j in range(steps):
+            t = j / steps
+            w = t * t * (3 - 2 * t)
+            if j == 0:
+                out.append(a)
+                continue
+            # both meet at the in-between position: a moves toward b's place, b starts from a's
+            out.append(blend(shifted(a, -dx * w, -dy * w), shifted(b, dx * (1 - w), dy * (1 - w)), w))
+    if not loop:
+        out.append(frames[keys[-1]])
+    return out
 
 
 def lum(rgb):  # relative luminance of sRGB 0..255 (approx, gamma ignored: a conservative proxy)
@@ -177,6 +235,11 @@ def main():
             y0 = H - f.shape[0] - 4          # feet on the baseline
             cv[y0:y0 + f.shape[0], x0:x0 + f.shape[1]] = f
             canvas.append(cv)
+        # smoothing: the idle strip is the calm start of the sheet with in-betweens (its neighbouring frames differ so little
+        # that a cross-fade reads as motion; the airborne hop poses differ too much, so floating holds one pose instead)
+        if name == 'idle':
+            contact['idle-raw'] = canvas
+            canvas = tween(canvas, IDLE_KEYS, IDLE_STEPS, loop=False)
         # measurements
         hl = [halo(c) for c in canvas]
         literal = float(np.mean([h[0] for h in hl]))
