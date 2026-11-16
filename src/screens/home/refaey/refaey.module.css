@@ -555,6 +555,46 @@
     min-height: 84px;
   }
 }
+/* Phones (Pink): his words on top across the width, Refaey under them (smaller, so he stays sharp), and the two paths
+   stacked as slim cards along the bottom, clear of both. */
+@media (max-width: 760px) {
+  .briefing {
+    --actor-h: min(22vh, 170px);
+    grid-template-columns: minmax(0, 1fr);
+    align-content: end;
+    row-gap: var(--space-3);
+    padding: var(--space-6) var(--gutter) calc(var(--space-4) + 172px);
+  }
+  .briefingActor {
+    padding-bottom: 0;
+  }
+  .briefingText {
+    --say: var(--text-lg);
+    order: -1;
+    width: 100%;
+    margin-bottom: 0;
+  }
+  .paths {
+    bottom: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .path {
+    min-height: 0;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .pathIcon {
+    width: 40px;
+    height: 40px;
+  }
+  .pathText strong {
+    font-size: var(--text-md);
+  }
+  .pathText small {
+    font-size: var(--text-xs);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .paths {
     animation: none;

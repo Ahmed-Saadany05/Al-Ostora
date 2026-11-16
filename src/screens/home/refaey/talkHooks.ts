@@ -3,7 +3,7 @@
  * balloon goes so it covers the least, and which corner he docks in on the step screens.
  */
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import { collectWeighted, dockCost, dockRect, edgeMargin, pickDock, pickSide, safeRect, type BalloonSide, type DockCorner, type Spot } from './balloonPlace';
+import { collectWeighted, dockCost, dockRect, edgeMargin, pickDock, pickSide, safeRect, type BalloonSide, type DockCorner, type DockSpotId, type Spot } from './balloonPlace';
 import type { Rect } from './placement';
 
 // ---------------------------------------------------------------- heard lines
@@ -58,13 +58,13 @@ export function useBalloonSpot(open: boolean, anchor: RefObject<HTMLElement | nu
 // ---------------------------------------------------------------- the dock
 
 /**
- * The corner of the screen (between the header and the status bar) where he covers the least, for a figure that floats
- * over a page. Checked on arrival, on resize, after scrolling stops and every 1.5 s as the page fills in; he only moves
+ * The spot at the screen edge (between the header and the status bar) where he covers the least, for a figure that floats
+ * over a page: a corner if one is clear, else a free gap along the left or right edge. Checked on arrival, on resize, after scrolling stops and every 1.5 s as the page fills in; he only moves
  * when the new corner is clearly better, and never while his balloon is open or the pointer is on him (`hold`).
  */
 export function useDock(enabled: boolean, root: RefObject<HTMLElement | null>, hold: boolean, order: DockCorner[]) {
   const [box, setBox] = useState<Rect | null>(null);
-  const corner = useRef<DockCorner | null>(null);
+  const current = useRef<DockSpotId | null>(null);
   const held = useRef(hold);
   held.current = hold;
   const orderKey = order.join(',');
@@ -79,13 +79,13 @@ export function useDock(enabled: boolean, root: RefObject<HTMLElement | null>, h
       const safe = safeRect(edgeMargin());
       const keep = collectWeighted();
       const best = pickDock(size, safe, keep, corners);
-      const now = corner.current;
-      if (!force && now && now !== best.corner && best.cost > dockCost(now, size, safe, keep) * 0.7 - 1) {
+      const now = current.current;
+      if (!force && now && now !== best.spot && best.cost > dockCost(now, size, safe, keep) * 0.7 - 1) {
         // not clearly better: stay, but follow a resized safe area
-        best.corner = now;
+        best.spot = now;
       }
-      corner.current = best.corner;
-      const next = dockRect(best.corner, size, safe);
+      current.current = best.spot;
+      const next = dockRect(best.spot, size, safe);
       setBox((prev) => (prev && Math.abs(prev.x - next.x) < 1 && Math.abs(prev.y - next.y) < 1 ? prev : next));
     };
     place(true);

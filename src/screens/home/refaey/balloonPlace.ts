@@ -79,40 +79,44 @@ export function scoreSide(anchor: Rect, size: { w: number; h: number }, safe: Re
 export type DockCorner = 'bottom-left' | 'bottom-right' | 'middle-left' | 'middle-right' | 'top-left' | 'top-right';
 export const DOCK_ORDER: DockCorner[] = ['bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-left', 'top-right'];
 
-/** The figure box in one corner of the safe area. */
-export function dockRect(corner: DockCorner, size: { w: number; h: number }, safe: Rect): Rect {
+/** A place he can dock: a named corner, or a step along the left or right edge ('left@0.375'). */
+export type DockSpotId = DockCorner | `${'left' | 'right'}@${number}`;
+const EDGE_STEPS = [0.125, 0.25, 0.375, 0.625, 0.75, 0.875];
+/** Edge spots cost a little more than corners, so a corner wins when both are clear. */
+const EDGE_EXTRA = 400;
+
+/** The figure box at a dock spot inside the safe area. */
+export function dockRect(spot: DockSpotId, size: { w: number; h: number }, safe: Rect): Rect {
   const left = safe.x;
   const right = safe.x + safe.w - size.w;
-  const top = safe.y;
-  const bottom = safe.y + safe.h - size.h;
-  const middle = safe.y + (safe.h - size.h) / 2;
-  const x = corner.endsWith('left') ? left : right;
-  const y = corner.startsWith('top') ? top : corner.startsWith('middle') ? middle : bottom;
+  const at = (f: number) => safe.y + (safe.h - size.h) * f;
+  const [edge, step] = spot.split('@');
+  const x = edge.endsWith('left') ? left : right;
+  const y = step !== undefined ? at(Number(step)) : spot.startsWith('top') ? at(0) : spot.startsWith('middle') ? at(0.5) : at(1);
   return { x: Math.round(x), y: Math.round(y), ...size };
 }
 
-/** A typical open balloon, for judging whether a corner leaves his words room. */
+/** A typical open balloon, for judging whether a spot leaves his words room. */
 export const TYPICAL_BALLOON = { w: 340, h: 170 };
 const ALL_SIDES: BalloonSide[] = ['right', 'left', 'above', 'below'];
+/** His figure is always on screen, his words only when asked: room for them counts for less. */
+const WORDS_SHARE = 0.15;
 
-/**
- * What docking in a corner costs: what his figure covers there, plus half of what his balloon would cover when opened
- * from there (a corner with no room for his words at all costs as much as covering a button with him).
- */
-export function dockCost(corner: DockCorner, size: { w: number; h: number }, safe: Rect, keepOuts: Weighted[], balloon = TYPICAL_BALLOON): number {
-  const fig = dockRect(corner, size, safe);
+/** What docking at a spot costs: what his figure covers there, plus a share of what his opened balloon would cover. */
+export function dockCost(spot: DockSpotId, size: { w: number; h: number }, safe: Rect, keepOuts: Weighted[], balloon = TYPICAL_BALLOON): number {
+  const fig = dockRect(spot, size, safe);
   const b = { w: Math.min(balloon.w, safe.w), h: balloon.h };
   const words = scoreSide(fig, b, safe, keepOuts, ALL_SIDES).cost;
-  return cost(fig, keepOuts) + 0.5 * (Number.isFinite(words) ? words : b.w * b.h);
+  return cost(fig, keepOuts) + WORDS_SHARE * (Number.isFinite(words) ? words : b.w * b.h) + (spot.includes('@') ? EDGE_EXTRA : 0);
 }
 
-/** The corner that costs the least (ties go to the earlier corner in `order`). */
-export function pickDock(size: { w: number; h: number }, safe: Rect, keepOuts: Weighted[], order: DockCorner[] = DOCK_ORDER): { corner: DockCorner; cost: number } {
-  let best = { corner: order[0], cost: Infinity };
-  for (const corner of order) {
-    const c = dockCost(corner, size, safe, keepOuts);
-    if (c < best.cost) best = { corner, cost: c };
-    if (c === 0) break;
+/** The spot that costs the least: the corners in `order` first, then steps along both edges (ties go to the earlier one). */
+export function pickDock(size: { w: number; h: number }, safe: Rect, keepOuts: Weighted[], order: DockCorner[] = DOCK_ORDER): { spot: DockSpotId; cost: number } {
+  const spots: DockSpotId[] = [...order, ...EDGE_STEPS.flatMap((f) => [`left@${f}`, `right@${f}`] as DockSpotId[])];
+  let best = { spot: spots[0], cost: Infinity };
+  for (const spot of spots) {
+    const c = dockCost(spot, size, safe, keepOuts);
+    if (c < best.cost) best = { spot, cost: c };
   }
   return best;
 }
