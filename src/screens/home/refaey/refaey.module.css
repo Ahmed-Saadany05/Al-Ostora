@@ -717,3 +717,13 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
 }
+
+/* Phones: his placed balloon is more compact (one size smaller type, tighter padding), so it covers less of a busy screen. */
+@media (max-width: 600px) {
+  .balloon[data-refaey-balloon] {
+    padding: var(--space-3);
+  }
+  .balloon[data-refaey-balloon] .talk {
+    --say: var(--text-sm);
+  }
+}
