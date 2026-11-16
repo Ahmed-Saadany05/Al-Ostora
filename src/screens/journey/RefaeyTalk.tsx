@@ -3,13 +3,21 @@
  * balloon beside him that holds the current beat and its reply choices (Hady's DialogueText). It sits where the page puts it,
  * so it works over the 3D terrain too. Esc or ✕ folds the balloon; clicking Refaey opens it again.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { RefaeyActor, useQuip, type ActorPose } from '@/screens/home/refaey/RefaeyActor';
-import { RefaeyBust } from '@/screens/home/refaey/Refaey';
-import { DialogueText, type PanelContent } from '@/screens/home/refaey/DialogueText';
-import type { Reply } from '@/screens/home/refaey/dialogues/dialogues';
-import rs from '@/screens/home/refaey/refaey.module.css';
-import s from './talk.module.css';
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  RefaeyActor,
+  useQuip,
+  type ActorPose,
+} from "@/screens/home/refaey/RefaeyActor";
+import { RefaeyBust } from "@/screens/home/refaey/Refaey";
+import { usePresence } from "@/screens/home/refaey/presence";
+import {
+  DialogueText,
+  type PanelContent,
+} from "@/screens/home/refaey/DialogueText";
+import type { Reply } from "@/screens/home/refaey/dialogues/dialogues";
+import rs from "@/screens/home/refaey/refaey.module.css";
+import s from "./talk.module.css";
 
 export function RefaeyTalk({
   content,
@@ -60,6 +68,8 @@ export function RefaeyTalk({
   const quip = useQuip();
   // A new beat always opens the balloon again.
   useEffect(() => setOpen(true), [content?.key]);
+  // The balloon animates in when it opens and out when it closes.
+  const { mounted, leaving, motion } = usePresence(!!content && open && entered);
   useEffect(() => {
     if (!autoFoldMs) return;
     const t = window.setTimeout(() => setOpen(false), autoFoldMs);
@@ -89,9 +99,15 @@ export function RefaeyTalk({
           <RefaeyBust size="56px" />
         </button>
       )}
-      {content && open && entered && (
+      {content && mounted && (
         <div
-          className={[rs.balloon, s.balloon].join(' ')}
+          className={[
+            rs.balloon,
+            s.balloon,
+            motion && (leaving ? rs.popOut : rs.popIn),
+          ]
+            .filter(Boolean)
+            .join(" ")}
           data-side={stacked ? 'above' : reverse ? 'left' : 'right'}
           style={{ maxWidth: balloonWidth }}
           role="dialog"

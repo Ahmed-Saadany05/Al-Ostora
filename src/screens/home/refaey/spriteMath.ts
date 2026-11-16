@@ -23,14 +23,14 @@ export function heightAt(t: number, h = HOP_HEIGHT_M, g = LUNAR_G) {
 
 export type Anim = 'idle' | 'walk' | 'hop';
 
-/** Idle: gentle, about 6 frames per second, ping-pong so the loop has no seam. Frame indices of one cycle. */
+/** Idle: a subtle breath (the calm start of the idle sheet with in-betweens, 21 frames) at 10 frames per second, ping-pong so the loop has no seam (4 s). Frame indices of one cycle. */
 export function idleCycle(count: number): number[] {
   const up = Array.from({ length: count }, (_, i) => i);
   return [...up, ...up.slice(1, -1).reverse()];
 }
-export const IDLE_FRAME_MS = 1000 / 6;
-/** Walk: about 12 frames per second. */
-export const WALK_FRAME_MS = 1000 / 12;
+export const IDLE_FRAME_MS = 1000 / 10;
+/** Walk (the running sheet, 24 frames): 24 frames per second, one stride cycle a second. */
+export const WALK_FRAME_MS = 1000 / 24;
 export const WALK_IN_MAX_S = 1.2;
 
 /**
@@ -65,16 +65,14 @@ export function hopLiftPx(tMs: number, spriteHeightPx: number, count: number) {
 }
 
 /**
- * Float: the airborne frames of the hop sheet with relaxed limbs (arms out, knees bent). Their helmet tops sit within 3 px
- * of each other (29, 31 and 32 px in a 451 px frame), so the loop does not pump; the weightless feel comes from the drift.
+ * Float: one relaxed airborne pose of the hop sheet, held. Swapping between airborne poses read as stepping (they differ
+ * a lot in the arms and legs, so in-between cross-fades show double limbs); the weightless feel comes from the drift,
+ * which is continuous.
  */
-export const FLOAT_FRAMES = [3, 7, 8];
-export const FLOAT_FRAME_MS = 250; // about 4 frames per second
+export const FLOAT_FRAME = 3;
 export const FLOAT_DRIFT_PX = 4;
 export const FLOAT_TILT_DEG = 1.5;
 export const FLOAT_PERIOD_MS = 4000;
-/** Ping-pong order over the float frames (no seam). */
-export const floatCycle = () => idleCycle(FLOAT_FRAMES.length).map((i) => FLOAT_FRAMES[i]);
 /** The slow, eased bob and tilt of a floating figure `tMs` into the loop: translateY ±4 px and rotate ±1.5° over about 4 s. */
 export function floatDrift(tMs: number) {
   const a = (2 * Math.PI * tMs) / FLOAT_PERIOD_MS;

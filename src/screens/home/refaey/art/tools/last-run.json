@@ -1,56 +1,56 @@
 {
   "scale": {
     "idle": 1.0,
-    "walk": 1.1856401788883284,
-    "hop": 1.375414895195906
+    "walk": 1.004761140796903,
+    "hop": 0.959212705695853
   },
   "sheets": {
     "idle": {
-      "frames": 8,
-      "frame_w": 196,
-      "frame_h": 433,
-      "strip_kb": 81.8,
-      "halo_literal_pct": 0.0,
+      "frames": 21,
+      "frame_w": 152,
+      "frame_h": 302,
+      "strip_kb": 174.0,
+      "halo_literal_pct": 0.05,
       "halo_fringe_pct": 0.0,
-      "helmet_drift_native_px": 1.0,
-      "helmet_drift_display_px": 1.02,
-      "torso_drift_display_px": 1.52,
+      "helmet_drift_native_px": 1.5,
+      "helmet_drift_display_px": 2.19,
+      "torso_drift_display_px": 3.64,
       "halo_ok": true,
-      "drift_ok": true,
+      "drift_ok": false,
       "size_ok": true
     },
     "walk": {
-      "frames": 12,
-      "frame_w": 255,
-      "frame_h": 403,
-      "strip_kb": 183.7,
-      "halo_literal_pct": 0.0,
+      "frames": 24,
+      "frame_w": 171,
+      "frame_h": 294,
+      "strip_kb": 247.6,
+      "halo_literal_pct": 0.1,
       "halo_fringe_pct": 0.0,
-      "helmet_drift_native_px": 7.0,
-      "helmet_drift_display_px": 7.64,
-      "torso_drift_display_px": 7.64,
+      "helmet_drift_native_px": 7.5,
+      "helmet_drift_display_px": 11.22,
+      "torso_drift_display_px": 11.97,
       "halo_ok": true,
       "drift_ok": null,
       "size_ok": true
     },
     "hop": {
       "frames": 12,
-      "frame_w": 288,
-      "frame_h": 451,
-      "strip_kb": 203.6,
-      "halo_literal_pct": 0.0,
+      "frame_w": 203,
+      "frame_h": 317,
+      "strip_kb": 133.1,
+      "halo_literal_pct": 0.01,
       "halo_fringe_pct": 0.0,
-      "helmet_drift_native_px": 37.5,
-      "helmet_drift_display_px": 36.59,
-      "torso_drift_display_px": 35.61,
+      "helmet_drift_native_px": 25.5,
+      "helmet_drift_display_px": 35.39,
+      "torso_drift_display_px": 35.39,
       "halo_ok": true,
       "drift_ok": null,
       "size_ok": true
     }
   },
   "busts": {
-    "80": 2.8,
+    "80": 3.1,
     "160": 6.9
   },
-  "total_kb": 478.8
+  "total_kb": 564.7
 }

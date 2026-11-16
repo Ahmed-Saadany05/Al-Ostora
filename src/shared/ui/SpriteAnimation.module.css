@@ -1,0 +1,7 @@
+/* Sprite-sheet animation — owner: Pink. */
+.sprite {
+  display: block;
+  flex: none;
+  background-repeat: no-repeat;
+  image-rendering: auto;
+}

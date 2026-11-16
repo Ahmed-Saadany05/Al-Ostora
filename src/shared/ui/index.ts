@@ -16,3 +16,4 @@ export { TimelineStrip, TimelineLegend } from './TimelineStrip';
 export { SkyTimeline, type SkyTimelineProps } from './SkyTimeline';
 export { StepHeader } from './StepHeader';
 export { DateField } from './DateField';
+export { SpriteAnimation, LOADER_SPRITE, type SpriteSheet } from './SpriteAnimation';
