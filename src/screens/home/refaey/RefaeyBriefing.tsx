@@ -138,7 +138,12 @@ export function RefaeyBriefing({
       {plain && (
         <>
           <div className={s.briefingActor} data-refaey-fallback>
-            <RefaeyActor height="var(--actor-h)" walkIn clickable />
+            <div className={s.hint}>
+              <RefaeyActor height="var(--actor-h)" walkIn clickable />
+              <span className={s.hintTip} aria-hidden>
+                Click me
+              </span>
+            </div>
           </div>
           <div className={[s.briefingText, s.quipHost].join(' ')} data-refaey-fallback data-quip={quip !== null}>
             <DialogueText className={s.talkFill} content={content} onReply={onReply} onCollapse={() => finish('close')} skip={skip} />

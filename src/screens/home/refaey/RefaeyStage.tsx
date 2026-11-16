@@ -208,16 +208,22 @@ export function RefaeyStage({
           height: figure.h,
         }}
       >
-        <RefaeyActor
-          height={`${figure.h}px`}
-          pose={slot.pose}
-          entrance={entrance}
-          clickable
-          driftPaused={popping}
-          onEntered={() => setEntered(true)}
-          onActivate={open ? undefined : () => setOpen(true)}
-          activateLabel={`${REFAEY_COPY.name}: open`}
-        />
+        {/* Hover: glow, lift and a "Click me" tip, so it is clear he can be clicked (Pink). */}
+        <div className={s.hint}>
+          <RefaeyActor
+            height={`${figure.h}px`}
+            pose={slot.pose}
+            entrance={entrance}
+            clickable
+            driftPaused={popping}
+            onEntered={() => setEntered(true)}
+            onActivate={open ? undefined : () => setOpen(true)}
+            activateLabel={`${REFAEY_COPY.name}: open`}
+          />
+          <span className={s.hintTip} aria-hidden>
+            Click me
+          </span>
+        </div>
         {standing && <span className={s.contactShadow} aria-hidden />}
       </div>
       {balloonMounted && (

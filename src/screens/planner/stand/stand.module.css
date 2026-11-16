@@ -455,3 +455,85 @@
 .picker option {
   background: var(--color-surface);
 }
+
+/* ---------------------------------------------------------------- phones (Pink) */
+/* Top: where you are (title one size down). Right, under the title: the Sun / Earth tab. Bottom row: the view toggle
+   above the time tab (left) and a smaller Launch (right). Drawers open full width. Side by side stacks top / bottom. */
+@media (max-width: 760px) {
+  .titleBlock {
+    top: var(--space-3);
+    right: var(--gutter);
+    gap: var(--space-2);
+  }
+  .title {
+    font-size: var(--text-2xl);
+  }
+  .statusRow {
+    flex-wrap: wrap;
+  }
+  .viewToggle {
+    top: auto;
+    bottom: calc(var(--space-4) + 52px);
+    left: var(--gutter);
+    transform: none;
+    gap: var(--space-2);
+  }
+  .launch {
+    right: var(--gutter);
+    bottom: var(--space-4);
+  }
+  .launch > * {
+    height: 40px;
+    min-height: 0;
+    padding-inline: var(--space-4);
+    font-size: var(--text-sm);
+  }
+  .right {
+    right: var(--gutter);
+    top: 210px;
+  }
+  .right .panel,
+  .left .panel {
+    width: calc(100vw - 2 * var(--gutter));
+    max-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 260px);
+    overflow: auto;
+  }
+  .right .panel {
+    top: 0;
+  }
+  .left {
+    left: var(--gutter);
+    top: 210px;
+  }
+  .left .panel {
+    top: 0;
+  }
+  .bottom {
+    left: var(--gutter);
+    bottom: var(--space-4);
+    transform: none;
+  }
+  .bottom .panel {
+    left: 0;
+    width: calc(100vw - 2 * var(--gutter));
+    transform: translateY(calc(100% + 80px));
+  }
+  .peek.bottom.open .panel {
+    transform: none;
+  }
+  .timeline {
+    padding: var(--space-3);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border-radius: var(--radius-md);
+  }
+  .split {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  .paneHead {
+    top: var(--space-3);
+  }
+  .paneFoot {
+    bottom: var(--space-3);
+  }
+}

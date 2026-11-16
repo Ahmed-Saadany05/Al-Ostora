@@ -3168,3 +3168,33 @@
   line-height: 1.5;
   color: var(--color-warn);
 }
+
+/* ---------------------------------------------------------------- phones (Pink) */
+/* Compare: the time bar wraps (slider on its own line) and the site columns stack, one under another. */
+@media (max-width: 760px) {
+  .cqTime {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+  .cqSlider {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .cqGrid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: var(--space-5);
+  }
+  .cqCol,
+  .cqAddCol {
+    padding-inline: 0;
+    border-left: 0;
+  }
+  .cqCol + .cqCol,
+  .cqCol + .cqAddCol {
+    padding-top: var(--space-5);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+  .cqAdd {
+    height: 120px;
+  }
+}

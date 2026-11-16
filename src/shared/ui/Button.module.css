@@ -105,3 +105,14 @@
 .active:hover {
   color: var(--color-text-inverse);
 }
+
+/* A button never grows wider than its container: a long label (an address on About) ends in "…" instead of
+   pushing the page sideways on a phone (Pink). */
+.button {
+  max-width: 100%;
+}
+.button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -535,3 +535,38 @@
     opacity: 0;
   }
 }
+
+/* ---------------------------------------------------------------- phones and narrow tablets */
+/* One column: the Moon on top (a little under half the screen), the menu under it, and the page scrolls. */
+@media (max-width: 760px) {
+  .frame {
+    padding-top: var(--space-4);
+  }
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    height: auto;
+    min-height: 0;
+  }
+  .left {
+    height: min(46vh, 420px);
+    min-height: 300px;
+  }
+  .stage {
+    min-height: 0;
+  }
+  .menu {
+    height: auto;
+  }
+  .menuScroll {
+    overflow: visible;
+    padding-right: 0;
+  }
+  .caption {
+    bottom: 40px;
+  }
+  .captionSub,
+  .captionHint {
+    display: none;
+  }
+}

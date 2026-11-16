@@ -201,10 +201,62 @@
   .nav {
     grid-column: 1 / -1;
     gap: var(--space-5);
-    overflow-x: auto;
+    /* visible, not auto: the active dot under a link would otherwise give the row its own scrollbar (Pink) */
+    overflow: visible;
   }
   .headerEnd,
   .credit {
     display: none;
+  }
+}
+
+/* Phones (Pink): one slim row — the mark, the two links — and a short status bar with just the step and the toggles. */
+@media (max-width: 600px) {
+  .header {
+    grid-template-columns: auto 1fr;
+    height: var(--header-height);
+    padding-block: 0;
+    column-gap: var(--space-4);
+  }
+  .logo {
+    width: 40px;
+    height: 40px;
+  }
+  .logo svg {
+    width: 22px;
+    height: 22px;
+  }
+  .name {
+    font-size: 1.25rem;
+  }
+  .tagline {
+    display: none;
+  }
+  .nav {
+    grid-column: auto;
+    justify-self: end;
+    gap: var(--space-4);
+    overflow: visible;
+  }
+  .navLink {
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+  .navLink::after {
+    bottom: -4px;
+  }
+  .status {
+    gap: var(--space-3);
+  }
+  .toggle {
+    white-space: nowrap;
+  }
+  .status > .statusGroup:first-child {
+    min-width: 0;
+  }
+  .status > .statusGroup:first-child span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

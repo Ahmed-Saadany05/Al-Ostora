@@ -103,6 +103,15 @@
   color: var(--color-demo);
   pointer-events: none;
 }
+/* Phones: the bottom edge holds the time and the main button, so the note moves to the top-right corner. */
+@media (max-width: 760px) {
+  .terrainNote {
+    left: auto;
+    right: var(--space-3);
+    bottom: auto;
+    top: var(--space-1);
+  }
+}
 
 .dense .tag {
   bottom: 18px;

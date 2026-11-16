@@ -128,3 +128,12 @@
     --duration-slow: 0ms;
   }
 }
+
+/* Phones (Pink): slimmer header and status bar, and a 16 px page gutter, so the page itself gets the room. */
+@media (max-width: 600px) {
+  :root {
+    --gutter: 16px;
+    --header-height: 64px;
+    --statusbar-height: 48px;
+  }
+}

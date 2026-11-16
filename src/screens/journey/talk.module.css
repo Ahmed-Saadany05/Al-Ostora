@@ -1,90 +1,73 @@
-/* Refaey's figure with his balloon to the right of his helmet. */
+/* Refaey's figure (or face) on a screen; his balloon is placed beside him by RefaeyTalk (fixed, in the body). */
 .talk {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
   pointer-events: none;
 }
 .talk > * {
   pointer-events: auto;
 }
-.bottom_left {
-  position: absolute;
-  z-index: 4;
-  left: var(--gutter);
-  bottom: var(--space-4);
-  align-items: flex-end;
-}
-.top_left {
+/* Docked in the corner that covers the least: he glides there when the page changes under him. */
+.dock {
   position: fixed;
   z-index: var(--z-chrome);
-  left: var(--gutter);
-  top: calc(var(--header-height) + 96px);
+}
+.dock[data-glide] {
+  transition:
+    left 600ms var(--ease-in-out),
+    top 600ms var(--ease-in-out);
+}
+:root[data-motion='off'] .dock {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock {
+    transition: none;
+  }
 }
 .inline {
   position: relative;
 }
-.figure {
-  flex: none;
-}
-/* The balloon sits beside his helmet: lifted to about two thirds of his height when he stands at the bottom. */
-.balloon {
-  position: relative;
-  width: max-content;
-  min-width: 240px;
-  box-shadow: var(--shadow-panel);
-}
-.bottom_left .balloon {
-  margin-bottom: calc(var(--fig-h, 30vh) * 0.15);
-}
-@media (max-width: 760px) {
-  .talk {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .bottom_left .balloon {
-    margin-bottom: 0;
-    order: -1;
-  }
+/* The page positions him (Step 1: beside the menu). */
+.free {
+  z-index: var(--z-chrome);
 }
 
-/* Bust-only mode (he is in the 3D scene): his face opens and closes the balloon. */
+/* The balloon: fixed beside him, above the page chrome but under drawers. */
+.balloon[data-refaey-balloon] {
+  position: fixed;
+  z-index: calc(var(--z-chrome) + 2);
+  max-width: none;
+  box-shadow: var(--shadow-panel);
+}
+.balloon[data-side='above']::before {
+  left: var(--tail-x) !important;
+}
+/* Under him: the tail points up at him. */
+.balloon[data-side='below']::before {
+  top: calc(var(--space-3) / -2 - 1px);
+  left: var(--tail-x);
+  margin-left: calc(var(--space-3) / -2);
+  border-right: 0;
+  border-bottom: 0;
+}
+/* No room beside him (a phone): across the bottom of the screen, no tail. */
+.balloon[data-side='sheet']::before {
+  display: none;
+}
+
+/* Face-only mode (he is in the 3D scene): his face opens and closes the balloon. */
 .face {
-  flex: none;
-  align-self: flex-end;
+  display: block;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: none;
   cursor: pointer;
+  line-height: 0;
 }
 .face:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-/* The page positions it (Step 1: beside the menu). */
-.free {
-  z-index: var(--z-chrome);
-}
-/* A narrow column: balloon under him (the tail points up at him). */
-.stacked {
-  flex-direction: column;
-  align-items: flex-start;
-}
-.stacked .balloon {
-  margin: 0;
-}
-/* He floats on the right of something, the balloon on his left. */
-.reverse {
-  flex-direction: row-reverse;
-}
-.stacked .balloon::before {
-  top: calc(var(--space-3) / -2 - 1px) !important;
-  bottom: auto !important;
-  left: 48px !important;
-  margin-left: 0 !important;
-  border: var(--border) !important;
-  border-right: 0 !important;
-  border-bottom: 0 !important;
-}
