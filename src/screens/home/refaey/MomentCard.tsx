@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefaeyCard, type CardPlacement } from './RefaeyCard';
+import { RefaeyPeek } from './RefaeyPeek';
 import { FactsBadge } from './FactsBadge';
 import { REFAEY_COPY } from './copy';
 import { advance, isSideNode } from './conversation';
@@ -52,6 +53,9 @@ export function MomentCard({
   const [eligible] = useState(() => !once || !alreadySeen);
   const [trail, setTrail] = useState<string[]>(() => (!briefed && !introduced ? [INTRO_ID] : [id]));
   const [dismissed, setDismissed] = useState(false);
+  // Over a 3D screen he only talks when asked (Pink): his face sits there, and a click opens the card beside him.
+  const peek = placement !== 'card';
+  const [open, setOpen] = useState(false);
   const nodeId = trail[trail.length - 1];
   const backTo = trail[trail.length - 2];
 
@@ -70,7 +74,7 @@ export function MomentCard({
 
   // Animates in on open and out when dismissed.
   const { mounted, leaving, motion } = usePresence(!dismissed);
-  if (!eligible || !mounted || !resolved) return null;
+  if (!eligible || (!peek && !mounted) || !resolved) return null;
 
   const act = (r: Reply) => () => {
     const intro = nodeId.startsWith(INTRO_ID);
@@ -86,20 +90,28 @@ export function MomentCard({
     }
     // "OK" on an explainer or source card goes back to the card; "OK" on the card closes it.
     if (isSideNode(nodeId)) return setTrail((t) => t.slice(0, -1));
+    // "OK" folds the peek back to his face; an inline card goes away.
+    if (peek) return setOpen(false);
     setDismissed(true);
   };
 
-  return (
+  const card = (
     <RefaeyCard
       id={`refaey-${id}`}
-      placement={placement}
+      placement={peek ? 'card' : placement}
       mood={resolved.mood}
       title={resolved.title}
       lines={resolved.lines}
       link={resolved.link}
       badge={resolved.usesFacts ? <FactsBadge /> : undefined}
       actions={resolved.replies.map((r) => ({ label: r.label, onClick: act(r) }))}
-      pop={!motion ? undefined : leaving ? 'out' : appear ? 'in' : undefined}
+      pop={peek || !motion ? undefined : leaving ? 'out' : appear ? 'in' : undefined}
     />
+  );
+  if (!peek) return card;
+  return (
+    <RefaeyPeek contentKey={`${id}:${nodeId}`} open={open} onToggle={() => setOpen((o) => !o)}>
+      {card}
+    </RefaeyPeek>
   );
 }

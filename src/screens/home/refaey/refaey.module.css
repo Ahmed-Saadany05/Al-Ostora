@@ -560,3 +560,120 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------- clickable Refaey: hover cue and "new" badge (Pink) */
+/* Wraps his figure or face wherever a click opens what he says. Hover (or keyboard focus): a soft sun glow, a small lift
+   and a "Click me" tip. Touch screens have no hover, so the glow pulses twice when he arrives instead. */
+.hint {
+  position: relative;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    filter var(--duration-base) var(--ease-out);
+}
+.hintTip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  z-index: 1;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.6;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .hint:hover,
+  .hint:has(:focus-visible) {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-sun) 55%, transparent));
+  }
+  .hint:hover .hintTip,
+  .hint:has(:focus-visible) .hintTip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@media (hover: none) {
+  .hintTip {
+    display: none;
+  }
+  .hint {
+    animation: hintPulse 1.6s var(--ease-in-out) 0.8s 2;
+  }
+}
+@keyframes hintPulse {
+  50% {
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--color-sun) 60%, transparent));
+  }
+}
+/* He has something new to say: a small sun-coloured dot by his helmet that breathes, until you open it. */
+.newBadge {
+  position: absolute;
+  top: 2px;
+  right: 10%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-sun);
+  box-shadow: 0 0 0 3px var(--color-bg);
+  pointer-events: none;
+  animation: newBadge 2s var(--ease-in-out) infinite;
+}
+@keyframes newBadge {
+  50% {
+    box-shadow:
+      0 0 0 3px var(--color-bg),
+      0 0 0 7px color-mix(in srgb, var(--color-sun) 35%, transparent);
+  }
+}
+:root[data-motion='off'] .hint,
+:root[data-motion='off'] .newBadge {
+  animation: none;
+}
+:root[data-motion='off'] .hint:hover {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hint,
+  .newBadge {
+    animation: none;
+  }
+  .hint:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------- his face in place of a pinned card (RefaeyPeek, Pink) */
+.peek {
+  position: fixed;
+  z-index: var(--z-chrome);
+}
+.peekFace {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+.peekFace:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.peekCard {
+  position: fixed;
+  z-index: calc(var(--z-chrome) + 2);
+  width: min(360px, calc(100vw - 24px));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+}

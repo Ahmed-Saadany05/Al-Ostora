@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import type { PanelContent } from '@/screens/home/refaey/DialogueText';
+import type { DockCorner } from '@/screens/home/refaey/balloonPlace';
 import { useMetrics, useSites, useSky } from '@/shared/data';
 import { formatDeg, formatDuration } from '@/shared/format';
 import { resolveSite } from '@/shared/mission';
@@ -67,6 +68,8 @@ function useBeside(selector: string | null, dy = -30) {
       const el = document.querySelector(selector);
       if (!el) return;
       const r = el.getBoundingClientRect();
+      // only when there is room for him left of the menu (not on phones, where the menu fills the width): else he docks
+      if (r.left < 220) return setPos(null);
       setPos({ position: 'fixed', right: window.innerWidth - r.left + 12, top: Math.max(80, r.top + dy) });
     };
     place();
@@ -81,6 +84,11 @@ function useBeside(selector: string | null, dy = -30) {
 }
 
 // ---------------------------------------------------------------- Step 1
+
+/** His height on the step screens: smaller on phones. */
+const FIG_H = 'min(110px, 22vw)';
+/** Step 1: the free column under Back first (he used to stand there). */
+const STEP1_DOCK: DockCorner[] = ['top-left', 'middle-left', 'bottom-left', 'bottom-right', 'top-right', 'middle-right'];
 
 type Phase = 'intro' | 'point' | 'sites' | 'done';
 
@@ -128,14 +136,14 @@ function Step1Guide() {
   if (!content) return null;
   return (
     <RefaeyTalk
-      placement={style ? 'free' : 'top-left'}
-      stacked={!style}
-      reverse={!!style}
+      placement={style ? 'free' : 'dock'}
+      dockOrder={STEP1_DOCK}
+      sides={style ? ['left', 'below', 'above'] : ['below', 'right', 'above', 'left']}
       style={style ?? undefined}
       className={s.moving}
       content={content}
       onReply={(r) => setPhase((r.next as Phase) ?? 'done')}
-      height={style ? '110px' : '130px'}
+      height={style ? '110px' : FIG_H}
       pose="float"
       entrance="none"
       balloonWidth={style ? 300 : 320}
@@ -194,12 +202,10 @@ function StandGuide() {
 
   return (
     <RefaeyTalk
-      placement="bottom-left"
-      style={{ position: 'fixed', bottom: 'calc(var(--statusbar-height) + var(--space-5))' }}
       content={content}
       onReply={() => undefined}
       closeOnReply
-      height="110px"
+      height={FIG_H}
       pose="float"
       entrance="none"
       balloonWidth={360}
@@ -226,8 +232,6 @@ function LandedGuide() {
   if (pole) lines.push('Here both stay low, so a few hours, or a few metres, change all of this. Play the clock and watch.');
   return (
     <RefaeyTalk
-      placement="bottom-left"
-      style={{ position: 'fixed', bottom: 'calc(var(--statusbar-height) + var(--space-5))' }}
       figure={false}
       content={{ key: `landed-${site.id}`, title: `Touchdown · ${site.name}`, lines, replies: [{ label: 'Got it', next: 'close' }] }}
       onReply={() => undefined}
@@ -263,8 +267,6 @@ export function PlannerLayout() {
     guide = (
       <RefaeyTalk
         key={key}
-        placement="bottom-left"
-        style={{ position: 'fixed', bottom: 'calc(var(--statusbar-height) + var(--space-5))' }}
         content={
           key === '/mission/compare'
             ? { key, title: 'Step 3 · Which one?', lines: ['Which spot keeps my batteries alive longest? Stand on any of them to look around, then pick.'], replies: [{ label: 'Got it', next: 'close' }] }
@@ -272,8 +274,7 @@ export function PlannerLayout() {
         }
         onReply={() => undefined}
         closeOnReply
-        autoFoldMs={7000}
-        height="110px"
+        height={FIG_H}
         pose="float"
         entrance="none"
         balloonWidth={320}

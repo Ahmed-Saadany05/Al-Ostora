@@ -7,6 +7,7 @@ import { missionUrl, useMission } from '@/shared/mission';
 import { daysAndHours } from './facts/display';
 import { MomentCard, type MomentContext } from './MomentCard';
 import { RefaeyCard, type CardPlacement } from './RefaeyCard';
+import { RefaeyPeek } from './RefaeyPeek';
 import type { Reply } from './dialogues/dialogues';
 
 /** Longest we wait for the engine's answer; after that the card just closes with its neutral line (no message). */
@@ -32,6 +33,7 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   const landing = plan?.landingDate;
   const motion = useApp((st) => st.motion);
   const [outcome, setOutcome] = useState<Outcome | 'waiting'>(live ? 'waiting' : 'demo');
+  const [waitOpen, setWaitOpen] = useState(false);
 
   useEffect(() => {
     if (!live || !site || !landing) {
@@ -74,7 +76,16 @@ export function OutcomeMoment({ placement: asked }: { placement: CardPlacement }
   }, [outcome, site, landing, sites]);
 
   if (!site) return null;
-  if (context === null) return <RefaeyCard id="refaey-moment-outcome" placement={placement} mood="neutral" lines={['Give me a second…']} pop={motion ? 'in' : undefined} />;
+  if (context === null) {
+    const wait = <RefaeyCard id="refaey-moment-outcome" placement="card" mood="neutral" lines={['Give me a second…']} pop={placement === 'card' && motion ? 'in' : undefined} />;
+    if (placement === 'card') return wait;
+    // Over the touchdown screen he only talks when asked: his face waits there (no badge until he has an answer).
+    return (
+      <RefaeyPeek contentKey="outcome-wait" open={waitOpen} onToggle={() => setWaitOpen((o) => !o)} quiet>
+        {wait}
+      </RefaeyPeek>
+    );
+  }
 
   const alt = outcome !== 'none' && outcome !== 'demo' && outcome !== 'waiting' ? outcome.alt : null;
   const onAction = (a: Reply['action']) => {
